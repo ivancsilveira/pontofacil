@@ -515,9 +515,16 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
           <button class="emp-tab active" onclick="selEmp(1,'ftab')" id="ftab1">Villa Canziani</button>
           <button class="emp-tab" onclick="selEmp(2,'ftab')" id="ftab2">Villa Bistro</button>
         </div>
-        <div class="card" style="display:flex;align-items:center;justify-content:space-between">
-          <div><div style="font-weight:600;font-size:14px">Fechamento mensal</div><div style="font-size:11px;color:var(--gray);margin-top:1px">Consolida e envia para a contadora</div></div>
-          <button class="btn btn-teal btn-sm" onclick="fecharMes()">🔒 Fechar mês</button>
+        <div class="card">
+          <div style="font-weight:600;font-size:14px;margin-bottom:10px">🔒 Fechamento mensal</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="form-group" style="flex:1;margin:0">
+              <label class="form-label">Mês de referência</label>
+              <input type="month" class="form-control" id="fechMesRef">
+            </div>
+            <button class="btn btn-teal btn-sm" onclick="fecharMes()" style="margin-top:16px;white-space:nowrap">🔒 Fechar mês</button>
+          </div>
+          <div style="font-size:11px;color:var(--gray);margin-top:6px">Padrão: mês atual. Altere para fechar outro período.</div>
         </div>
         <div id="listaFechamentos"><div class="empty">Nenhum fechamento</div></div>
       </div>
@@ -832,7 +839,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.49 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.50 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1942,7 +1949,13 @@ function goScreen(sc,navId){
   if(sc==='ajustes'){popularSelectFunc('ajFunc');document.getElementById('ajData').value=new Date().toISOString().slice(0,10);}
   if(sc==='escalas')renderEscalas();
   if(sc==='equipe')renderEquipe();
-  if(sc==='fechamento'){renderFechamentos();popularSelectFunc('detFunc');}
+  if(sc==='fechamento'){
+    renderFechamentos();
+    popularSelectFunc('detFunc');
+    // Inicializa seletor com mês atual
+    var mRef=document.getElementById('fechMesRef');
+    if(mRef&&!mRef.value) mRef.value=new Date().toISOString().slice(0,7);
+  }
   if(sc==='config'){carregarConfigUI();renderFeriados();}
   if(sc==='ferias'){popularSelectFerias();renderFerias();}
 }
@@ -2459,8 +2472,14 @@ function renderFechamentos(){
   }).join('');
 }
 async function fecharMes(){
-  const agora=new Date(),mesAtual=agora.toISOString().slice(0,7),mesLabel=agora.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  if(!confirm('Fechar '+mesLabel+' — '+( S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho')+'?'))return;
+  // Usa mês selecionado ou mês atual como fallback
+  const inputMes=document.getElementById('fechMesRef');
+  const mesAtual=inputMes&&inputMes.value?inputMes.value:new Date().toISOString().slice(0,7);
+  const [ano,mes]=mesAtual.split('-').map(Number);
+  const dtRef=new Date(ano,mes-1,1);
+  const mesLabel=dtRef.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const empNome=S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho';
+  if(!confirm('Fechar '+mesLabel+' — '+empNome+'?'))return;
   toast('Gerando...');
   const funcList=S.funcionarios.filter(f=>(!f.isAdmin||f.aparecerNaLista)&&!f.inativo&&(f.empresa==S.empFech||f.empresa==='ambas'));
   let regsDoMes=[];
