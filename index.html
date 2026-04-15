@@ -772,7 +772,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.34 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.35 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1656,17 +1656,70 @@ async function carregarPontosAjuste(){
   if(!fid||!di){document.getElementById('ajFormCard').style.display='none';return;}
   const diParts=di.split('-');const dataBR=diParts[2]+'/'+diParts[1]+'/'+diParts[0];
   let regs=[];
-  try{const snap=await db.collection('registros').where('funcionarioId','==',fid).where('data','==',dataBR).orderBy('timestamp').get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+  try{
+    // Sem orderBy para não precisar de índice composto — ordena em JS
+    const snap=await db.collection('registros')
+      .where('funcionarioId','==',fid)
+      .where('data','==',dataBR).get();
+    regs=snap.docs.map(d=>({id:d.id,...d.data()}));
+    regs.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  }catch(e){console.error('Erro ajuste:',e);}
   const func=S.funcionarios.find(f=>f.id===fid);
   const hojeISO=di;const ehFolga=isFolga(fid,hojeISO);
   const el=document.getElementById('ajPontosHoje');
   el.innerHTML=`<div style="font-size:12px;color:var(--gray);margin-bottom:8px"><strong>${func?.nome||''}</strong> — ${dataBR} ${ehFolga?'<span class="badge badge-pink">Dia de folga</span>':''}</div>`+
-    (regs.length?regs.map(r=>`<div class="reg-item"><div><div class="reg-type">${r.tipo}${r.ajuste?` <span class="ajuste-badge">✏️ ${r.motivoLabel||''}</span>`:''}</div><div class="reg-meta">${r.ajuste?'por '+r.ajustadoPor:'GPS ✓'}</div></div><div style="display:flex;align-items:center;gap:7px"><div class="reg-time">${r.hora}</div><button class="btn btn-danger-sm btn-sm" onclick="excluirReg('${r.id}')" style="padding:3px 7px;font-size:11px">✕</button></div></div>`).join(''):'<div class="empty">Sem registros nesta data</div>');
+    (regs.length?regs.map(r=>`
+    <div class="reg-item" style="align-items:center">
+      <div style="flex:1">
+        <div class="reg-type">${r.tipo}${r.ajuste?` <span class="ajuste-badge">✏️ ${r.motivoLabel||''}</span>`:''}</div>
+        <div class="reg-meta">${r.ajuste?'por '+r.ajustadoPor:'GPS ✓'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="reg-time">${r.hora}</div>
+        <button onclick="editarReg('${r.id}','${r.tipo}','${r.hora}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer">✏️</button>
+        <button onclick="excluirReg('${r.id}')" style="background:var(--red-light);color:var(--red);border:1px solid #fca5a5;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:600;cursor:pointer">✕</button>
+      </div>
+    </div>`).join(''):'<div class="empty">Sem registros nesta data</div>');
   document.getElementById('ajFormCard').style.display='block';
   document.getElementById('ajHora').value=new Date().toTimeString().slice(0,5);
 }
 
-async function excluirReg(id){if(!confirm('Excluir registro?'))return;try{await db.collection('registros').doc(id).delete();toast('Excluído');carregarPontosAjuste();}catch(e){toast('Erro');}}
+async function excluirReg(id){
+  if(!confirm('Excluir este registro?'))return;
+  try{await db.collection('registros').doc(id).delete();toast('Excluído');carregarPontosAjuste();}
+  catch(e){toast('Erro ao excluir');}
+}
+
+function editarReg(id,tipoAtual,horaAtual){
+  // Preenche o formulário de ajuste com os dados do registro para edição
+  const tipoEl=document.getElementById('ajTipo');
+  const horaEl=document.getElementById('ajHora');
+  // Seleciona o tipo correto
+  for(var i=0;i<tipoEl.options.length;i++){
+    if(tipoEl.options[i].text===tipoAtual||tipoEl.options[i].value===tipoAtual){tipoEl.selectedIndex=i;break;}
+  }
+  horaEl.value=horaAtual;
+  // Scroll para o formulário
+  document.getElementById('ajFormCard').scrollIntoView({behavior:'smooth'});
+  // Muda o botão para salvar como edição (exclui o antigo e salva novo)
+  var btnSalvar=document.querySelector('#ajFormCard .btn-orange');
+  if(btnSalvar){
+    btnSalvar.textContent='💾 Salvar edição';
+    btnSalvar.setAttribute('data-editando',id);
+    btnSalvar.onclick=async function(){
+      var oldId=this.getAttribute('data-editando');
+      // Deleta o registro antigo
+      try{await db.collection('registros').doc(oldId).delete();}catch(e){}
+      // Remove data-editando e restaura botão
+      this.removeAttribute('data-editando');
+      this.textContent='✏️ Salvar ajuste';
+      this.onclick=salvarAjuste;
+      // Salva o novo
+      await salvarAjuste();
+    };
+  }
+  toast('Edite o horário e clique em Salvar edição');
+}
 
 async function salvarAjuste(){
   const fid=document.getElementById('ajFunc').value,di=document.getElementById('ajData').value;if(!fid||!di){toast('Selecione funcionário e data');return;}
