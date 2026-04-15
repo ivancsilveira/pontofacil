@@ -541,6 +541,44 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </div>
     </div>
 
+    <!-- LOGS -->
+    <div class="screen" id="sc-logs">
+      <div class="card">
+        <div class="card-title">Filtros</div>
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="form-group">
+            <label class="form-label">Data</label>
+            <input type="date" class="form-control" id="logData" onchange="carregarLogs()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Funcionário</label>
+            <select class="form-control" id="logFunc" onchange="carregarLogs()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label">Tipo de ação</label>
+          <select class="form-control" id="logTipo" onchange="carregarLogs()">
+            <option value="">Todas as ações</option>
+            <option value="ponto_registrado">Ponto registrado</option>
+            <option value="ponto_editado">Ponto editado</option>
+            <option value="ponto_excluido">Ponto excluído</option>
+            <option value="func_cadastrado">Funcionário cadastrado</option>
+            <option value="func_editado">Funcionário editado</option>
+            <option value="func_excluido">Funcionário excluído</option>
+            <option value="ajuste_ponto">Ajuste de ponto</option>
+            <option value="ferias_registradas">Férias registradas</option>
+            <option value="ferias_excluidas">Férias excluídas</option>
+            <option value="fechamento">Fechamento mensal</option>
+            <option value="login">Login</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="carregarLogs()" style="width:auto">🔍 Buscar</button>
+      </div>
+      <div id="logsLista"><div class="empty">Selecione um período para consultar</div></div>
+    </div>
+
     <!-- CONFIG -->
     <div class="screen" id="sc-config">
       <div class="card">
@@ -611,6 +649,9 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   <div class="bottom-nav no-print">
     <!-- LINHA 1: Funcionários (sempre visível) -->
     <div class="nav-row">
+      <button class="nav-item active admin-nav" onclick="goScreen('dashboard','nav0')" id="nav0" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard
+      </button>
       <button class="nav-item active" onclick="goScreen('ponto','nav1')" id="nav1">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Ponto
       </button>
@@ -622,9 +663,6 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </button>
       <button class="nav-item admin-nav" onclick="goScreen('ferias','navF')" id="navF" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8 2 4 5 4 9c0 5 8 13 8 13s8-8 8-13c0-4-4-7-8-7z"/><circle cx="12" cy="9" r="2.5"/></svg>Férias
-      </button>
-      <button class="nav-item active admin-nav" onclick="goScreen('dashboard','nav0')" id="nav0" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard
       </button>
     </div>
     <!-- LINHA 2: Admin (só aparece para admin) -->
@@ -640,6 +678,9 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </button>
       <button class="nav-item admin-nav" onclick="goScreen('fechamento','nav7')" id="nav7">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Fechamento
+      </button>
+      <button class="nav-item admin-nav" onclick="goScreen('logs','navL')" id="navL">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Logs
       </button>
       <button class="nav-item admin-nav" onclick="goScreen('config','nav8')" id="nav8">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Config
@@ -839,7 +880,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.50 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.53 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1003,7 +1044,12 @@ async function capturarLoginFacial(){
               } else {
                 var doc = await db.collection('funcionarios').doc(melhor.func.id).get();
                 S.user = Object.assign({id:doc.id}, doc.data());
-                S.isAdmin = S.user.isAdmin||false;
+                // Se CPF é do master, força admin
+                if(S.user.cpf==='495.256.629-34'){
+                  S.isAdmin=true; S.user.isAdmin=true;
+                } else {
+                  S.isAdmin = S.user.isAdmin||false;
+                }
               }
               try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
               document.getElementById('loginWrap').style.display='none';
@@ -1037,6 +1083,7 @@ async function doLogin(){
       S.user={id:'admin',nome:'Administrador',cpf:cpf,empresa:'ambas',isAdmin:true};
       S.isAdmin=true;
       try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
+      registrarLog('login','Login: '+S.user.nome,{funcId:S.user.id,funcNome:S.user.nome,detalhes:'Acesso ao sistema'});
       document.getElementById('loginWrap').style.display='none';
       document.getElementById('appWrap').style.display='flex';
       iniciarApp();
@@ -1133,6 +1180,7 @@ async function iniciarApp(){
     document.querySelectorAll('.admin-nav').forEach(el=>el.style.display='');
     document.getElementById('adminAgendaInfo').style.display='block';
     var empTabs=document.getElementById('dashEmpTabs');if(empTabs)empTabs.style.display='flex';
+    var navL=document.getElementById('navL');if(navL)navL.style.display='';
     // Mostrar linha 2 do nav (admin) e itens corretos
     var navRowAdmin=document.getElementById('navRowAdmin');
     if(navRowAdmin) navRowAdmin.style.display='flex';
@@ -1553,6 +1601,7 @@ async function _registrarPonto(tipo,fotoB64,statusFacial,faceOk,confianca){
   try{
     var ref=await db.collection('registros').add(reg);
     reg.id=ref.id; S.registros.unshift(reg);
+    registrarLog('ponto_registrado',tipo+' registrado às '+reg.hora,{funcId:S.user.id,funcNome:S.user.nome,detalhes:tipo+' · '+reg.data+' '+reg.hora+(reg.atraso?' ⚠️ +'+reg.minAtraso+'min atraso':'')});
     renderRegistrosHoje(); calcTotal();
     var faceMsg=statusFacial==='confirmado'?' · 🤖 '+confianca+'%':statusFacial==='revisao_manual'?' · ⚠️ Revisão':'';
     toast('✅ '+tipo+' às '+reg.hora+(atraso?' ⚠️ +'+minAtraso+'min':'')+faceMsg);
@@ -1915,6 +1964,137 @@ function _renderDashLista(){
 }
 function irParaAjuste(fid,dataBR){goScreen('ajustes','nav4');document.getElementById('ajFunc').value=fid;const p=dataBR.split('/');document.getElementById('ajData').value=p[2]+'-'+p[1]+'-'+p[0];carregarPontosAjuste();}
 
+// Editar registros de um dia direto pelo fechamento
+async function editarDiaFechamento(funcId, dataBR){
+  // dataBR = dd/mm/yyyy
+  if(!funcId){toast('Funcionário não identificado');return;}
+  const p=dataBR.split('/');
+  const dataISO=p[2]+'-'+p[1]+'-'+p[0];
+
+  // Busca registros do dia no Firebase
+  let regs=[];
+  try{
+    const snap=await db.collection('registros').where('funcionarioId','==',funcId).where('data','==',dataBR).get();
+    regs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  }catch(e){}
+
+  const func=S.funcionarios.find(f=>f.id===funcId);
+  const nomeFuncionario=func?func.nome:'Funcionário';
+
+  // Monta modal de edição do dia
+  var modal=document.getElementById('modalEditDiaFech');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='modalEditDiaFech';
+    modal.className='modal-bg';
+    modal.innerHTML=`<div class="modal" style="max-width:420px">
+      <h2 id="editDiaTit">✏️ Editar dia</h2>
+      <div id="editDiaRegs" style="margin-bottom:14px"></div>
+      <div style="background:var(--gray-light);border-radius:8px;padding:12px;margin-bottom:14px">
+        <div class="card-title" style="margin-bottom:8px">Adicionar registro</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="form-control" id="editDiaTipo" style="flex:2;min-width:120px">
+            <option>Entrada</option>
+            <option>Início intervalo</option>
+            <option>Retorno intervalo</option>
+            <option>Saída</option>
+          </select>
+          <input type="time" class="form-control" id="editDiaHora" style="flex:1;min-width:90px">
+          <button onclick="adicionarRegEditDia()" style="background:var(--blue);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">+ Add</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-solid btn-sm" style="flex:1" onclick="document.getElementById('modalEditDiaFech').classList.remove('open');document.getElementById('modalFechDetalhe').classList.add('open')">✅ Concluído</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click',function(e){if(e.target===modal){modal.classList.remove('open');document.getElementById('modalFechDetalhe').classList.add('open');}});
+  }
+
+  // Fecha o modal do fechamento e abre o de edição
+  document.getElementById('modalFechDetalhe').classList.remove('open');
+
+  // Guarda contexto
+  modal._funcId=funcId;
+  modal._dataBR=dataBR;
+  modal._dataISO=dataISO;
+  modal._nomeFuncionario=nomeFuncionario;
+
+  document.getElementById('editDiaTit').textContent='✏️ '+nomeFuncionario+' — '+dataBR;
+  document.getElementById('editDiaHora').value=new Date().toTimeString().slice(0,5);
+  renderEditDiaRegs(regs, funcId, dataBR);
+  modal.classList.add('open');
+}
+
+function renderEditDiaRegs(regs, funcId, dataBR){
+  const el=document.getElementById('editDiaRegs');
+  if(!regs.length){
+    el.innerHTML='<div class="empty">Nenhum registro neste dia</div>';
+    return;
+  }
+  el.innerHTML=regs.map(r=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">${r.tipo} ${r.ajuste?'<span class="ajuste-badge">✏️</span>':''}</div>
+        <div style="font-size:11px;color:var(--gray)">${r.ajuste?'por '+r.ajustadoPor:'GPS ✓'}</div>
+      </div>
+      <input type="time" value="${r.hora}" onchange="atualizarHoraReg('${r.id}',this.value,'${r.tipo}','${r.funcionarioId}','${r.data}')" style="border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;font-weight:600;width:90px">
+      <button onclick="excluirRegDiaFech('${r.id}','${funcId}','${dataBR}')" style="background:var(--red-light);color:var(--red);border:1px solid #fca5a5;border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer">✕</button>
+    </div>`).join('');
+}
+
+async function atualizarHoraReg(id, novaHora, tipo, funcId, dataBR){
+  const p=dataBR.split('/');
+  const bd=new Date(p[2]+'-'+p[1]+'-'+p[0]+'T'+novaHora+':00');
+  try{
+    await db.collection('registros').doc(id).update({
+      hora:novaHora, timestamp:bd.getTime(),
+      ajuste:true, ajustadoPor:S.user.nome, ajustadoEm:new Date().toISOString(),
+      motivo:'edicao_fechamento', motivoLabel:'Editado no fechamento'
+    });
+    toast('✅ Horário atualizado');
+  }catch(e){toast('Erro: '+e.message);}
+}
+
+async function excluirRegDiaFech(regId, funcId, dataBR){
+  if(!confirm('Excluir este registro?'))return;
+  try{
+    await db.collection('registros').doc(regId).delete();
+    toast('Registro excluído');
+    // Recarrega registros
+    const snap=await db.collection('registros').where('funcionarioId','==',funcId).where('data','==',dataBR).get();
+    const regs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+    renderEditDiaRegs(regs, funcId, dataBR);
+  }catch(e){toast('Erro: '+e.message);}
+}
+
+async function adicionarRegEditDia(){
+  const modal=document.getElementById('modalEditDiaFech');
+  const funcId=modal._funcId, dataBR=modal._dataBR, dataISO=modal._dataISO;
+  const tipo=document.getElementById('editDiaTipo').value;
+  const hora=document.getElementById('editDiaHora').value;
+  if(!hora){toast('Informe o horário');return;}
+  const p=dataBR.split('/');
+  const bd=new Date(p[2]+'-'+p[1]+'-'+p[0]+'T'+hora+':00');
+  const func=S.funcionarios.find(f=>f.id===funcId);
+  const reg={
+    funcionarioId:funcId, funcionarioNome:func?func.nome:'',
+    tipo, data:dataBR, hora, timestamp:bd.getTime(),
+    mes:dataISO.slice(0,7), empresa:func?func.empresa:'1',
+    empresaNome:func&&func.empresa==='2'?S.config.empresaB.nome:S.config.empresaA.nome,
+    ajuste:true, motivo:'edicao_fechamento', motivoLabel:'Adicionado no fechamento',
+    ajustadoPor:S.user.nome, ajustadoEm:new Date().toISOString(),
+    atraso:false, minAtraso:0
+  };
+  try{
+    await db.collection('registros').add(reg);
+    toast('✅ Registro adicionado');
+    const snap=await db.collection('registros').where('funcionarioId','==',funcId).where('data','==',dataBR).get();
+    const regs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+    renderEditDiaRegs(regs, funcId, dataBR);
+  }catch(e){toast('Erro: '+e.message);}
+}
+
 /* NAV */
 function goScreen(sc,navId){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -1957,6 +2137,12 @@ function goScreen(sc,navId){
     if(mRef&&!mRef.value) mRef.value=new Date().toISOString().slice(0,7);
   }
   if(sc==='config'){carregarConfigUI();renderFeriados();}
+  if(sc==='logs'){
+    popularSelectFunc('logFunc');
+    var ld=document.getElementById('logData');
+    if(ld&&!ld.value) ld.value=new Date().toISOString().slice(0,10);
+    carregarLogs();
+  }
   if(sc==='ferias'){popularSelectFerias();renderFerias();}
 }
 
@@ -2147,6 +2333,8 @@ async function salvarEdicaoRegHistorico(){
       motivoLabel:'Edição admin'
     });
     document.getElementById('modalEditReg').classList.remove('open');
+    const fn10=S.funcionarios.find(f=>f.id===funcId);
+    registrarLog('ponto_editado','Registro editado no histórico: '+novoTipo+' às '+novaHora,{funcId,funcNome:fn10?fn10.nome:'',detalhes:dataBR+' · '+novoTipo+' '+novaHora});
     toast('✅ Registro atualizado!');
     carregarHistorico();
   }catch(e){toast('Erro ao salvar: '+e.message);}
@@ -2190,7 +2378,7 @@ async function carregarPontosAjuste(){
 
 async function excluirReg(id){
   if(!confirm('Excluir este registro?'))return;
-  try{await db.collection('registros').doc(id).delete();toast('Excluído');carregarPontosAjuste();}
+  try{await db.collection('registros').doc(id).delete();registrarLog('ponto_excluido','Registro de ponto excluído',{detalhes:'ID: '+id});toast('Excluído');carregarPontosAjuste();}
   catch(e){toast('Erro ao excluir');}
 }
 
@@ -2250,7 +2438,7 @@ async function salvarAjuste(){
     }
   }
   const reg={funcionarioId:fid,funcionarioNome:func?.nome||'',tipo:tipoAj,empresa:empId,empresaNome:empId==='2'?S.config.empresaB.nome:S.config.empresaA.nome,data:dataBR,hora,timestamp:bd.getTime(),mes:di.slice(0,7),ajuste:true,motivo,motivoLabel,obs:document.getElementById('ajObs').value,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj};
-  try{await db.collection('registros').add(reg);toast('✅ Ajuste salvo com identificação');carregarPontosAjuste();carregarDashboard();}catch(e){toast('Erro ao salvar');}
+  try{await db.collection('registros').add(reg);registrarLog('ajuste_ponto','Ajuste de ponto: '+reg.tipo+' às '+reg.hora,{funcId:fid,funcNome:reg.funcionarioNome,detalhes:reg.motivoLabel+' · '+reg.data+' '+reg.hora});toast('✅ Ajuste salvo com identificação');carregarPontosAjuste();carregarDashboard();}catch(e){toast('Erro ao salvar');}
 }
 
 /* ESCALAS */
@@ -2415,6 +2603,7 @@ async function cadastrarFunc(){
     const ref=await db.collection('funcionarios').add(func);
     S.funcionarios.push({id:ref.id,...func});
     fecharModalFunc();renderEquipe();carregarDashboard();
+    registrarLog('func_cadastrado','Funcionário cadastrado: '+nome,{funcId:ref.id,funcNome:nome,detalhes:'CPF: '+cpf});
     toast('✅ '+nome+' cadastrado!');
     ['fNome','fCpf','fCargo','fSenha','fFotoBase64','fAdmissao','fHorasMes','fEmail','fTelefone'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('fFotoPreview').innerHTML='👤';
@@ -2447,12 +2636,13 @@ function apagarFotoFunc(){
   if(prev)prev.innerHTML='👤';
   toast('Foto marcada para apagar. Clique em Salvar.');
 }
-async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
+async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);const fn=S.funcionarios.find(f=>f.id===id);registrarLog('func_editado','Funcionário editado: '+(fn?fn.nome:''),{funcId:id,funcNome:fn?fn.nome:'',detalhes:'Dados atualizados'});fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
 async function excluirFunc(id,nome){
   if(!confirm('⚠️ EXCLUIR permanentemente '+nome+'?\n\nEsta ação não pode ser desfeita. Todos os registros de ponto serão mantidos, mas o funcionário não poderá mais fazer login.'))return;
   try{
     await db.collection('funcionarios').doc(id).delete();
     S.funcionarios=S.funcionarios.filter(f=>f.id!==id);
+    registrarLog('func_excluido','Funcionário excluído: '+nome,{funcId:id,funcNome:nome,detalhes:'Excluído permanentemente'});
     renderEquipe();
     carregarDashboard();
     toast('🗑 '+nome+' excluído do sistema');
@@ -2499,6 +2689,7 @@ async function fecharMes(){
   try{
     const ref=await db.collection('fechamentos').add(fech);
     S.fechamentos.unshift({id:ref.id,...fech});
+    registrarLog('fechamento','Fechamento gerado: '+mesLabel,{detalhes:(S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho')+' · '+funcList.length+' funcionários'});
     renderFechamentos();
     enviarEmail(fech);
     toast('✅ Mês fechado com sucesso!');
@@ -2581,7 +2772,11 @@ function verFechamento(id){
           <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--red)">${saida?saida.hora:'—'}</td>
           <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">${m2h(mins)}</td>
           <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:${isFerF?'#ea580c':saldo>=0?'var(--green)':'var(--red)'}">${isFerF?ferLabel:(saldo>=0?'+':'')+m2h(saldo)}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center">${temAtraso?'⚠️':''}${temAjuste?'✏️':''}</td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center">
+            ${temAtraso?'<span title="Atraso">⚠️</span>':''}
+            ${temAjuste?'<span class="ajuste-badge" style="font-size:9px">✏️</span>':''}
+            <button onclick="editarDiaFechamento('${func?func.id:''}','${data}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;margin-left:2px" title="Editar registros do dia">✏️</button>
+          </td>
         </tr>`;
       });
     }
@@ -3164,6 +3359,87 @@ async function toggleAparecerLista(id,valor){
     toast(valor?'✅ Aparecerá na lista de funcionários':'👁 Ocultado da lista');
   }catch(e){toast('Erro: '+e.message);}
 }
+
+/* ===== SISTEMA DE LOGS ===== */
+async function registrarLog(tipo, descricao, dadosExtra){
+  try{
+    const agora=new Date();
+    const log={
+      tipo,
+      descricao,
+      operadorId: S.user?S.user.id:'sistema',
+      operadorNome: S.user?S.user.nome:'Sistema',
+      operadorAdmin: S.isAdmin||false,
+      timestamp: agora.getTime(),
+      data: agora.toLocaleDateString('pt-BR'),
+      hora: agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      ...dadosExtra
+    };
+    await db.collection('logs').add(log);
+  }catch(e){/* silencia erro de log para não atrapalhar fluxo */}
+}
+
+async function carregarLogs(){
+  const el=document.getElementById('logsLista');
+  if(!el)return;
+  el.innerHTML='<div class="empty">Carregando...</div>';
+  const dataFiltro=document.getElementById('logData').value;
+  const funcFiltro=document.getElementById('logFunc').value;
+  const tipoFiltro=document.getElementById('logTipo').value;
+  if(!dataFiltro){el.innerHTML='<div class="empty">Selecione uma data para consultar</div>';return;}
+  const dataBR=dataFiltro.split('-').reverse().join('/');
+  try{
+    let query=db.collection('logs').where('data','==',dataBR);
+    const snap=await query.orderBy('timestamp','desc').get();
+    let logs=snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Filtros em JS
+    if(funcFiltro) logs=logs.filter(l=>l.funcId===funcFiltro||l.funcNome===funcFiltro||(l.funcIds&&l.funcIds.includes(funcFiltro)));
+    if(tipoFiltro) logs=logs.filter(l=>l.tipo===tipoFiltro);
+    if(!logs.length){el.innerHTML='<div class="empty">Nenhum registro encontrado</div>';return;}
+    const cores={
+      ponto_registrado:'var(--green)',ponto_editado:'var(--amber)',ponto_excluido:'var(--red)',
+      ajuste_ponto:'var(--orange)',func_cadastrado:'var(--blue)',func_editado:'var(--blue)',
+      func_excluido:'var(--red)',ferias_registradas:'#16a34a',ferias_excluidas:'var(--red)',
+      fechamento:'var(--teal)',login:'var(--purple)',outro:'var(--gray)'
+    };
+    const icones={
+      ponto_registrado:'🕐',ponto_editado:'✏️',ponto_excluido:'🗑',ajuste_ponto:'✏️',
+      func_cadastrado:'👤',func_editado:'✏️',func_excluido:'🗑',ferias_registradas:'🏖️',
+      ferias_excluidas:'🗑',fechamento:'🔒',login:'🔑',outro:'📋'
+    };
+    el.innerHTML=logs.map(l=>{
+      const cor=cores[l.tipo]||cores.outro;
+      const ico=icones[l.tipo]||'📋';
+      return `<div style="border-left:3px solid ${cor};padding:10px 12px;margin-bottom:8px;background:#fff;border-radius:0 8px 8px 0;box-shadow:var(--shadow)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${ico} ${l.descricao}</div>
+            ${l.funcNome?`<div style="font-size:11px;color:var(--gray);margin-top:2px">👤 Funcionário: <strong>${l.funcNome}</strong></div>`:''}
+            <div style="font-size:11px;color:var(--gray);margin-top:2px">🔧 Por: <strong>${l.operadorNome}</strong>${l.operadorAdmin?' (Admin)':''}</div>
+            ${l.detalhes?`<div style="font-size:11px;color:var(--gray);margin-top:3px;font-style:italic">${l.detalhes}</div>`:''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:12px;font-weight:700;color:${cor}">${l.hora}</div>
+            <div style="font-size:10px;color:var(--gray)">${l.data}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    // Índice não existe ainda, tenta sem orderBy
+    try{
+      const snap=await db.collection('logs').where('data','==',dataBR).get();
+      let logs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+      if(funcFiltro) logs=logs.filter(l=>l.funcId===funcFiltro);
+      if(tipoFiltro) logs=logs.filter(l=>l.tipo===tipoFiltro);
+      if(!logs.length){el.innerHTML='<div class="empty">Nenhum registro encontrado</div>';return;}
+      const cores={ponto_registrado:'var(--green)',ponto_editado:'var(--amber)',ponto_excluido:'var(--red)',ajuste_ponto:'var(--orange)',func_cadastrado:'var(--blue)',func_editado:'var(--blue)',func_excluido:'var(--red)',ferias_registradas:'#16a34a',ferias_excluidas:'var(--red)',fechamento:'var(--teal)',login:'var(--purple)',outro:'var(--gray)'};
+      const icones={ponto_registrado:'🕐',ponto_editado:'✏️',ponto_excluido:'🗑',ajuste_ponto:'✏️',func_cadastrado:'👤',func_editado:'✏️',func_excluido:'🗑',ferias_registradas:'🏖️',ferias_excluidas:'🗑',fechamento:'🔒',login:'🔑',outro:'📋'};
+      el.innerHTML=logs.map(l=>{const cor=cores[l.tipo]||cores.outro;const ico=icones[l.tipo]||'📋';return `<div style="border-left:3px solid ${cor};padding:10px 12px;margin-bottom:8px;background:#fff;border-radius:0 8px 8px 0;box-shadow:var(--shadow)"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div style="flex:1"><div style="font-weight:600;font-size:13px">${ico} ${l.descricao}</div>${l.funcNome?`<div style="font-size:11px;color:var(--gray);margin-top:2px">👤 Funcionário: <strong>${l.funcNome}</strong></div>`:''}<div style="font-size:11px;color:var(--gray);margin-top:2px">🔧 Por: <strong>${l.operadorNome}</strong>${l.operadorAdmin?' (Admin)':''}</div>${l.detalhes?`<div style="font-size:11px;color:var(--gray);margin-top:3px;font-style:italic">${l.detalhes}</div>`:''}</div><div style="text-align:right;flex-shrink:0"><div style="font-size:12px;font-weight:700;color:${cor}">${l.hora}</div><div style="font-size:10px;color:var(--gray)">${l.data}</div></div></div></div>`;}).join('');
+    }catch(e2){el.innerHTML='<div class="empty">Erro ao carregar logs: '+e2.message+'</div>';}
+  }
+}
+
 
 /* TOAST */
 function toast(msg){const o=document.getElementById('_t');if(o)o.remove();const el=document.createElement('div');el.id='_t';el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3500);}
