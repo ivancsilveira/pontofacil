@@ -251,6 +251,14 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="form-group" style="margin-bottom:10px"><label class="form-label">Senha</label><input class="form-control" type="password" id="loginSenha" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn btn-solid" onclick="doLogin()">Entrar</button>
     <div id="loginErro" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-top:8px;font-weight:500"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin:12px 0">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:11px;color:var(--gray)">ou</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <button class="btn" onclick="loginFacial()" style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;font-size:14px;font-weight:600">
+      📷 Entrar por reconhecimento facial
+    </button>
     <div style="margin-top:12px;text-align:center">
       <button onclick="document.getElementById('esqueciWrap').style.display='block'" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;text-decoration:underline">Esqueci minha senha</button>
     </div>
@@ -264,10 +272,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div style="font-size:12px;color:var(--gray);margin-top:4px">Informe seu email para receber a senha</div>
     </div>
     <div class="form-group" style="margin-bottom:14px">
-      <label class="form-label">Seu email</label>
-      <input class="form-control" type="email" id="esqueciEmail" placeholder="seu@email.com">
+      <label class="form-label">Email ou CPF cadastrado</label>
+      <input class="form-control" id="esqueciEmail" placeholder="seu@email.com ou 000.000.000-00">
     </div>
-    <button class="btn btn-solid" onclick="enviarSenhaEmail()" style="margin-bottom:8px">Enviar senha por email</button>
+    <button class="btn btn-solid" onclick="enviarSenhaEmail()" style="margin-bottom:8px">🔍 Buscar e enviar senha</button>
     <button onclick="document.getElementById('esqueciWrap').style.display='none'" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:12px;width:100%;text-align:center">← Voltar ao login</button>
     <div id="esqueciMsg" style="display:none;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-top:8px"></div>
   </div>
@@ -292,6 +300,12 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
           <div class="dash-stat" id="statFolgas" onclick="filtrarDash('folgas')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFolgas">0</div><div class="dash-stat-l">Folgas</div></div>
           <div class="dash-stat" id="statAtrasos" onclick="filtrarDash('atrasos')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashAtrasos">0</div><div class="dash-stat-l">Atrasos</div></div>
         </div>
+      </div>
+      <!-- Filtro de empresa -->
+      <div class="emp-tabs admin-nav" style="margin-bottom:8px;display:none" id="dashEmpTabs">
+        <button class="emp-tab active" id="dashEmp0" onclick="filtrarDashEmp(0)">Todas</button>
+        <button class="emp-tab" id="dashEmp1" onclick="filtrarDashEmp(1)">V. Canziani</button>
+        <button class="emp-tab" id="dashEmp2" onclick="filtrarDashEmp(2)">V. Bistro</button>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div id="dashFiltroLabel" style="font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.06em">Funcionários — ordem alfabética</div>
@@ -699,6 +713,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="fAdmissao"></div>
         <div class="form-group"><label class="form-label">Horas/mês contratadas</label><input class="form-control" type="number" id="fHorasMes" placeholder="Ex: 220" min="1" max="300"></div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" type="email" id="fEmail" placeholder="email@exemplo.com"></div>
+        <div class="form-group"><label class="form-label">Celular (WhatsApp)</label><input class="form-control" type="tel" id="fTelefone" placeholder="(44) 99999-9999" inputmode="numeric"></div>
+      </div>
       <div class="form-group"><label class="form-label">Senha *</label><input class="form-control" type="password" id="fSenha" placeholder="Mínimo 6 caracteres"></div>
       <div class="form-group">
         <label class="form-label">Foto de referência (reconhecimento facial)</label>
@@ -736,6 +754,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-row">
         <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="editAdmissao"></div>
         <div class="form-group"><label class="form-label">Horas/mês contratadas</label><input class="form-control" type="number" id="editHorasMes" placeholder="Ex: 220" min="1" max="300"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" type="email" id="editEmail" placeholder="email@exemplo.com"></div>
+        <div class="form-group"><label class="form-label">Celular (WhatsApp)</label><input class="form-control" type="tel" id="editTelefone" placeholder="(44) 99999-9999" inputmode="numeric"></div>
       </div>
       <div class="form-group"><label class="form-label">Nova senha (em branco = manter)</label><input class="form-control" type="password" id="editSenha"></div>
       <div class="form-group">
@@ -783,7 +805,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.39 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.43 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -825,6 +847,134 @@ var MOTIVOS = {atestado:'🏥 Atestado',saida_autorizada:'✅ Saída autorizada'
 function fmtCpf(v){v=v.replace(/\D/g,'').slice(0,11);return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');}
 
 /* LOGIN */
+// ===== LOGIN POR RECONHECIMENTO FACIAL =====
+var _loginFacialStream = null;
+
+async function loginFacial(){
+  // Cria overlay de câmera
+  var overlay = document.getElementById('loginFacialOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'loginFacialOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:12px">📷 Reconhecimento facial</div>
+      <div style="position:relative;width:100%;max-width:320px;margin-bottom:12px">
+        <video id="loginFacialVideo" autoplay playsinline style="width:100%;border-radius:12px;display:block"></video>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:180px;height:180px;border:3px solid rgba(255,255,255,.8);border-radius:50%;pointer-events:none"></div>
+      </div>
+      <div id="loginFacialStatus" style="color:rgba(255,255,255,.85);font-size:13px;margin-bottom:16px;text-align:center;padding:0 16px">Posicione seu rosto no círculo</div>
+      <div id="loginFacialResult" style="margin-bottom:12px;width:100%;max-width:320px"></div>
+      <button id="loginFacialBtn" onclick="capturarLoginFacial()" style="background:#fff;color:#1a1a2e;border:none;padding:13px 32px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer">📸 Identificar</button>
+      <button onclick="fecharLoginFacial()" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);padding:10px 24px;border-radius:50px;font-size:13px;cursor:pointer;margin-top:10px">✕ Cancelar</button>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  document.getElementById('loginFacialStatus').textContent = 'Iniciando câmera...';
+  document.getElementById('loginFacialResult').innerHTML = '';
+  document.getElementById('loginFacialBtn').disabled = false;
+  document.getElementById('loginFacialBtn').textContent = '📸 Identificar';
+  try{
+    _loginFacialStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+    document.getElementById('loginFacialVideo').srcObject = _loginFacialStream;
+    document.getElementById('loginFacialStatus').textContent = 'Posicione seu rosto no círculo e clique em Identificar';
+  }catch(e){
+    document.getElementById('loginFacialStatus').textContent = '⚠️ Câmera não disponível: '+e.message;
+  }
+}
+
+function fecharLoginFacial(){
+  if(_loginFacialStream){ _loginFacialStream.getTracks().forEach(t=>t.stop()); _loginFacialStream=null; }
+  var overlay = document.getElementById('loginFacialOverlay');
+  if(overlay) overlay.style.display = 'none';
+}
+
+async function capturarLoginFacial(){
+  var video = document.getElementById('loginFacialVideo');
+  var statusEl = document.getElementById('loginFacialStatus');
+  var resultEl = document.getElementById('loginFacialResult');
+  var btn = document.getElementById('loginFacialBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analisando...';
+  statusEl.textContent = 'Capturando foto...';
+
+  // Captura frame
+  var canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 320;
+  canvas.height = video.videoHeight || 240;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  var fotoCapturada = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+
+  // Busca todos funcionários com foto cadastrada
+  statusEl.textContent = 'Buscando funcionários...';
+  var funcionarios = [];
+  try{
+    var snap = await db.collection('funcionarios').get();
+    funcionarios = snap.docs.map(d=>({id:d.id,...d.data()})).filter(f=>f.fotoCadastro&&!f.inativo&&!f.isAdmin);
+  }catch(e){
+    statusEl.textContent = '❌ Erro ao conectar: '+e.message;
+    btn.disabled=false; btn.textContent='📸 Tentar novamente';
+    return;
+  }
+
+  if(!funcionarios.length){
+    statusEl.textContent = '⚠️ Nenhum funcionário com foto cadastrada';
+    btn.disabled=false; btn.textContent='📸 Tentar novamente';
+    return;
+  }
+
+  // Compara com cada funcionário
+  statusEl.textContent = 'Comparando com '+funcionarios.length+' foto(s)...';
+
+  function imgSim(b64a, b64b, cb){
+    var SZ=64;
+    function load(b64,done){var img=new Image();img.onload=function(){var c=document.createElement('canvas');c.width=SZ;c.height=SZ;var ctx=c.getContext('2d');ctx.drawImage(img,0,0,SZ,SZ);done(ctx.getImageData(0,0,SZ,SZ).data);};img.src='data:image/jpeg;base64,'+b64;}
+    load(b64a,function(da){load(b64b,function(db2){var diff=0,n=da.length;for(var i=0;i<n;i+=4){diff+=Math.abs(da[i]-db2[i])+Math.abs(da[i+1]-db2[i+1])+Math.abs(da[i+2]-db2[i+2]);}cb(1-diff/(255*3*SZ*SZ));});});
+  }
+
+  var resultados = [];
+  var pending = funcionarios.length;
+
+  funcionarios.forEach(function(f){
+    imgSim(f.fotoCadastro, fotoCapturada, function(sim){
+      resultados.push({func:f, sim:sim, confianca:Math.round(sim*100)});
+      pending--;
+      if(pending === 0){
+        // Ordena pelo maior match
+        resultados.sort((a,b)=>b.sim-a.sim);
+        var melhor = resultados[0];
+
+        if(melhor.confianca >= 55){
+          // Reconheceu!
+          resultEl.innerHTML = '<div style="background:rgba(45,122,58,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">✅ Olá, '+melhor.func.nome.split(' ')[0]+'!<br><span style="font-size:11px;opacity:.8">'+melhor.confianca+'% de similaridade</span></div>';
+          statusEl.textContent = 'Entrando...';
+          setTimeout(async function(){
+            fecharLoginFacial();
+            // Busca dados atualizados
+            try{
+              var doc = await db.collection('funcionarios').doc(melhor.func.id).get();
+              S.user = Object.assign({id:doc.id}, doc.data());
+              S.isAdmin = S.user.isAdmin||false;
+              try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
+              document.getElementById('loginWrap').style.display='none';
+              document.getElementById('appWrap').style.display='flex';
+              iniciarApp();
+            }catch(e){
+              var erroEl=document.getElementById('loginErro');
+              erroEl.textContent='Erro ao carregar dados: '+e.message;erroEl.style.display='block';
+            }
+          }, 1200);
+        } else {
+          resultEl.innerHTML = '<div style="background:rgba(185,28,28,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">❌ Não reconhecido ('+melhor.confianca+'%)<br><span style="font-size:11px;opacity:.8">Use CPF e senha</span></div>';
+          statusEl.textContent = 'Tente novamente com melhor iluminação';
+          btn.disabled=false; btn.textContent='🔄 Tentar novamente';
+        }
+      }
+    });
+  });
+}
+
 async function doLogin(){
   var cpf=document.getElementById('loginCpf').value.trim();
   var senha=document.getElementById('loginSenha').value;
@@ -867,17 +1017,61 @@ async function enviarSenhaEmail(){
   var email=document.getElementById('esqueciEmail').value.trim();
   var msgEl=document.getElementById('esqueciMsg');
   function showMsg(msg,ok){msgEl.textContent=msg;msgEl.style.background=ok?'#e6f4ea':'#fef2f2';msgEl.style.color=ok?'var(--green)':'#b91c1c';msgEl.style.display='block';}
-  if(!email){showMsg('Digite seu email',false);return;}
+  if(!email){showMsg('Digite seu email ou CPF',false);return;}
   try{
+    // Tenta buscar por email
     var snap=await db.collection('funcionarios').where('email','==',email).get();
+    // Se não achou, tenta buscar por CPF
+    if(snap.empty){
+      var cpfLimpo=email.replace(/\D/g,'');
+      if(cpfLimpo.length===11){
+        snap=await db.collection('funcionarios').get();
+        var found=snap.docs.find(d=>(d.data().cpf||'').replace(/\D/g,'')===cpfLimpo);
+        snap={empty:!found,docs:found?[found]:[]};
+      }
+    }
     if(!snap.empty){
       var f=snap.docs[0].data();
-      window.open('mailto:'+email+'?subject=Sua senha PontoFácil&body=Olá '+f.nome+',%0A%0ASua senha é: '+f.senha+'%0A%0ALink: https://ivancsilveira.github.io/pontofacil');
-      showMsg('✅ Email preparado! Confirme o envio.',true);
+      var msg='Olá '+f.nome+'! Sua senha do PontoFácil é: '+f.senha+'%0AAcesse: https://ivancsilveira.github.io/pontofacil';
+      var botoes='';
+      if(f.email){
+        var emailHref='mailto:'+f.email+'?subject=Sua+senha+PontoFacil&body='+encodeURIComponent(msg.replace(/\*/g,''));
+        botoes+='<a href="'+emailHref+'" style="display:block;width:100%;background:#1a56a0;color:#fff;border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;text-align:center;text-decoration:none">📧 Enviar por Email</a>';
+      }
+      if(f.telefone){
+        var tel=f.telefone.replace(/\D/g,'');
+        if(tel.length===11&&tel[0]!=='5') tel='55'+tel;
+        var waHref='https://wa.me/'+tel+'?text='+encodeURIComponent(msg);
+        botoes+='<a href="'+waHref+'" target="_blank" style="display:block;width:100%;background:#25d366;color:#fff;border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none">💬 Enviar por WhatsApp</a>';
+      }
+            if(!botoes){
+        showMsg('Funcionário sem email ou telefone cadastrado. Contate o administrador.',false);
+        return;
+      }
+      msgEl.innerHTML='<div style="font-size:12px;color:#15803d;margin-bottom:8px">✅ Funcionário encontrado: <strong>'+f.nome+'</strong></div>'+botoes;
+      msgEl.style.background='#f0fdf4';msgEl.style.color='#15803d';msgEl.style.display='block';
     } else {
-      showMsg('Email não encontrado. Contate o administrador.',false);
+      showMsg('Não encontrado. Contate o administrador.',false);
     }
   }catch(e){showMsg('Erro ao buscar. Contate o administrador.',false);}
+}
+
+// Enviar senha para funcionário direto da tela Equipe (admin)
+function enviarSenhaFunc(fid){
+  var f=S.funcionarios.find(x=>x.id===fid);
+  if(!f){toast('Funcionário não encontrado');return;}
+  var msg='Olá '+f.nome+'! Sua senha do PontoFácil é: '+f.senha+'%0AAcesse: https://ivancsilveira.github.io/pontofacil';
+  if(!f.email&&!f.telefone){toast('Funcionário sem email ou telefone cadastrado');return;}
+  var opcoes=[];
+  if(f.email) opcoes.push('📧 '+f.email);
+  if(f.telefone) opcoes.push('💬 '+f.telefone);
+  if(f.telefone){
+    var tel=f.telefone.replace(/\D/g,'');
+    if(tel.length===11&&!tel.startsWith('55')) tel='55'+tel;
+    window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg));
+  } else if(f.email){
+    window.open('mailto:'+f.email+'?subject=Sua senha PontoFácil&body='+encodeURIComponent(msg.replace(/\*/g,'')));
+  }
 }
 
 async function iniciarApp(){
@@ -889,6 +1083,7 @@ async function iniciarApp(){
   if(S.isAdmin){
     document.querySelectorAll('.admin-nav').forEach(el=>el.style.display='');
     document.getElementById('adminAgendaInfo').style.display='block';
+    var empTabs=document.getElementById('dashEmpTabs');if(empTabs)empTabs.style.display='flex';
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
     document.getElementById('sc-dashboard').classList.add('active');
@@ -1521,8 +1716,9 @@ async function carregarDashboard(){
     let _filtroCard='faltas';
     if(ehFolga) _filtroCard='folgas';
     else if(entrada||retInt||iniInt||saida) _filtroCard='presentes';
-    if(atrasado&&_filtroCard==='presentes') _filtroCard='atrasos';
-    return `<div class="func-dash-card" data-filtro="${_filtroCard}">
+    // Atrasado aparece em AMBOS: presentes e atrasos
+    const _filtroCardExtra=atrasado&&_filtroCard==='presentes'?'atrasos':'';
+    return `<div class="func-dash-card" data-filtro="${_filtroCard}" data-filtro2="${_filtroCardExtra}" data-empresa="${f.empresa||'1'}">
       <div class="func-dash-header" onclick="toggleDashCard('${cardId}')">
         <div class="avatar" style="${ehFolga?'background:var(--pink-light);color:var(--pink)':''}">${ini}</div>
         <div><div class="func-name">${f.nome}</div><div class="func-info">${f.cargo||'—'}</div></div>
@@ -1613,8 +1809,18 @@ async function rejeitarRevisao(regId){
 
 function toggleDashCard(id){document.getElementById(id).classList.toggle('open');}
 
-// Filtro do dashboard por status
+// Filtro do dashboard
 var _dashFiltro=null;
+var _dashEmpFiltro=0; // 0=todas, 1=Canziani, 2=Bistro
+
+function filtrarDashEmp(emp){
+  _dashEmpFiltro=emp;
+  [0,1,2].forEach(function(i){
+    var el=document.getElementById('dashEmp'+i);
+    if(el) el.classList.toggle('active',i===emp);
+  });
+  _renderDashLista();
+}
 function filtrarDash(tipo){
   // Toggle: clica de novo no mesmo → limpa filtro
   if(_dashFiltro===tipo){
@@ -1642,7 +1848,11 @@ function _renderDashLista(){
   }
   cards.forEach(function(c){
     var filtro=c.getAttribute('data-filtro');
-    c.style.display=(filtro===_dashFiltro)?'':'none';
+    var filtro2=c.getAttribute('data-filtro2')||'';
+    var emp=c.getAttribute('data-empresa')||'1';
+    var passaFiltro=!_dashFiltro||(filtro===_dashFiltro||filtro2===_dashFiltro);
+    var passaEmp=(_dashEmpFiltro===0)||(emp===String(_dashEmpFiltro))||(emp==='ambas');
+    c.style.display=(passaFiltro&&passaEmp)?'':'none';
   });
 }
 function irParaAjuste(fid,dataBR){goScreen('ajustes','nav4');document.getElementById('ajFunc').value=fid;const p=dataBR.split('/');document.getElementById('ajData').value=p[2]+'-'+p[1]+'-'+p[0];carregarPontosAjuste();}
@@ -2092,10 +2302,10 @@ function renderEquipe(){
       <div>
         <div class="func-name">${f.nome} ${f.inativo?'<span style="background:var(--gray-light);color:var(--gray);font-size:10px;padding:1px 6px;border-radius:20px;font-weight:600">Inativo</span>':''}</div>
         <div class="func-info">${f.cargo||'—'} · ${esc?`<span style="color:var(--purple)">${esc.nome}</span>`:`<span style="color:var(--red)">Sem escala</span>`}</div>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;display:flex;gap:8px">${f.admissao?'<span>📅 '+f.admissao.split('-').reverse().join('/')+'</span>':''} ${f.horasMes?'<span>⏱ '+f.horasMes+'h/mês</span>':''}</div>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">${f.admissao?'<span>📅 '+f.admissao.split('-').reverse().join('/')+'</span>':''} ${f.horasMes?'<span>⏱ '+f.horasMes+'h/mês</span>':''} ${f.telefone?'<span>📱 '+f.telefone+'</span>':''} ${f.email?'<span>📧 '+f.email+'</span>':''}</div>
       </div>
       <div class="func-actions">
-        ${!f.inativo?`<button class="btn btn-primary btn-sm" onclick="abrirModalEdit('${f.id}')">Editar</button>`:''}
+        ${!f.inativo?`<button class="btn btn-primary btn-sm" onclick="abrirModalEdit('${f.id}')">Editar</button>`:''}${(!f.inativo&&(f.email||f.telefone))?`<button class="btn btn-teal btn-sm" onclick="enviarSenhaFunc('${f.id}')" title="Enviar senha">🔑</button>`:''}
         <button class="btn btn-sm" onclick="toggleInativar('${f.id}','${f.nome}',${!!f.inativo})" style="padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid;${f.inativo?'background:var(--green-light);color:var(--green);border-color:#a7d7b0':'background:var(--amber-light);color:var(--amber);border-color:#fcd34d'}">${f.inativo?'✅ Reativar':'⏸ Desativar'}</button>
       </div>
     </div>`;
@@ -2121,13 +2331,13 @@ async function cadastrarFunc(){
   if(!nome||!cpf||!senha){toast('Preencha nome, CPF e senha');return;}
   if(senha.length<6){toast('Senha mínimo 6 caracteres');return;}
   const fotoCadastro=document.getElementById('fFotoBase64').value||'';
-  const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,admissao:document.getElementById('fAdmissao').value||'',horasMes:parseInt(document.getElementById('fHorasMes').value)||220,senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
+  const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,admissao:document.getElementById('fAdmissao').value||'',horasMes:parseInt(document.getElementById('fHorasMes').value)||220,email:document.getElementById('fEmail').value.trim()||'',telefone:document.getElementById('fTelefone').value.trim()||'',senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
   try{
     const ref=await db.collection('funcionarios').add(func);
     S.funcionarios.push({id:ref.id,...func});
     fecharModalFunc();renderEquipe();carregarDashboard();
     toast('✅ '+nome+' cadastrado!');
-    ['fNome','fCpf','fCargo','fSenha','fFotoBase64','fAdmissao','fHorasMes'].forEach(id=>document.getElementById(id).value='');
+    ['fNome','fCpf','fCargo','fSenha','fFotoBase64','fAdmissao','fHorasMes','fEmail','fTelefone'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('fFotoPreview').innerHTML='👤';
   }catch(e){toast('Erro ao cadastrar');}
 }
@@ -2141,6 +2351,8 @@ function abrirModalEdit(id){
   document.getElementById('editEscala').value=f.escalaId||'';
   document.getElementById('editAdmissao').value=f.admissao||'';
   document.getElementById('editHorasMes').value=f.horasMes||220;
+  document.getElementById('editEmail').value=f.email||'';
+  document.getElementById('editTelefone').value=f.telefone||'';
   document.getElementById('editSenha').value='';
   document.getElementById('editFotoBase64').value='';
   document.getElementById('editCpfDisplay').textContent=f.cpf||'—';
@@ -2156,7 +2368,7 @@ function apagarFotoFunc(){
   if(prev)prev.innerHTML='👤';
   toast('Foto marcada para apagar. Clique em Salvar.');
 }
-async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
+async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
 async function excluirFunc(id,nome){if(!confirm('Excluir '+nome+'?'))return;S.funcionarios=S.funcionarios.filter(f=>f.id!==id);try{await db.collection('funcionarios').doc(id).delete();renderEquipe();toast('Removido');}catch(e){toast('Erro');}}
 
 /* FECHAMENTO */
