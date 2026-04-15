@@ -248,8 +248,26 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="form-group" style="margin-bottom:11px"><label class="form-label">CPF</label><input class="form-control" type="text" id="loginCpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);" onkeydown="if(event.key==='Enter')document.getElementById('loginSenha').focus()"></div>
     <div class="form-group" style="margin-bottom:10px"><label class="form-label">Senha</label><input class="form-control" type="password" id="loginSenha" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn btn-solid" onclick="doLogin()">Entrar</button>
-    <div id="loginErro" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-top:6px;font-weight:500"></div>
-    <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--border);font-size:11px;color:var(--gray);text-align:center">Admin: <strong>495.256.629-34</strong> / senha: <strong>Ivan252005</strong></div>
+    <div id="loginErro" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-top:8px;font-weight:500"></div>
+    <div style="margin-top:12px;text-align:center">
+      <button onclick="document.getElementById('esqueciWrap').style.display='block'" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;text-decoration:underline">Esqueci minha senha</button>
+    </div>
+  </div>
+
+  <!-- ESQUECI SENHA -->
+  <div id="esqueciWrap" style="display:none" class="login-card">
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:28px;margin-bottom:6px">🔑</div>
+      <div style="font-weight:700;font-size:16px">Recuperar senha</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px">Informe seu email para receber a senha</div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Seu email</label>
+      <input class="form-control" type="email" id="esqueciEmail" placeholder="seu@email.com">
+    </div>
+    <button class="btn btn-solid" onclick="enviarSenhaEmail()" style="margin-bottom:8px">Enviar senha por email</button>
+    <button onclick="document.getElementById('esqueciWrap').style.display='none'" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:12px;width:100%;text-align:center">← Voltar ao login</button>
+    <div id="esqueciMsg" style="display:none;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-top:8px"></div>
   </div>
 </div>
 
@@ -714,33 +732,57 @@ function fmtCpf(v){v=v.replace(/\D/g,'').slice(0,11);return v.replace(/(\d{3})(\
 
 /* LOGIN */
 async function doLogin(){
-  const cpf=document.getElementById('loginCpf').value.trim(),senha=document.getElementById('loginSenha').value;
-  const erroEl=document.getElementById('loginErro');
-  function showErro(msg){if(erroEl){erroEl.textContent=msg;erroEl.style.display='block';setTimeout(()=>erroEl.style.display='none',4000);}}
-  if(!cpf||!senha){showErro('Preencha CPF e senha');return;}
-  // Admin master
-  if(cpf==='495.256.629-34'&&senha==='Ivan252005'){
-    S.user={id:'admin',nome:'Administrador',cpf,empresa:'ambas',isAdmin:true};S.isAdmin=true;
-    document.getElementById('loginWrap').style.display='none';
-    document.getElementById('appWrap').style.display='flex';
-    iniciarApp();return;
+  var cpf=document.getElementById('loginCpf').value.trim();
+  var senha=document.getElementById('loginSenha').value;
+  var erroEl=document.getElementById('loginErro');
+  function showErro(msg){erroEl.textContent=msg;erroEl.style.display='block';setTimeout(function(){erroEl.style.display='none';},4000);}
+  if(!cpf){showErro('Digite seu CPF');return;}
+  if(!senha){showErro('Digite sua senha');return;}
+  if(cpf==='495.256.629-34'){
+    if(senha==='Ivan252005'){
+      S.user={id:'admin',nome:'Administrador',cpf:cpf,empresa:'ambas',isAdmin:true};
+      S.isAdmin=true;
+      document.getElementById('loginWrap').style.display='none';
+      document.getElementById('appWrap').style.display='flex';
+      iniciarApp();
+    } else {
+      showErro('Senha incorreta');
+      document.getElementById('loginSenha').value='';
+    }
+    return;
   }
   try{
-    const snap=await db.collection('funcionarios').where('cpf','==',cpf).get();
+    var snap=await db.collection('funcionarios').where('cpf','==',cpf).get();
+    if(snap.empty){showErro('CPF não encontrado');return;}
+    var doc=snap.docs[0];
+    var data=doc.data();
+    if(data.inativo){showErro('Usuário inativo. Fale com o administrador.');return;}
+    if(data.senha!==senha){showErro('Senha incorreta');document.getElementById('loginSenha').value='';return;}
+    S.user=Object.assign({id:doc.id},data);
+    S.isAdmin=data.isAdmin||false;
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('appWrap').style.display='flex';
+    iniciarApp();
+  }catch(e){showErro('Erro de conexão: '+e.message);}
+}
+
+async function enviarSenhaEmail(){
+  var email=document.getElementById('esqueciEmail').value.trim();
+  var msgEl=document.getElementById('esqueciMsg');
+  function showMsg(msg,ok){msgEl.textContent=msg;msgEl.style.background=ok?'#e6f4ea':'#fef2f2';msgEl.style.color=ok?'var(--green)':'#b91c1c';msgEl.style.display='block';}
+  if(!email){showMsg('Digite seu email',false);return;}
+  try{
+    var snap=await db.collection('funcionarios').where('email','==',email).get();
     if(!snap.empty){
-      const d=snap.docs[0];const data=d.data();
-      if(data.senha===senha){
-        if(data.inativo){
-          showErro('Usuário inativo. Fale com o administrador.');return;
-        }
-        S.user={id:d.id,...data};S.isAdmin=data.isAdmin||false;
-        document.getElementById('loginWrap').style.display='none';
-        document.getElementById('appWrap').style.display='flex';
-        iniciarApp();return;
-      }
+      var f=snap.docs[0].data();
+      window.open('mailto:'+email+'?subject=Sua senha PontoFácil&body=Olá '+f.nome+',%0A%0ASua senha é: '+f.senha+'%0A%0ALink: https://ivancsilveira.github.io/pontofacil');
+      showMsg('✅ Email preparado! Confirme o envio.',true);
+    } else {
+      showMsg('Email não encontrado. Contate o administrador.',false);
     }
-    showErro('CPF ou senha incorretos');
-  }catch(e){showErro('Erro de conexão');}
+  }catch(e){showMsg('Erro ao buscar. Contate o administrador.',false);}
+}
+
 }
 
 async function iniciarApp(){
