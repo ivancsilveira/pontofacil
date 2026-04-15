@@ -880,7 +880,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.57 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.58 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2170,7 +2170,7 @@ function goScreen(sc,navId){
       // Admin: mostra seletor de funcionário
       if(wrap) wrap.style.display='block';
       if(sel){
-        const lista=[...S.funcionarios].filter(f=>!f.inativo&&(!f.isAdmin||f.aparecerNaLista)).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+        const lista=[...S.funcionarios].filter(f=>(!f.isAdmin||f.aparecerNaLista)&&!f.inativo&&f.cpf!=='495.256.629-34').sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
         sel.innerHTML='<option value="">— Selecione funcionário —</option>'+lista.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
       }
     } else {
@@ -2603,7 +2603,7 @@ function popularSelectFunc(id){const el=document.getElementById(id);if(!el)retur
 var _mostrarInativos=false;
 
 function renderEquipe(){
-  const todos=S.funcionarios.filter(f=>f.empresa==S.empEquipe||f.empresa==='ambas').sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const todos=S.funcionarios.filter(f=>((!f.isAdmin||f.aparecerNaLista)&&!f.inativo&&f.cpf!=='495.256.629-34')&&(f.empresa==S.empEquipe||f.empresa==='ambas')).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const ativos=todos.filter(f=>!f.inativo);
   const inativos=todos.filter(f=>f.inativo);
   const lista=_mostrarInativos?todos:ativos;
