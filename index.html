@@ -105,7 +105,7 @@ input,select,button,textarea{font-family:inherit;font-size:inherit}
 .dash-date{font-size:12px;opacity:.8;margin-bottom:4px}
 .dash-title{font-size:17px;font-weight:700}
 .dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
-.dash-stat{background:rgba(255,255,255,.15);border-radius:8px;padding:7px;text-align:center}
+.dash-stat{background:rgba(255,255,255,.15);border-radius:8px;padding:7px;text-align:center;transition:.15s}.dash-stat:hover{background:rgba(255,255,255,.25)}.dash-stat.ativo{background:rgba(255,255,255,.4);outline:2px solid #fff}
 .dash-stat-v{font-size:20px;font-weight:700}
 .dash-stat-l{font-size:9px;opacity:.8;margin-top:1px}
 .func-dash-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:7px;overflow:hidden}
@@ -287,15 +287,15 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="dash-date" id="dashDate">—</div>
         <div class="dash-title">Dashboard de Ponto</div>
         <div class="dash-stats">
-          <div class="dash-stat"><div class="dash-stat-v" id="dashPresentes">0</div><div class="dash-stat-l">Presentes</div></div>
-          <div class="dash-stat"><div class="dash-stat-v" id="dashFaltas">0</div><div class="dash-stat-l">Faltas</div></div>
-          <div class="dash-stat"><div class="dash-stat-v" id="dashFolgas">0</div><div class="dash-stat-l">Folgas</div></div>
-          <div class="dash-stat"><div class="dash-stat-v" id="dashAtrasos">0</div><div class="dash-stat-l">Atrasos</div></div>
+          <div class="dash-stat" id="statPresentes" onclick="filtrarDash('presentes')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashPresentes">0</div><div class="dash-stat-l">Presentes</div></div>
+          <div class="dash-stat" id="statFaltas" onclick="filtrarDash('faltas')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFaltas">0</div><div class="dash-stat-l">Faltas</div></div>
+          <div class="dash-stat" id="statFolgas" onclick="filtrarDash('folgas')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFolgas">0</div><div class="dash-stat-l">Folgas</div></div>
+          <div class="dash-stat" id="statAtrasos" onclick="filtrarDash('atrasos')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashAtrasos">0</div><div class="dash-stat-l">Atrasos</div></div>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.06em">Funcionários — ordem alfabética</div>
-        <button class="btn btn-primary btn-sm" onclick="carregarDashboard()">↺</button>
+        <div id="dashFiltroLabel" style="font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.06em">Funcionários — ordem alfabética</div>
+        <button class="btn btn-primary btn-sm" onclick="carregarDashboard()" title="Mostrar todos">↺</button>
       </div>
       <div id="dashLista"><div class="empty">Carregando...</div></div>
       <!-- REVISÃO FACIAL - só admin -->
@@ -783,7 +783,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.37 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.39 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1477,6 +1477,16 @@ function renderAgenda(){
 
 /* DASHBOARD */
 async function carregarDashboard(){
+  // Reset filtro ao recarregar manualmente
+  if(typeof _dashFiltro !== 'undefined' && _dashFiltro !== null){
+    _dashFiltro=null;
+    ['Presentes','Faltas','Folgas','Atrasos'].forEach(function(t){
+      var el=document.getElementById('stat'+t);
+      if(el) el.classList.remove('ativo');
+    });
+    var lbl=document.getElementById('dashFiltroLabel');
+    if(lbl) lbl.textContent='Funcionários — ordem alfabética';
+  }
   const hoje=new Date();
   document.getElementById('dashDate').textContent=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   const hojeISO=hoje.toISOString().slice(0,10);
@@ -1497,9 +1507,9 @@ async function carregarDashboard(){
     const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
     let statusDot='sd-gray',statusTxt='Sem registro';
     if(ehFolga){statusDot='sd-pink';statusTxt=ehFolgaDom?'Folga (Dom)':'Folga';folgas++;}
-    else if(saida){statusDot='sd-gray';statusTxt='Saiu '+saida.hora;presentes++;}
+    else if(saida){statusDot='sd-gray';statusTxt='Saiu '+saida.hora;presentes++;if(atrasado)atrasos++;}
     else if(retInt){statusDot='sd-green';statusTxt='Trabalhando';presentes++;if(atrasado)atrasos++;}
-    else if(iniInt){statusDot='sd-amber';statusTxt='Em intervalo';}
+    else if(iniInt){statusDot='sd-amber';statusTxt='Em intervalo';presentes++;if(atrasado)atrasos++;}
     else if(entrada){statusDot='sd-green';statusTxt='Trabalhando';presentes++;if(atrasado)atrasos++;}
     else{faltas++;}
     const totalMin=calcDia(regsF);
@@ -1507,7 +1517,12 @@ async function carregarDashboard(){
     const pontosHtml=ehFolga?`<div style="padding:10px 0;font-size:13px;color:var(--pink);font-weight:600;text-align:center">🌴 ${ehFolgaDom?'Folga de domingo':'Dia de folga'}</div>`:
       pontos.map(p=>`<div class="ponto-linha"><div class="ponto-tipo">${p.tipo}</div><div class="ponto-hora">${p.hora}</div><div>${p.ajuste?`<span class="ajuste-badge">✏️ ${p.motivoLabel||''}</span>`:'<span style="font-size:10px;color:var(--gray)">GPS ✓</span>'}</div></div>`).join('')||'<div class="empty" style="padding:10px">Sem registros hoje</div>';
     const cardId='dc_'+f.id;
-    return `<div class="func-dash-card">
+    // Determina categoria para filtro
+    let _filtroCard='faltas';
+    if(ehFolga) _filtroCard='folgas';
+    else if(entrada||retInt||iniInt||saida) _filtroCard='presentes';
+    if(atrasado&&_filtroCard==='presentes') _filtroCard='atrasos';
+    return `<div class="func-dash-card" data-filtro="${_filtroCard}">
       <div class="func-dash-header" onclick="toggleDashCard('${cardId}')">
         <div class="avatar" style="${ehFolga?'background:var(--pink-light);color:var(--pink)':''}">${ini}</div>
         <div><div class="func-name">${f.nome}</div><div class="func-info">${f.cargo||'—'}</div></div>
@@ -1529,6 +1544,8 @@ async function carregarDashboard(){
   document.getElementById('dashFaltas').textContent=faltas;
   document.getElementById('dashFolgas').textContent=folgas;
   document.getElementById('dashAtrasos').textContent=atrasos;
+  // Re-aplica filtro ativo após atualização
+  setTimeout(_renderDashLista, 50);
   // Carregar revisões faciais pendentes (admin)
   if(S.isAdmin) carregarRevisaoFacial();
 }
@@ -1595,6 +1612,39 @@ async function rejeitarRevisao(regId){
 }
 
 function toggleDashCard(id){document.getElementById(id).classList.toggle('open');}
+
+// Filtro do dashboard por status
+var _dashFiltro=null;
+function filtrarDash(tipo){
+  // Toggle: clica de novo no mesmo → limpa filtro
+  if(_dashFiltro===tipo){
+    _dashFiltro=null;
+  } else {
+    _dashFiltro=tipo;
+  }
+  // Atualiza visual dos cards
+  ['presentes','faltas','folgas','atrasos'].forEach(function(t){
+    var el=document.getElementById('stat'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(el) el.classList.toggle('ativo', _dashFiltro===t);
+  });
+  // Atualiza label
+  var labels={presentes:'Presentes hoje',faltas:'Ausentes hoje',folgas:'De folga hoje',atrasos:'Com atraso hoje'};
+  document.getElementById('dashFiltroLabel').textContent=_dashFiltro?labels[_dashFiltro]:'Funcionários — ordem alfabética';
+  // Re-renderiza lista com filtro
+  _renderDashLista();
+}
+
+function _renderDashLista(){
+  var cards=document.querySelectorAll('#dashLista .func-dash-card');
+  if(!_dashFiltro){
+    cards.forEach(function(c){c.style.display='';});
+    return;
+  }
+  cards.forEach(function(c){
+    var filtro=c.getAttribute('data-filtro');
+    c.style.display=(filtro===_dashFiltro)?'':'none';
+  });
+}
 function irParaAjuste(fid,dataBR){goScreen('ajustes','nav4');document.getElementById('ajFunc').value=fid;const p=dataBR.split('/');document.getElementById('ajData').value=p[2]+'-'+p[1]+'-'+p[0];carregarPontosAjuste();}
 
 /* NAV */
@@ -1730,13 +1780,101 @@ async function carregarHistorico(){
         <div style="font-weight:700;font-size:13px">${data} ${temAtraso?'<span style="color:var(--amber);font-size:11px">⚠️ Atraso</span>':''}</div>
         <div style="font-size:12px;font-weight:600;color:var(--blue)">${mins>0?m2h(mins):'—'}</div>
       </div>
-      ${regsD.map(r=>`<div class="reg-item" style="padding:7px 12px">
-        <div><div class="reg-type">${r.tipo}${r.ajuste?` <span class="ajuste-badge">✏️ ${r.motivoLabel||''}</span>`:''}</div>
-        <div class="reg-meta">${r.ajuste?'por '+r.ajustadoPor:(r.empresaNome||'')}</div></div>
-        <div class="reg-time">${r.hora}</div>
+      ${regsD.map(r=>`<div class="reg-item" style="padding:7px 12px;align-items:center">
+        <div style="flex:1">
+          <div class="reg-type">${r.tipo}${r.atraso?` <span style="color:var(--amber);font-size:10px">⚠️ +${r.minAtraso}min</span>`:''}${r.ajuste?` <span class="ajuste-badge">✏️ ${r.motivoLabel||''}</span>`:''}</div>
+          <div class="reg-meta">${r.ajuste?'Ajuste por '+r.ajustadoPor:(r.empresaNome||'GPS ✓')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="reg-time">${r.hora}</div>
+          ${S.isAdmin?`
+          <button onclick="editarRegHistorico('${r.id}','${r.tipo}','${r.hora}','${r.funcionarioId}','${data}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer">✏️</button>
+          <button onclick="excluirRegHistorico('${r.id}')" style="background:var(--red-light);color:var(--red);border:1px solid #fca5a5;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer">✕</button>`:''}
+        </div>
       </div>`).join('')}
     </div>`;
   }).join('');
+}
+
+async function excluirRegHistorico(id){
+  if(!confirm('Excluir este registro?'))return;
+  try{
+    await db.collection('registros').doc(id).delete();
+    toast('Registro excluído');
+    carregarHistorico();
+  }catch(e){toast('Erro ao excluir');}
+}
+
+function editarRegHistorico(id,tipo,hora,funcId,data){
+  // Abre modal de edição inline
+  var modal=document.getElementById('modalEditReg');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='modalEditReg';
+    modal.className='modal-bg';
+    modal.innerHTML=`<div class="modal" style="max-width:340px">
+      <h2>✏️ Editar registro</h2>
+      <input type="hidden" id="erRegId">
+      <input type="hidden" id="erFuncId">
+      <input type="hidden" id="erData">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="form-group"><label class="form-label">Tipo</label>
+          <select class="form-control" id="erTipo">
+            <option>Entrada</option>
+            <option>Início intervalo</option>
+            <option>Retorno intervalo</option>
+            <option>Saída</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Horário</label>
+          <input type="time" class="form-control" id="erHora">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-saida btn-sm" style="flex:1" onclick="document.getElementById('modalEditReg').classList.remove('open')">Cancelar</button>
+        <button class="btn btn-solid btn-sm" style="flex:1" onclick="salvarEdicaoRegHistorico()">💾 Salvar</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click',function(e){if(e.target===modal)modal.classList.remove('open');});
+  }
+  document.getElementById('erRegId').value=id;
+  document.getElementById('erFuncId').value=funcId;
+  document.getElementById('erData').value=data;
+  const tipoEl=document.getElementById('erTipo');
+  for(var i=0;i<tipoEl.options.length;i++){
+    if(tipoEl.options[i].text===tipo){tipoEl.selectedIndex=i;break;}
+  }
+  document.getElementById('erHora').value=hora;
+  modal.classList.add('open');
+}
+
+async function salvarEdicaoRegHistorico(){
+  const id=document.getElementById('erRegId').value;
+  const funcId=document.getElementById('erFuncId').value;
+  const dataBR=document.getElementById('erData').value;
+  const novoTipo=document.getElementById('erTipo').value;
+  const novaHora=document.getElementById('erHora').value;
+  if(!novaHora){toast('Informe o horário');return;}
+  const [hh,mm]=novaHora.split(':').map(Number);
+  // Reconstrói timestamp a partir da data (dd/mm/yyyy)
+  const p=dataBR.split('/');
+  const bd=new Date(p[2]+'-'+p[1]+'-'+p[0]+'T'+novaHora+':00');
+  try{
+    await db.collection('registros').doc(id).update({
+      tipo:novoTipo,
+      hora:novaHora,
+      timestamp:bd.getTime(),
+      ajuste:true,
+      ajustadoPor:S.user.nome,
+      ajustadoEm:new Date().toISOString(),
+      motivo:'edicao_admin',
+      motivoLabel:'Edição admin'
+    });
+    document.getElementById('modalEditReg').classList.remove('open');
+    toast('✅ Registro atualizado!');
+    carregarHistorico();
+  }catch(e){toast('Erro ao salvar: '+e.message);}
 }
 
 /* AJUSTES */
