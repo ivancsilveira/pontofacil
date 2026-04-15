@@ -815,7 +815,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.47 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.48 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1698,7 +1698,10 @@ async function carregarDashboard(){
   const dataHoje=String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
   let regsHoje=[];
   try{const snap=await db.collection('registros').where('data','==',dataHoje).get();regsHoje=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
-  const funcOrdenados=[...S.funcionarios].filter(f=>!f.inativo&&(!f.isAdmin||f.aparecerNaLista)).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const funcOrdenados=[...S.funcionarios].filter(f=>!f.inativo&&(!f.isAdmin||f.aparecerNaLista)&&f.cpf!=='495.256.629-34').sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  // Adiciona master se aparecerNaLista
+  const masterEntry=S.funcionarios.find(f=>f.id==='master');
+  if(masterEntry&&masterEntry.aparecerNaLista) funcOrdenados.unshift(masterEntry);
   let presentes=0,fimJornada=0,faltas=0,folgas=0,atrasos=0;
   const el=document.getElementById('dashLista');
   if(!funcOrdenados.length){el.innerHTML='<div class="empty">Nenhum funcionário cadastrado</div>';return;}
@@ -2329,6 +2332,7 @@ function renderEquipe(){
       <div class="func-actions">
         ${!f.inativo?`<button class="btn btn-primary btn-sm" onclick="abrirModalEdit('${f.id}')">Editar</button>`:''}${(!f.inativo&&(f.email||f.telefone))?`<button class="btn btn-teal btn-sm" onclick="enviarSenhaFunc('${f.id}')" title="Enviar senha">🔑</button>`:''}
         <button class="btn btn-sm" onclick="toggleInativar('${f.id}','${f.nome}',${!!f.inativo})" style="padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid;${f.inativo?'background:var(--green-light);color:var(--green);border-color:#a7d7b0':'background:var(--amber-light);color:var(--amber);border-color:#fcd34d'}">${f.inativo?'✅ Reativar':'⏸ Desativar'}</button>
+        <button class="btn btn-danger-sm btn-sm" onclick="excluirFunc('${f.id}','${f.nome}')" style="padding:6px 10px;font-size:12px">🗑 Excluir</button>
       </div>
     </div>`;
   }).join('');
@@ -2391,7 +2395,16 @@ function apagarFotoFunc(){
   toast('Foto marcada para apagar. Clique em Salvar.');
 }
 async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
-async function excluirFunc(id,nome){if(!confirm('Excluir '+nome+'?'))return;S.funcionarios=S.funcionarios.filter(f=>f.id!==id);try{await db.collection('funcionarios').doc(id).delete();renderEquipe();toast('Removido');}catch(e){toast('Erro');}}
+async function excluirFunc(id,nome){
+  if(!confirm('⚠️ EXCLUIR permanentemente '+nome+'?\n\nEsta ação não pode ser desfeita. Todos os registros de ponto serão mantidos, mas o funcionário não poderá mais fazer login.'))return;
+  try{
+    await db.collection('funcionarios').doc(id).delete();
+    S.funcionarios=S.funcionarios.filter(f=>f.id!==id);
+    renderEquipe();
+    carregarDashboard();
+    toast('🗑 '+nome+' excluído do sistema');
+  }catch(e){toast('Erro ao excluir: '+e.message);}
+}
 
 /* FECHAMENTO */
 async function carregarFechamentos(){try{const snap=await db.collection('fechamentos').orderBy('criadoEm','desc').limit(24).get();S.fechamentos=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}}
