@@ -773,7 +773,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.25 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.26 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 document.addEventListener('DOMContentLoaded',function(){
   var el=document.getElementById('appVersionLabel');
   if(el)el.textContent=APP_VERSION;
@@ -1960,13 +1960,27 @@ async function carregarDetalhe(){
   const fid=document.getElementById('detFunc').value,mes=document.getElementById('detMes').value;
   if(!fid||!mes)return;
   const func=S.funcionarios.find(f=>f.id===fid);if(!func)return;
+  // Garantir que férias estão carregadas
+  if(!S_ferias||S_ferias.length===0) await carregarFerias();
   let regs=[];
   try{const snap=await db.collection('registros').where('funcionarioId','==',fid).where('mes','==',mes).get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));regs.sort((a,b)=>{const da=a.data||'',db2=b.data||'';if(da!==db2)return da.localeCompare(db2);return (a.hora||'').localeCompare(b.hora||'');});}catch(e){console.error('Erro detalhe:',e);}
   const diasMap=agruparDias(regs),banco=calcBH(func,regs,mes),esc=S.escalas.find(e=>e.id===func.escalaId);
   const folgasMes=Object.values(S.folgas).filter(f=>f.funcId===fid&&f.mes===mes);
   // Buscar férias do funcionário que cobrem o mês selecionado
-  const feriasFuncMes=S_ferias.filter(f=>f.funcionarioId===fid&&f.inicio<=mes+'-31'&&f.fim>=mes+'-01');
-  function ehFerias(isoDate){return feriasFuncMes.some(f=>isoDate>=f.inicio&&isoDate<=f.fim);}
+  // mes = 'yyyy-mm', compara com inicio/fim em formato 'yyyy-mm-dd'
+  const mesIni=mes+'-01';
+  const mesAno=parseInt(mes.split('-')[0]),mesNum=parseInt(mes.split('-')[1]);
+  const ultimoDia=new Date(mesAno,mesNum,0).getDate();
+  const mesFim=mes+'-'+String(ultimoDia).padStart(2,'0');
+  const feriasFuncMes=(S_ferias||[]).filter(f=>
+    f.funcionarioId===fid &&
+    f.inicio<=mesFim &&
+    f.fim>=mesIni
+  );
+  function ehFerias(isoDate){
+    return feriasFuncMes.some(f=>isoDate>=f.inicio&&isoDate<=f.fim);
+  }
+  console.log('Férias do func no mês:', feriasFuncMes.length, feriasFuncMes.map(f=>f.inicio+' a '+f.fim));
   const [ano,mesN]=mes.split('-').map(Number);
   const diasNoMes=new Date(ano,mesN,0).getDate();
   let totalTrabalhado=0,linhas='';
@@ -1998,14 +2012,32 @@ async function carregarDetalhe(){
     const nomeFer=isFer?nomeFeriado(iso):'';
     let bgRow='',statusCol='';
     const emFerias=ehFerias(iso);
-    if(emFerias&&regsD.length===0){bgRow='background:#e0f2fe;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#0369a1;font-weight:600">🏖️ Férias</td>';}
-    else if(emFerias&&regsD.length>0){bgRow='background:#e0f2fe;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#0369a1">🏖️ +horas</td>';}
-    if(ehFolga){bgRow='background:#fdf2f8;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--pink)">🌴 Folga</td>';}
-    else if(isFer&&regsD.length>0){bgRow='background:#fff7ed;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:#ea580c">🟠 H.Extra</td>';}
-    else if(isFer&&regsD.length===0){bgRow='background:#fff7ed;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#d97706">📅 Feriado</td>';}
-    else if(!trabalhaNesteDia){bgRow='background:#f8fafc;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--gray)">—</td>';}
-    else if(regsD.length===0){bgRow='background:#fff5f5;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--red);font-weight:600">Falta</td>';}
-    else{statusCol=`<td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'}">` + (saldo>=0?'+':'') + `${m2h(saldo)}</td>`;}
+    let bgRow='',statusCol='';
+    // Prioridade: Férias > Folga > Feriado > Dia não trabalhado > Falta > Normal
+    if(emFerias&&regsD.length===0){
+      bgRow='background:#e0f2fe;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#0369a1;font-weight:600">🏖️ Férias</td>';
+    } else if(emFerias&&regsD.length>0){
+      bgRow='background:#e0f2fe;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#0369a1">🏖️ +horas</td>';
+    } else if(ehFolga){
+      bgRow='background:#fdf2f8;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--pink)">🌴 Folga</td>';
+    } else if(isFer&&regsD.length>0){
+      bgRow='background:#fff7ed;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:#ea580c">🟠 H.Extra</td>';
+    } else if(isFer&&regsD.length===0){
+      bgRow='background:#fff7ed;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#d97706">📅 Feriado</td>';
+    } else if(!trabalhaNesteDia){
+      bgRow='background:#f8fafc;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--gray)">—</td>';
+    } else if(regsD.length===0){
+      bgRow='background:#fff5f5;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--red);font-weight:600">Falta</td>';
+    } else {
+      statusCol=`<td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'}">`+(saldo>=0?'+':'')+`${m2h(saldo)}</td>`;
+    }
     linhas+=`<tr style="${bgRow}border-bottom:1px solid var(--border)">
       <td style="padding:5px 4px;font-size:11px;font-weight:600;white-space:nowrap;color:${isDom?'var(--red)':isSab?'var(--blue)':isFer?'#ea580c':'inherit'}">${String(d).padStart(2,'0')}/${String(mesN).padStart(2,'0')} <span style="font-weight:400;color:var(--gray);font-size:10px">${diaSem}</span>${isFer?'<span style="font-size:9px;color:#ea580c;font-weight:600;margin-left:3px"> 📅'+nomeFer+'</span>':''}</td>
       <td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--green)">${entrada?entrada.hora:'—'}</td>
