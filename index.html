@@ -234,12 +234,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 .face-fail{background:var(--red-light);color:var(--red)}
 .face-sem{background:var(--blue-light);color:var(--blue)}
 @media(min-width:521px){body{background:#dde3f0}.app{margin:14px auto;height:calc(100vh - 28px);border-radius:18px;overflow:hidden}}
-@media print{
-  body *{visibility:hidden}
-  #printArea,#printArea *{visibility:visible}
-  #printArea{position:fixed;top:0;left:0;width:100%;padding:16px;box-sizing:border-box}
-  .no-print{display:none!important}
-}
+@media print{.no-print{display:none!important}}
 </style>
 </head>
 <body>
@@ -706,7 +701,6 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   </div>
 </div>
 <!-- ÁREA DE IMPRESSÃO (invisível na tela) -->
-<div id="printArea" style="display:none"></div>
 
 <script>
 // Estado global
@@ -1616,11 +1610,17 @@ async function fecharMes(){
 function agruparDias(regs){
   const map={};
   regs.forEach(r=>{
-    // Normalizar data para dd/mm/yyyy com zeros
     let data=r.data||'';
     if(data.includes('/')){
       const p=data.split('/');
-      data=p[0].padStart(2,'0')+'/'+p[1].padStart(2,'0')+'/'+p[2];
+      // Garantir ano com 4 dígitos
+      let ano=p[2];
+      if(ano&&ano.length===2) ano='20'+ano;
+      data=p[0].padStart(2,'0')+'/'+p[1].padStart(2,'0')+'/'+ano;
+    } else if(data.includes('-')&&data.length===10){
+      // formato yyyy-mm-dd → converte para dd/mm/yyyy
+      const p=data.split('-');
+      data=p[2]+'/'+p[1]+'/'+p[0];
     }
     if(!map[data])map[data]=[];
     map[data].push(r);
@@ -1737,11 +1737,41 @@ function reenviar(id){const f=S.fechamentos.find(x=>x.id===id);if(f)enviarEmail(
 function imprimirFechamento(){
   const conteudo=document.getElementById('modalFechConteudo').innerHTML;
   const titulo=document.getElementById('modalFechTit').textContent;
-  const pa=document.getElementById('printArea');
-  pa.style.display='block';
-  pa.innerHTML=`<div style="font-family:sans-serif;font-size:12px"><h2 style="text-align:center;margin-bottom:12px">${titulo}</h2>${conteudo}</div>`;
-  window.print();
-  setTimeout(()=>{pa.style.display='none';pa.innerHTML='';},1000);
+  const win=window.open('','_blank','width=800,height=600');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titulo}</title><style>
+    body{font-family:sans-serif;font-size:12px;margin:16px;color:#222}
+    h2{text-align:center;margin-bottom:16px;font-size:16px}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    th{padding:5px 4px;font-size:10px;font-weight:700;border-bottom:2px solid #ccc;text-align:left;background:#f5f5f5}
+    td{padding:5px 4px;font-size:11px;border-bottom:1px solid #eee}
+    .bloco{margin-bottom:20px;border:1px solid #ccc;border-radius:6px;overflow:hidden;page-break-inside:avoid}
+    .header-func{background:#1a6fb5;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
+    .header-func .nome{font-weight:700;font-size:13px}
+    .header-func .cargo{font-size:10px;opacity:.8}
+    .header-func .bh{font-size:16px;font-weight:700}
+    .header-func .bh-label{font-size:9px;opacity:.8;text-align:right}
+    .folga-row{background:#fce7f3;padding:5px 4px;font-size:11px;color:#be185d;font-weight:600}
+    .total-row{background:#f5f5f5;border-top:2px solid #ccc;font-weight:700}
+    .resumo-topo{text-align:center;margin-bottom:16px;padding:10px;background:#f0f7ff;border-radius:6px;border:1px solid #bfdbfe}
+    .resumo-topo .rt{font-weight:700;font-size:14px;color:#1e3a5f}
+    .resumo-topo .rs{font-size:12px;color:#1a6fb5}
+    @media print{body{margin:8px}.bloco{page-break-inside:avoid}}
+  </style></head><body>`);
+  win.document.write(`<h2>${titulo}</h2>`);
+  // Reescreve o conteúdo em formato limpo para impressão
+  const parser=new DOMParser();
+  const doc2=parser.parseFromString(conteudo,'text/html');
+  // Pega os blocos de cada funcionário
+  const blocos=doc2.querySelectorAll('[style*="margin-bottom:16px"]');
+  if(blocos.length>0){
+    blocos.forEach(b=>win.document.write(b.outerHTML));
+  } else {
+    win.document.write(conteudo);
+  }
+  win.document.write('</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{win.print();},500);
 }
 async function apagarFechamento(id,label){
   if(!confirm('Apagar o fechamento de '+label+'? Esta ação não pode ser desfeita.'))return;
@@ -1765,7 +1795,7 @@ async function carregarDetalhe(){
   if(!fid||!mes)return;
   const func=S.funcionarios.find(f=>f.id===fid);if(!func)return;
   let regs=[];
-  try{const snap=await db.collection('registros').where('funcionarioId','==',fid).where('mes','==',mes).orderBy('timestamp').get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+  try{const snap=await db.collection('registros').where('funcionarioId','==',fid).where('mes','==',mes).get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));regs.sort((a,b)=>{const da=a.data||'',db2=b.data||'';if(da!==db2)return da.localeCompare(db2);return (a.hora||'').localeCompare(b.hora||'');});}catch(e){console.error('Erro detalhe:',e);}
   const diasMap=agruparDias(regs),banco=calcBH(func,regs),esc=S.escalas.find(e=>e.id===func.escalaId);
   const folgasMes=Object.values(S.folgas).filter(f=>f.funcId===fid&&f.mes===mes);
   const [ano,mesN]=mes.split('-').map(Number);
@@ -1775,10 +1805,11 @@ async function carregarDetalhe(){
     const dt=new Date(ano,mesN-1,d);
     const iso=dt.toISOString().slice(0,10);
     const dataBR=String(d).padStart(2,'0')+'/'+String(mesN).padStart(2,'0')+'/'+ano;
+    const dataBRShort=String(d).padStart(2,'0')+'/'+String(mesN).padStart(2,'0')+'/'+String(ano).slice(2);
     const diaSem=DIAS[dt.getDay()];
     const isDom=dt.getDay()===0,isSab=dt.getDay()===6;
     const ehFolga=folgasMes.some(f=>f.data===iso);
-    const regsD=diasMap[dataBR]||[];
+    const regsD=diasMap[dataBR]||diasMap[dataBRShort]||[];
     const entrada=regsD.find(r=>r.tipo==='Entrada');
     const iniInt=regsD.find(r=>r.tipo==='Início intervalo');
     const retInt=regsD.find(r=>r.tipo==='Retorno intervalo');
