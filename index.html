@@ -730,6 +730,9 @@ async function doLogin(){
     if(!snap.empty){
       const d=snap.docs[0];const data=d.data();
       if(data.senha===senha){
+        if(data.inativo){
+          showErro('Usuário inativo. Fale com o administrador.');return;
+        }
         S.user={id:d.id,...data};S.isAdmin=data.isAdmin||false;
         document.getElementById('loginWrap').style.display='none';
         document.getElementById('appWrap').style.display='flex';
@@ -1197,7 +1200,7 @@ async function carregarDashboard(){
   const dataHoje=hoje.toLocaleDateString('pt-BR'),hojeISO=hoje.toISOString().slice(0,10);
   let regsHoje=[];
   try{const snap=await db.collection('registros').where('data','==',dataHoje).get();regsHoje=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
-  const funcOrdenados=[...S.funcionarios].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const funcOrdenados=[...S.funcionarios].filter(f=>!f.inativo).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   let presentes=0,faltas=0,folgas=0,atrasos=0;
   const el=document.getElementById('dashLista');
   if(!funcOrdenados.length){el.innerHTML='<div class="empty">Nenhum funcionário cadastrado</div>';return;}
@@ -1428,11 +1431,54 @@ async function excluirEscala(id,nome){if(!confirm('Excluir "'+nome+'"?'))return;
 /* EQUIPE */
 async function carregarFuncionarios(){try{const snap=await db.collection('funcionarios').get();S.funcionarios=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}}
 function popularSelectFunc(id){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">— Selecione —</option>'+[...S.funcionarios].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');}
+var _mostrarInativos=false;
+
 function renderEquipe(){
-  const lista=S.funcionarios.filter(f=>f.empresa==S.empEquipe||f.empresa==='ambas').sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const todos=S.funcionarios.filter(f=>f.empresa==S.empEquipe||f.empresa==='ambas').sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const ativos=todos.filter(f=>!f.inativo);
+  const inativos=todos.filter(f=>f.inativo);
+  const lista=_mostrarInativos?todos:ativos;
   const el=document.getElementById('listaEquipe');
-  if(!lista.length){el.innerHTML='<div class="empty">Nenhum funcionário</div>';return;}
-  el.innerHTML=lista.map(f=>{const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();const esc=S.escalas.find(e=>e.id===f.escalaId);return `<div class="func-item"><div class="avatar">${ini}</div><div><div class="func-name">${f.nome}</div><div class="func-info">${f.cargo||'—'} · ${esc?`<span style="color:var(--purple)">${esc.nome}</span>`:'<span style="color:var(--red)">Sem escala</span>'}</div></div><div class="func-actions"><button class="btn btn-primary btn-sm" onclick="abrirModalEdit('${f.id}')">Editar</button><button class="btn btn-danger-sm btn-sm" onclick="excluirFunc('${f.id}','${f.nome}')">✕</button></div></div>`;}).join('');
+
+  // Header com filtro
+  const header=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:12px;color:var(--gray)">${ativos.length} ativo(s)${inativos.length>0?' · '+inativos.length+' inativo(s)':''}</div>
+    ${inativos.length>0?`<button onclick="_mostrarInativos=!_mostrarInativos;renderEquipe()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--gray)">${_mostrarInativos?'Ocultar inativos':'Mostrar inativos'}</button>`:''}
+  </div>`;
+
+  if(!lista.length){el.innerHTML=header+'<div class="empty">Nenhum funcionário</div>';return;}
+
+  el.innerHTML=header+lista.map(f=>{
+    const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
+    const esc=S.escalas.find(e=>e.id===f.escalaId);
+    const fotoHtml=f.fotoCadastro?
+      `<img src="data:image/jpeg;base64,${f.fotoCadastro}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid ${f.inativo?'var(--gray)':'var(--green)'};flex-shrink:0;${f.inativo?'filter:grayscale(1);opacity:.6':''}">`:
+      `<div class="avatar" style="${f.inativo?'background:var(--gray-light);color:var(--gray);opacity:.6':''}">${ini}</div>`;
+    return `<div class="func-item" style="${f.inativo?'opacity:.7':''}">
+      ${fotoHtml}
+      <div>
+        <div class="func-name">${f.nome} ${f.inativo?'<span style="background:var(--gray-light);color:var(--gray);font-size:10px;padding:1px 6px;border-radius:20px;font-weight:600">Inativo</span>':''}</div>
+        <div class="func-info">${f.cargo||'—'} · ${esc?`<span style="color:var(--purple)">${esc.nome}</span>`:'<span style="color:var(--red)">Sem escala</span>'}</div>
+      </div>
+      <div class="func-actions">
+        ${!f.inativo?`<button class="btn btn-primary btn-sm" onclick="abrirModalEdit('${f.id}')">Editar</button>`:''}
+        <button class="btn btn-sm" onclick="toggleInativar('${f.id}','${f.nome}',${!!f.inativo})" style="padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid;${f.inativo?'background:var(--green-light);color:var(--green);border-color:#a7d7b0':'background:var(--amber-light);color:var(--amber);border-color:#fcd34d'}">${f.inativo?'✅ Reativar':'⏸ Desativar'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleInativar(id,nome,jaInativo){
+  const acao=jaInativo?'Reativar':'Desativar';
+  if(!confirm(acao+' o funcionário '+nome+'?\n\n'+(jaInativo?'Ele voltará a ter acesso ao sistema.':'Ele perderá o acesso mas seus dados serão mantidos.')))return;
+  const inativo=!jaInativo;
+  try{
+    await db.collection('funcionarios').doc(id).update({inativo});
+    const i=S.funcionarios.findIndex(f=>f.id===id);
+    if(i>=0)S.funcionarios[i].inativo=inativo;
+    renderEquipe();
+    toast(inativo?'⏸ '+nome+' desativado':'✅ '+nome+' reativado');
+  }catch(e){toast('Erro ao '+acao.toLowerCase());}
 }
 function abrirModalFunc(){popularSelectEscalas();document.getElementById('modalFunc').classList.add('open');}
 function fecharModalFunc(){document.getElementById('modalFunc').classList.remove('open');}
@@ -1500,11 +1546,105 @@ function agruparDias(regs){const map={};regs.forEach(r=>{if(!map[r.data])map[r.d
 function verFechamento(id){
   const f=S.fechamentos.find(x=>x.id===id);if(!f)return;
   document.getElementById('modalFechTit').textContent='Fechamento — '+f.mesLabel;
-  let html=f.resumos.map(r=>{
-    let dh='';if(r.diasMap){Object.entries(r.diasMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([data,regs])=>{const mins=calcDia(regs);const pts=regs.map(x=>`${x.tipo}: <strong>${x.hora}</strong>${x.ajuste?` <span class="ajuste-badge">✏️</span>`:''}`).join(' · ');dh+=`<div class="dia-row"><div><div style="font-weight:600;font-size:12px">${data}</div><div style="font-size:11px;color:var(--gray)">${pts}</div></div><div style="font-weight:700;font-size:12px;color:var(--blue)">${m2h(mins)}</div></div>`;});}
+
+  let html=`<div style="text-align:center;margin-bottom:14px;padding:10px;background:var(--blue-light);border-radius:8px">
+    <div style="font-weight:700;font-size:14px;color:var(--blue-dark)">Villa Canziani Donato</div>
+    <div style="font-size:12px;color:var(--blue)">${f.mesLabel} · ${f.totalFunc} funcionários</div>
+  </div>`;
+
+  html+=f.resumos.map(r=>{
     const bh=r.banco||0;
-    return `<div style="margin-bottom:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"><div style="background:var(--gray-light);padding:9px 12px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700;font-size:13px">${r.nome}</div><div style="font-size:11px;color:var(--gray)">${r.cargo} · ${r.escala}</div></div><div style="text-align:right"><div style="display:flex;gap:3px;justify-content:flex-end;flex-wrap:wrap"><span class="badge badge-green">${r.presencas}p</span><span class="badge badge-red">${r.faltas}f</span><span class="badge badge-pink">${r.folgas}🌴</span><span class="badge badge-amber">${r.atrasos}⚠️</span>${r.ajustes?`<span class="badge badge-orange">${r.ajustes}✏️</span>`:''}</div><div style="font-size:12px;font-weight:700;color:${bh>=0?'var(--green)':'var(--red)'};margin-top:3px">Banco: ${bh>=0?'+':''}${m2h(bh)}</div></div></div><div style="padding:0 12px">${dh||'<div class="empty" style="padding:10px">Sem registros</div>'}</div></div>`;
+
+    // Calcular horas previstas por dia baseado na escala
+    const func=S.funcionarios.find(fn=>fn.nome===r.nome);
+    const esc=func?S.escalas.find(e=>e.id===func.escalaId):null;
+
+    // Dia a dia detalhado
+    let diasHtml='';
+    let totalMinTrabalhado=0;
+    let totalMinPrevisto=0;
+
+    if(r.diasMap&&Object.keys(r.diasMap).length>0){
+      Object.entries(r.diasMap).sort(([a],[b])=>a.localeCompare(b,'pt-BR')).forEach(([data,regs])=>{
+        const dt=new Date(data.split('/').reverse().join('-'));
+        const diaSem=DIAS[dt.getDay()];
+        const mins=calcDia(regs);
+        totalMinTrabalhado+=mins;
+
+        // Horas previstas neste dia
+        let minPrev=0;
+        if(esc&&esc.tipo!=='especial'&&esc.dias&&esc.dias[diaSem]&&esc.dias[diaSem].ativo){
+          const cfg=esc.dias[diaSem];
+          minPrev=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
+          totalMinPrevisto+=minPrev;
+        }
+
+        const saldo=mins-minPrev;
+        const entrada=regs.find(r=>r.tipo==='Entrada');
+        const saida=regs.find(r=>r.tipo==='Saída');
+        const iniInt=regs.find(r=>r.tipo==='Início intervalo');
+        const retInt=regs.find(r=>r.tipo==='Retorno intervalo');
+        const temAtraso=regs.some(r=>r.atraso);
+        const temAjuste=regs.some(r=>r.ajuste);
+
+        diasHtml+=`<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:6px 4px;font-size:11px;font-weight:600;white-space:nowrap">${data.slice(0,5)} <span style="color:var(--gray);font-weight:400">${diaSem}</span></td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--green)">${entrada?entrada.hora:'—'}</td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--amber)">${iniInt?iniInt.hora:'—'}</td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--amber)">${retInt?retInt.hora:'—'}</td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--red)">${saida?saida.hora:'—'}</td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">${m2h(mins)}</td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'}">${saldo>=0?'+':''}${m2h(saldo)}</td>
+          <td style="padding:6px 4px;font-size:11px;text-align:center">${temAtraso?'⚠️':''}${temAjuste?'✏️':''}</td>
+        </tr>`;
+      });
+    }
+
+    // Dias de folga
+    if(r.folgas>0){
+      diasHtml+=`<tr style="background:var(--pink-light)"><td colspan="8" style="padding:5px 4px;font-size:11px;color:var(--pink);font-weight:600">🌴 ${r.folgas} dia(s) de folga no mês${r.folgasDom?' ('+r.folgasDom+' domingo)':''}</td></tr>`;
+    }
+
+    // Linha de totais
+    diasHtml+=`<tr style="background:var(--gray-light);border-top:2px solid var(--border)">
+      <td style="padding:7px 4px;font-size:11px;font-weight:700">TOTAL</td>
+      <td colspan="4" style="padding:7px 4px;font-size:11px;color:var(--gray);text-align:center">${r.presencas} presenças · ${r.faltas} faltas · ${r.atrasos} atraso(s)</td>
+      <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:var(--blue)">${m2h(totalMinTrabalhado)}</td>
+      <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:${bh>=0?'var(--green)':'var(--red)'}">${bh>=0?'+':''}${m2h(bh)}</td>
+      <td></td>
+    </tr>`;
+
+    return `<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="background:var(--blue);color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700;font-size:14px">${r.nome}</div>
+          <div style="font-size:11px;opacity:.8">${r.cargo} · ${r.escala}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:700">${bh>=0?'+':''}${m2h(bh)}</div>
+          <div style="font-size:10px;opacity:.8">banco de horas</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:480px">
+          <thead>
+            <tr style="background:var(--gray-light)">
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:left;border-bottom:2px solid var(--border)">Data</th>
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--green);text-align:center;border-bottom:2px solid var(--border)">Entrada</th>
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--amber);text-align:center;border-bottom:2px solid var(--border)">Almoço</th>
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--amber);text-align:center;border-bottom:2px solid var(--border)">Retorno</th>
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--red);text-align:center;border-bottom:2px solid var(--border)">Saída</th>
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--blue);text-align:center;border-bottom:2px solid var(--border)">Trabalhado</th>
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Saldo</th>
+              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Obs</th>
+            </tr>
+          </thead>
+          <tbody>${diasHtml||'<tr><td colspan="8" style="padding:12px;text-align:center;color:var(--gray);font-size:12px">Sem registros neste mês</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
   }).join('');
+
   document.getElementById('modalFechConteudo').innerHTML=html||'<div class="empty">Sem dados</div>';
   document.getElementById('modalFechDetalhe').classList.add('open');
 }
