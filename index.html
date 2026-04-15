@@ -455,8 +455,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <!-- EQUIPE (ADMIN) -->
     <div class="screen" id="sc-equipe">
       <div class="emp-tabs">
-        <button class="emp-tab active" onclick="selEmp(1,'etab')" id="etab1">Empresa A</button>
-        <button class="emp-tab" onclick="selEmp(2,'etab')" id="etab2">Empresa B</button>
+        <button class="emp-tab active" onclick="selEmp(1,'etab')" id="etab1">Villa Canziani</button>
+        <button class="emp-tab" onclick="selEmp(2,'etab')" id="etab2">Villa Bistro</button>
       </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -476,8 +476,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </div>
       <div id="sub-fech">
         <div class="emp-tabs" style="margin-bottom:10px">
-          <button class="emp-tab active" onclick="selEmp(1,'ftab')" id="ftab1">Empresa A</button>
-          <button class="emp-tab" onclick="selEmp(2,'ftab')" id="ftab2">Empresa B</button>
+          <button class="emp-tab active" onclick="selEmp(1,'ftab')" id="ftab1">Villa Canziani</button>
+          <button class="emp-tab" onclick="selEmp(2,'ftab')" id="ftab2">Villa Bistro</button>
         </div>
         <div class="card" style="display:flex;align-items:center;justify-content:space-between">
           <div><div style="font-weight:600;font-size:14px">Fechamento mensal</div><div style="font-size:11px;color:var(--gray);margin-top:1px">Consolida e envia para a contadora</div></div>
@@ -501,7 +501,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <!-- CONFIG -->
     <div class="screen" id="sc-config">
       <div class="card">
-        <div class="card-title">Empresa A</div>
+        <div class="card-title">Villa Canziani Donato</div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">Nome</label><input class="form-control" id="cfgA_nome"></div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">CNPJ</label><input class="form-control" id="cfgA_cnpj"></div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">Endereço</label><input class="form-control" id="cfgA_end"></div>
@@ -510,7 +510,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <button class="btn btn-primary btn-sm" onclick="usarLoc('A')" style="margin-top:8px;width:auto;padding:7px 12px">📍 Minha localização (A)</button>
       </div>
       <div class="card">
-        <div class="card-title">Empresa B</div>
+        <div class="card-title">Villa Bistro Patacho</div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">Nome</label><input class="form-control" id="cfgB_nome"></div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">CNPJ</label><input class="form-control" id="cfgB_cnpj"></div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">Endereço</label><input class="form-control" id="cfgB_end"></div>
@@ -683,7 +683,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">Nome *</label><input class="form-control" id="fNome"></div>
       <div class="form-group"><label class="form-label">CPF *</label><input class="form-control" id="fCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);"></div>
       <div class="form-group"><label class="form-label">Cargo</label><input class="form-control" id="fCargo" placeholder="Garçom, Camareira, Recepcionista..."></div>
-      <div class="form-group"><label class="form-label">Empresa *</label><select class="form-control" id="fEmpresa"><option value="1">Empresa A</option><option value="2">Empresa B</option><option value="ambas">Ambas</option></select></div>
+      <div class="form-group"><label class="form-label">Empresa *</label><select class="form-control" id="fEmpresa"><option value="1">Villa Canziani Donato</option><option value="2">Villa Bistro Patacho</option><option value="ambas">Ambas</option></select></div>
       <div class="form-group"><label class="form-label">Escala *</label><select class="form-control" id="fEscala"><option value="">— Selecione —</option></select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="fAdmissao"></div>
@@ -721,7 +721,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </div>
       <div class="form-group"><label class="form-label">Nome</label><input class="form-control" id="editNome"></div>
       <div class="form-group"><label class="form-label">Cargo</label><input class="form-control" id="editCargo"></div>
-      <div class="form-group"><label class="form-label">Empresa</label><select class="form-control" id="editEmpresa"><option value="1">Empresa A</option><option value="2">Empresa B</option><option value="ambas">Ambas</option></select></div>
+      <div class="form-group"><label class="form-label">Empresa</label><select class="form-control" id="editEmpresa"><option value="1">Villa Canziani Donato</option><option value="2">Villa Bistro Patacho</option><option value="ambas">Ambas</option></select></div>
       <div class="form-group"><label class="form-label">Escala</label><select class="form-control" id="editEscala"><option value="">— Selecione —</option></select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="editAdmissao"></div>
@@ -733,6 +733,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
           <div id="editFotoPreview" style="width:52px;height:52px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden">👤</div>
           <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('edit')" style="width:auto">📷 Nova foto</button>
+          <button type="button" class="btn btn-saida btn-sm" onclick="apagarFotoFunc()" style="width:auto;margin-left:6px">🗑 Apagar foto</button>
         </div>
         <input type="hidden" id="editFotoBase64">
       </div>
@@ -772,7 +773,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.23 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.25 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 document.addEventListener('DOMContentLoaded',function(){
   var el=document.getElementById('appVersionLabel');
   if(el)el.textContent=APP_VERSION;
@@ -1018,19 +1019,108 @@ function calcDia(regs){
   if(ii&&fi&&fi.timestamp&&ii.timestamp)t-=(fi.timestamp-ii.timestamp);
   return Math.round(t/60000);
 }
-function calcBH(func,regsArr){
-  const esc=S.escalas.find(e=>e.id===func.escalaId);let banco=0;
-  const map={};regsArr.filter(r=>r.funcionarioId===func.id).forEach(r=>{if(!map[r.data])map[r.data]=[];map[r.data].push(r);});
+function calcBH(func,regsArr,mesRef){
+  // mesRef: 'yyyy-mm' opcional — se não passado usa o mês dos registros
+  const esc=S.escalas.find(e=>e.id===func.escalaId);
+
+  // Agrupar registros por data
+  const map={};
+  regsArr.filter(r=>!r.funcionarioId||r.funcionarioId===func.id)
+    .forEach(r=>{if(!map[r.data])map[r.data]=[];map[r.data].push(r);});
+
+  // Calcular horas trabalhadas
+  let trabTotal=0;
   Object.entries(map).forEach(([data,regs])=>{
-    const trab=calcDia(regs);
-    if(!esc||esc.tipo==='especial'){banco+=trab;return;}
-    const dt=new Date(data.split('/').reverse().join('-')),dia=DIAS[dt.getDay()];
-    const cfg=esc.dias&&esc.dias[dia];
-    if(!cfg||!cfg.ativo){banco+=trab;return;}
-    const prev=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
-    banco+=(trab-prev);
+    trabTotal+=calcDia(regs);
   });
-  return banco;
+
+  // Calcular horas previstas descontando férias e folgas
+  // Se o funcionário tem horasMes definido, usamos como base
+  const horasMesContratadas=(func.horasMes||220)*60; // em minutos
+
+  if(!mesRef){
+    // Sem mês de referência: modo simples (saldo = trabalhado - previsto pela escala por dia)
+    let banco=0;
+    Object.entries(map).forEach(([data,regs])=>{
+      const trab=calcDia(regs);
+      if(!esc||esc.tipo==='especial'){banco+=trab;return;}
+      const dt=new Date(data.split('/').reverse().join('-')),dia=DIAS[dt.getDay()];
+      const cfg=esc.dias&&esc.dias[dia];
+      if(!cfg||!cfg.ativo){banco+=trab;return;}
+      const prev=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
+      banco+=(trab-prev);
+    });
+    return banco;
+  }
+
+  // Com mês de referência: descontar férias e folgas das horas previstas
+  const [ano,mesN]=mesRef.split('-').map(Number);
+  const diasNoMes=new Date(ano,mesN,0).getDate();
+
+  // Dias úteis da escala no mês
+  let diasUteisEscala=0;
+  let minsPorDiaUtil=0;
+  if(esc&&esc.tipo!=='especial'&&esc.dias){
+    for(let d=1;d<=diasNoMes;d++){
+      const dt=new Date(ano,mesN-1,d);
+      const diaSem=DIAS[dt.getDay()];
+      const cfg=esc.dias[diaSem];
+      if(cfg&&cfg.ativo){
+        diasUteisEscala++;
+        const mins=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
+        minsPorDiaUtil+=mins;
+      }
+    }
+  }
+
+  // Horas previstas base (usando horasMes do contrato ou calculado pela escala)
+  const prevBase = diasUteisEscala>0 ? minsPorDiaUtil : horasMesContratadas;
+
+  // Descontar dias de férias no mês
+  const feriasFuncMes=(S_ferias||[]).filter(f=>
+    f.funcionarioId===func.id &&
+    f.inicio<=mesRef+'-31' && f.fim>=mesRef+'-01'
+  );
+  let minsFerias=0;
+  if(feriasFuncMes.length>0&&esc&&esc.dias){
+    for(let d=1;d<=diasNoMes;d++){
+      const iso=`${ano}-${String(mesN).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const emFerias=feriasFuncMes.some(f=>iso>=f.inicio&&iso<=f.fim);
+      if(emFerias){
+        const diaSem=DIAS[new Date(ano,mesN-1,d).getDay()];
+        const cfg=esc.dias[diaSem];
+        if(cfg&&cfg.ativo){
+          minsFerias+=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
+        }
+      }
+    }
+  } else if(feriasFuncMes.length>0&&diasUteisEscala>0){
+    // Sem escala detalhada: proporcional
+    const minsPorDia=prevBase/diasUteisEscala;
+    feriasFuncMes.forEach(f=>{
+      const ini=new Date(Math.max(new Date(f.inicio+'T12:00'),new Date(ano,mesN-1,1)));
+      const fim=new Date(Math.min(new Date(f.fim+'T12:00'),new Date(ano,mesN,0)));
+      const dias=Math.round((fim-ini)/(1000*60*60*24))+1;
+      minsFerias+=dias*minsPorDia;
+    });
+  }
+
+  // Descontar dias de folga
+  const folgasMes=Object.values(S.folgas||{}).filter(f=>f.funcId===func.id&&f.mes===mesRef);
+  let minsFolgas=0;
+  folgasMes.forEach(fg=>{
+    if(esc&&esc.dias){
+      const dt=new Date(fg.data+'T12:00');
+      const diaSem=DIAS[dt.getDay()];
+      const cfg=esc.dias[diaSem];
+      if(cfg&&cfg.ativo){
+        minsFolgas+=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
+      }
+    }
+  });
+
+  const prevAjustado=Math.max(0, prevBase - minsFerias - minsFolgas);
+  return trabTotal - prevAjustado;
 }
 
 /* BATER PONTO */
@@ -1383,8 +1473,8 @@ function goScreen(sc,navId){
 function renderEmpTabsAgenda(){
   if(!S.isAdmin){document.getElementById('empTabsAgenda').innerHTML='';return;}
   document.getElementById('empTabsAgenda').innerHTML=`
-    <button class="emp-tab ${S.empAgenda===1?'active':''}" onclick="selEmpAgenda(1)">Emp. A</button>
-    <button class="emp-tab ${S.empAgenda===2?'active':''}" onclick="selEmpAgenda(2)">Emp. B</button>`;
+    <button class="emp-tab ${S.empAgenda===1?'active':''}" onclick="selEmpAgenda(1)">V. Canziani</button>
+    <button class="emp-tab ${S.empAgenda===2?'active':''}" onclick="selEmpAgenda(2)">V. Bistro</button>`;
 }
 function selEmpAgenda(n){S.empAgenda=n;renderEmpTabsAgenda();renderAgenda();}
 
@@ -1629,7 +1719,14 @@ function abrirModalEdit(id){
   document.getElementById('modalEditFunc').classList.add('open');
 }
 function fecharModalEdit(){document.getElementById('modalEditFunc').classList.remove('open');}
-async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
+function apagarFotoFunc(){
+  if(!confirm('Apagar a foto deste funcionário?'))return;
+  document.getElementById('editFotoBase64').value='__APAGAR__';
+  const prev=document.getElementById('editFotoPreview');
+  if(prev)prev.innerHTML='👤';
+  toast('Foto marcada para apagar. Clique em Salvar.');
+}
+async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
 async function excluirFunc(id,nome){if(!confirm('Excluir '+nome+'?'))return;S.funcionarios=S.funcionarios.filter(f=>f.id!==id);try{await db.collection('funcionarios').doc(id).delete();renderEquipe();toast('Removido');}catch(e){toast('Erro');}}
 
 /* FECHAMENTO */
@@ -1646,7 +1743,7 @@ function renderFechamentos(){
 }
 async function fecharMes(){
   const agora=new Date(),mesAtual=agora.toISOString().slice(0,7),mesLabel=agora.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  if(!confirm('Fechar '+mesLabel+' — Empresa '+S.empFech+'?'))return;
+  if(!confirm('Fechar '+mesLabel+' — '+( S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho')+'?'))return;
   toast('Gerando...');
   const funcList=S.funcionarios.filter(f=>!f.isAdmin&&!f.inativo&&(f.empresa==S.empFech||f.empresa==='ambas'));
   let regsDoMes=[];
@@ -1660,7 +1757,7 @@ async function fecharMes(){
     const folgasMes=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual).length;
     const folgasDom=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual&&v.tipo==='folga_dom').length;
     const esc=S.escalas.find(e=>e.id===f.escalaId);
-    return {nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size,faltas:Math.max(0,22-diasCom.size-folgasMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs),diasMap:agruparDias(regs)};
+    return {nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size,faltas:Math.max(0,22-diasCom.size-folgasMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
   });
   const fech={empresa:String(S.empFech),mes:mesAtual,mesLabel,totalFunc:funcList.length,resumos,criadoEm:new Date().toISOString(),emailContadora:S.config.emailContadora||''};
   try{
@@ -1857,7 +1954,7 @@ async function renderBH(){
   const el=document.getElementById('listaBH');
   const lista=[...S.funcionarios].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   if(!lista.length){el.innerHTML='<div class="empty">Nenhum funcionário</div>';return;}
-  el.innerHTML=lista.map(f=>{const banco=calcBH(f,regs),esc=S.escalas.find(e=>e.id===f.escalaId);const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();return `<div class="bh-card ${banco>0?'bh-pos':banco<0?'bh-neg':'bh-neu'}" style="display:flex;align-items:center;gap:11px"><div class="avatar" style="background:rgba(255,255,255,.5)">${ini}</div><div style="flex:1"><div style="font-weight:600;font-size:13px">${f.nome}</div><div style="font-size:11px;opacity:.8">${esc?.nome||'Sem escala'}</div></div><div style="font-size:20px;font-weight:700">${banco>=0?'+':''}${m2h(banco)}</div></div>`;}).join('');
+  el.innerHTML=lista.map(f=>{const banco=calcBH(f,regs,mes),esc=S.escalas.find(e=>e.id===f.escalaId);const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();return `<div class="bh-card ${banco>0?'bh-pos':banco<0?'bh-neg':'bh-neu'}" style="display:flex;align-items:center;gap:11px"><div class="avatar" style="background:rgba(255,255,255,.5)">${ini}</div><div style="flex:1"><div style="font-weight:600;font-size:13px">${f.nome}</div><div style="font-size:11px;opacity:.8">${esc?.nome||'Sem escala'}</div></div><div style="font-size:20px;font-weight:700">${banco>=0?'+':''}${m2h(banco)}</div></div>`;}).join('');
 }
 async function carregarDetalhe(){
   const fid=document.getElementById('detFunc').value,mes=document.getElementById('detMes').value;
@@ -1865,8 +1962,11 @@ async function carregarDetalhe(){
   const func=S.funcionarios.find(f=>f.id===fid);if(!func)return;
   let regs=[];
   try{const snap=await db.collection('registros').where('funcionarioId','==',fid).where('mes','==',mes).get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));regs.sort((a,b)=>{const da=a.data||'',db2=b.data||'';if(da!==db2)return da.localeCompare(db2);return (a.hora||'').localeCompare(b.hora||'');});}catch(e){console.error('Erro detalhe:',e);}
-  const diasMap=agruparDias(regs),banco=calcBH(func,regs),esc=S.escalas.find(e=>e.id===func.escalaId);
+  const diasMap=agruparDias(regs),banco=calcBH(func,regs,mes),esc=S.escalas.find(e=>e.id===func.escalaId);
   const folgasMes=Object.values(S.folgas).filter(f=>f.funcId===fid&&f.mes===mes);
+  // Buscar férias do funcionário que cobrem o mês selecionado
+  const feriasFuncMes=S_ferias.filter(f=>f.funcionarioId===fid&&f.inicio<=mes+'-31'&&f.fim>=mes+'-01');
+  function ehFerias(isoDate){return feriasFuncMes.some(f=>isoDate>=f.inicio&&isoDate<=f.fim);}
   const [ano,mesN]=mes.split('-').map(Number);
   const diasNoMes=new Date(ano,mesN,0).getDate();
   let totalTrabalhado=0,linhas='';
@@ -1897,6 +1997,9 @@ async function carregarDetalhe(){
     const isFer=ehFeriado(iso);
     const nomeFer=isFer?nomeFeriado(iso):'';
     let bgRow='',statusCol='';
+    const emFerias=ehFerias(iso);
+    if(emFerias&&regsD.length===0){bgRow='background:#e0f2fe;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#0369a1;font-weight:600">🏖️ Férias</td>';}
+    else if(emFerias&&regsD.length>0){bgRow='background:#e0f2fe;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#0369a1">🏖️ +horas</td>';}
     if(ehFolga){bgRow='background:#fdf2f8;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--pink)">🌴 Folga</td>';}
     else if(isFer&&regsD.length>0){bgRow='background:#fff7ed;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:#ea580c">🟠 H.Extra</td>';}
     else if(isFer&&regsD.length===0){bgRow='background:#fff7ed;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#d97706">📅 Feriado</td>';}
@@ -1933,7 +2036,7 @@ async function carregarDetalhe(){
       <tbody>${linhas}</tbody>
       <tfoot><tr style="background:var(--gray-light);border-top:2px solid var(--border)">
         <td style="padding:7px 4px;font-size:11px;font-weight:700">TOTAL</td>
-        <td colspan="4" style="padding:7px 4px;font-size:11px;color:var(--gray);text-align:center">${regs.filter(r=>r.tipo==='Entrada').length} presenças · ${folgasMes.length} folgas</td>
+        <td colspan="4" style="padding:7px 4px;font-size:11px;color:var(--gray);text-align:center">${regs.filter(r=>r.tipo==='Entrada').length} presenças · ${folgasMes.length} folgas${feriasFuncMes.length>0?' · '+feriasFuncMes.reduce((acc,f)=>{const ini=new Date(f.inicio+'T12:00'),fim=new Date(f.fim+'T12:00');const diasNoMes=Array.from({length:(fim-ini)/(86400000)+1},(_,i)=>new Date(ini.getTime()+i*86400000)).filter(d=>d.getFullYear()===ano&&d.getMonth()===mesN-1).length;return acc+diasNoMes;},0)+' dias férias':''}</td>
         <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:var(--blue)">${m2h(totalTrabalhado)}</td>
         <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:${banco>=0?'var(--green)':'var(--red)'}">${banco>=0?'+':''}${m2h(banco)}</td>
         <td></td>
@@ -2181,7 +2284,7 @@ async function salvarFotoMaster(){
   }catch(e){toast('Erro ao salvar foto: '+e.message);}
 }
 async function salvarConfig(){S.config={empresaA:{nome:document.getElementById('cfgA_nome').value,cnpj:document.getElementById('cfgA_cnpj').value,end:document.getElementById('cfgA_end').value,lat:parseFloat(document.getElementById('cfgA_lat').value)||0,lng:parseFloat(document.getElementById('cfgA_lng').value)||0,raio:parseInt(document.getElementById('cfgA_raio').value)||150},empresaB:{nome:document.getElementById('cfgB_nome').value,cnpj:document.getElementById('cfgB_cnpj').value,end:document.getElementById('cfgB_end').value,lat:parseFloat(document.getElementById('cfgB_lat').value)||0,lng:parseFloat(document.getElementById('cfgB_lng').value)||0,raio:parseInt(document.getElementById('cfgB_raio').value)||200},emailContadora:document.getElementById('cfgEmail').value};try{await db.collection('config').doc('geral').set(S.config);toast('✅ Configurações salvas!');}catch(e){toast('Erro ao salvar');}}
-function usarLoc(emp){navigator.geolocation.getCurrentPosition(pos=>{document.getElementById('cfg'+emp+'_lat').value=pos.coords.latitude.toFixed(6);document.getElementById('cfg'+emp+'_lng').value=pos.coords.longitude.toFixed(6);toast('📍 Localização Empresa '+emp+' capturada!');},()=>toast('GPS negado'));}
+function usarLoc(emp){navigator.geolocation.getCurrentPosition(pos=>{document.getElementById('cfg'+emp+'_lat').value=pos.coords.latitude.toFixed(6);document.getElementById('cfg'+emp+'_lng').value=pos.coords.longitude.toFixed(6);toast('📍 Localização '+(emp==='A'?'Villa Canziani Donato':'Villa Bistro Patacho')+' capturada!');},()=>toast('GPS negado'));}
 
 /* ===== GESTÃO DE ADMINS ===== */
 var S_admins=[];
