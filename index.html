@@ -880,7 +880,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.53 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.54 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1669,7 +1669,7 @@ function renderAgenda(){
 
   let funcList;
   if(S.isAdmin){
-    funcList=S.funcionarios.filter(f=>f.empresa==S.empAgenda||f.empresa==='ambas').sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+    funcList=S.funcionarios.filter(f=>(!f.isAdmin||f.aparecerNaLista)&&!f.inativo&&(f.empresa==S.empAgenda||f.empresa==='ambas')).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   } else {
     funcList=S.funcionarios.filter(f=>f.id===S.user.id);
   }
