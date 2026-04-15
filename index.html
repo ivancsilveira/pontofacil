@@ -245,6 +245,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="login-logo">🕐</div>
     <div class="login-title">PontoFácil</div>
     <div class="login-sub">Villa Canziani Donato</div>
+    <div style="font-size:10px;color:var(--gray);text-align:center;margin-bottom:8px">v1.0.15 · 15/04/2026</div>
     <div class="form-group" style="margin-bottom:11px"><label class="form-label">CPF</label><input class="form-control" type="text" id="loginCpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);" onkeydown="if(event.key==='Enter')document.getElementById('loginSenha').focus()"></div>
     <div class="form-group" style="margin-bottom:10px"><label class="form-label">Senha</label><input class="form-control" type="password" id="loginSenha" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn btn-solid" onclick="doLogin()">Entrar</button>
@@ -700,7 +701,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 </div>
 
 <script>
-const FIREBASE_CONFIG = {
+// Estado global
+var S={user:null,isAdmin:false,registros:[],funcionarios:[],escalas:[],folgas:{},fechamentos:[],config:{empresaA:{nome:'',cnpj:'',end:'',lat:-23.55,lng:-46.63,raio:150},empresaB:{nome:'',cnpj:'',end:'',lat:-23.55,lng:-46.63,raio:200},emailContadora:''},agendaMes:new Date().getMonth(),agendaAno:new Date().getFullYear(),empAgenda:1,empEquipe:1,geoOk:false,lat:0,lng:0};
+
+var FIREBASE_CONFIG = {
   apiKey: "AIzaSyC6hVTaaDd7UPS5TqSdLZj2G6LFidcFr9c",
   authDomain: "villa-canziani-donato-ponto.firebaseapp.com",
   projectId: "villa-canziani-donato-ponto",
@@ -708,24 +712,15 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "802996857300",
   appId: "1:802996857300:web:93a250bcb83489a8db8e41"
 };
-let db = null;
-try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) {}
+var db = null;
+try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const DIAS_FULL = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-const HP = {entrada:'08:00',saida:'17:00',almoco:'12:00',retorno:'13:00'};
-const MOTIVOS = {atestado:'🏥 Atestado',saida_autorizada:'✅ Saída autorizada',esquecimento:'📝 Esquecimento',folga_compensada:'🔄 Folga compensada',hora_extra_auth:'⏰ H.extra autorizada',feriado_trab:'📅 Feriado trabalhado',outro:'✏️ Outro'};
+var DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+var DIAS_FULL = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+var HP = {entrada:'08:00',saida:'17:00',almoco:'12:00',retorno:'13:00'};
+var MOTIVOS = {atestado:'🏥 Atestado',saida_autorizada:'✅ Saída autorizada',esquecimento:'📝 Esquecimento',folga_compensada:'🔄 Folga compensada',hora_extra_auth:'⏰ H.extra autorizada',feriado_trab:'📅 Feriado trabalhado',outro:'✏️ Outro'};
 
-let S = {
-  user:null, isAdmin:false, geoOk:false, lat:null, lng:null,
-  empEquipe:1, empFech:1, empAgenda:1,
-  agendaAno:new Date().getFullYear(), agendaMes:new Date().getMonth(),
-  registros:[], escalas:[], funcionarios:[], fechamentos:[],
-  folgas:{}, // key: "funcId_YYYY-MM-DD" => {tipo:'folga'|'folga_dom'}
-  config:{empresaA:{nome:'Empresa A',cnpj:'',end:'',lat:-23.3045,lng:-51.1696,raio:150},
-          empresaB:{nome:'Empresa B',cnpj:'',end:'',lat:-23.3060,lng:-51.1700,raio:200},emailContadora:''},
-  escalaTabDias:{}
-};
+// S já declarado acima
 
 /* CPF */
 function fmtCpf(v){v=v.replace(/\D/g,'').slice(0,11);return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');}
