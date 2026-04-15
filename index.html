@@ -746,27 +746,31 @@ async function doLogin(){
 async function iniciarApp(){
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('appWrap').style.display='flex';
-  const cfg=S.user.empresa==='2'?S.config.empresaB:S.config.empresaA;
   document.getElementById('topName').textContent='Olá, '+S.user.nome.split(' ')[0];
-  document.getElementById('topSub').textContent=S.isAdmin?'Administrador · Villa Canziani Donato':cfg.nome;
+  document.getElementById('topSub').textContent=S.isAdmin?'Administrador · Villa Canziani Donato':'';
   document.getElementById('topRole').textContent=S.isAdmin?'Admin':'Funcionário';
   if(S.isAdmin){
     document.querySelectorAll('.admin-nav').forEach(el=>el.style.display='');
     document.getElementById('adminAgendaInfo').style.display='block';
-    // Admin começa no dashboard
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
     document.getElementById('sc-dashboard').classList.add('active');
     document.getElementById('nav0').classList.add('active');
   } else {
-    // Funcionário começa e fica na tela Ponto
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
     document.getElementById('sc-ponto').classList.add('active');
     document.getElementById('nav1').classList.add('active');
   }
   iniciarRelogio(); verificarGPS(); setDates();
-  await Promise.all([carregarConfig(),carregarEscalas(),carregarFuncionarios(),carregarFechamentos(),carregarFolgas()]);
+  try{
+    await Promise.all([carregarConfig(),carregarEscalas(),carregarFuncionarios(),carregarFechamentos(),carregarFolgas()]);
+  }catch(e){console.error('Erro ao carregar dados:',e);}
+  // Atualizar subtítulo com config carregada
+  if(!S.isAdmin){
+    const cfg=S.user.empresa==='2'?S.config.empresaB:S.config.empresaA;
+    document.getElementById('topSub').textContent=cfg&&cfg.nome?cfg.nome:'';
+  }
   mostrarEscalaFuncionario();
   verificarFolgaHoje();
   if(S.isAdmin){
