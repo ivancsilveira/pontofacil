@@ -815,7 +815,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.46 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.47 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2281,7 +2281,20 @@ function editarEscala(id){
 async function excluirEscala(id,nome){if(!confirm('Excluir "'+nome+'"?'))return;try{await db.collection('escalas').doc(id).delete();S.escalas=S.escalas.filter(e=>e.id!==id);renderEscalas();popularSelectEscalas();toast('Removida');}catch(e){toast('Erro');}}
 
 /* EQUIPE */
-async function carregarFuncionarios(){try{const snap=await db.collection('funcionarios').get();S.funcionarios=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}}
+async function carregarFuncionarios(){
+  try{
+    const snap=await db.collection('funcionarios').get();
+    S.funcionarios=snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Verifica se master deve aparecer na lista
+    try{
+      const masterDoc=await db.collection('config').doc('master').get();
+      if(masterDoc.exists && masterDoc.data().aparecerNaLista){
+        const masterFoto=masterDoc.data().fotoCadastro||'';
+        S.funcionarios.push({id:'master',nome:'Administrador Master (Ivan)',cpf:'495.256.629-34',isAdmin:true,aparecerNaLista:true,empresa:'ambas',cargo:'Administrador',fotoCadastro:masterFoto});
+      }
+    }catch(e){}
+  }catch(e){}
+}
 function popularSelectFunc(id){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">— Selecione —</option>'+[...S.funcionarios].filter(f=>(!f.isAdmin||f.aparecerNaLista)&&!f.inativo).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');}
 var _mostrarInativos=false;
 
@@ -2983,9 +2996,15 @@ async function renderAdmins(){
   const el=document.getElementById('listaAdmins');
   if(!el)return;
   // Buscar foto do master
-  let masterFoto='';
-  try{const doc=await db.collection('config').doc('master').get();if(doc.exists)masterFoto=doc.data().fotoCadastro||'';}catch(e){}
-  const todos=[{id:'master',nome:'Administrador Master (Ivan)',cpf:'495.256.629-34',fotoCadastro:masterFoto},...S_admins];
+  let masterFoto='',masterAparecerLista=false;
+  try{
+    const doc=await db.collection('config').doc('master').get();
+    if(doc.exists){
+      masterFoto=doc.data().fotoCadastro||'';
+      masterAparecerLista=doc.data().aparecerNaLista||false;
+    }
+  }catch(e){}
+  const todos=[{id:'master',nome:'Administrador Master (Ivan)',cpf:'495.256.629-34',fotoCadastro:masterFoto,aparecerNaLista:masterAparecerLista},...S_admins];
   el.innerHTML=todos.map(a=>{
     const ini=(a.nome||'AD').split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
     const fotoHtml=a.fotoCadastro?
@@ -2999,10 +3018,10 @@ async function renderAdmins(){
         <div style="font-size:11px;color:var(--blue)">${a.cpf||'—'}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        ${a.id!=='master'?`
-          <button class="btn btn-danger-sm btn-sm" onclick="excluirAdmin('${a.id}','${a.nome}')" style="padding:4px 8px;font-size:11px">✕</button>
-          <button onclick="toggleAparecerLista('${a.id}',${!a.aparecerNaLista})" style="background:${a.aparecerNaLista?'var(--green-light)':'var(--gray-light)'};color:${a.aparecerNaLista?'var(--green)':'var(--gray)'};border:1px solid ${a.aparecerNaLista?'#a7d7b0':'var(--border)'};border-radius:6px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer" title="${a.aparecerNaLista?'Clique para ocultar da lista':'Clique para mostrar na lista'}">${a.aparecerNaLista?'👁 Na lista':'👁 Oculto'}</button>
-        `:'<span style="font-size:10px;color:var(--blue);opacity:.6">Master</span>'}
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <button onclick="toggleAparecerLista('${a.id}',${!a.aparecerNaLista})" style="background:${a.aparecerNaLista?'var(--green-light)':'var(--gray-light)'};color:${a.aparecerNaLista?'var(--green)':'var(--gray)'};border:1px solid ${a.aparecerNaLista?'#a7d7b0':'var(--border)'};border-radius:6px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer">${a.aparecerNaLista?'👁 Na lista':'👁 Oculto'}</button>
+        ${a.id!=='master'?`<button class="btn btn-danger-sm btn-sm" onclick="excluirAdmin('${a.id}','${a.nome}')" style="padding:4px 8px;font-size:11px">✕</button>`:'<span style="font-size:10px;color:var(--blue);opacity:.6">Master</span>'}
+      </div>
       </div>
     </div>`;
   }).join('');
@@ -3050,14 +3069,27 @@ async function excluirAdmin(id,nome){
 
 async function toggleAparecerLista(id,valor){
   try{
-    await db.collection('funcionarios').doc(id).update({aparecerNaLista:valor});
-    const idx=S_admins.findIndex(a=>a.id===id);
-    if(idx>=0) S_admins[idx].aparecerNaLista=valor;
-    // Atualiza também em S.funcionarios
-    const fi=S.funcionarios.findIndex(f=>f.id===id);
-    if(fi>=0) S.funcionarios[fi].aparecerNaLista=valor;
+    if(id==='master'){
+      // Master: salva em config/master
+      await db.collection('config').doc('master').set({aparecerNaLista:valor},{merge:true});
+      // Adiciona/remove do S.funcionarios dinamicamente
+      const masterIdx=S.funcionarios.findIndex(f=>f.id==='master');
+      if(valor && masterIdx<0){
+        S.funcionarios.push({id:'master',nome:'Administrador Master (Ivan)',cpf:'495.256.629-34',isAdmin:true,aparecerNaLista:true,empresa:'ambas',cargo:'Administrador'});
+      } else if(!valor && masterIdx>=0){
+        S.funcionarios.splice(masterIdx,1);
+      } else if(masterIdx>=0){
+        S.funcionarios[masterIdx].aparecerNaLista=valor;
+      }
+    } else {
+      await db.collection('funcionarios').doc(id).update({aparecerNaLista:valor});
+      const idx=S_admins.findIndex(a=>a.id===id);
+      if(idx>=0) S_admins[idx].aparecerNaLista=valor;
+      const fi=S.funcionarios.findIndex(f=>f.id===id);
+      if(fi>=0) S.funcionarios[fi].aparecerNaLista=valor;
+    }
     renderAdmins();
-    toast(valor?'✅ Admin aparecerá na lista de funcionários':'Admin ocultado da lista');
+    toast(valor?'✅ Aparecerá na lista de funcionários':'👁 Ocultado da lista');
   }catch(e){toast('Erro: '+e.message);}
 }
 
