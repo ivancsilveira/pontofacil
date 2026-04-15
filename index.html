@@ -528,7 +528,26 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         </div>
         <div id="listaFechamentos"><div class="empty">Nenhum fechamento</div></div>
       </div>
-      <div id="sub-bh" style="display:none"><div class="card"><div class="card-title">Banco de horas — mês atual</div><div id="listaBH"><div class="empty">Carregando...</div></div></div></div>
+      <div id="sub-bh" style="display:none">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:10px">Banco de horas</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Empresa</label>
+              <select class="form-control" id="bhEmp" onchange="renderBH()">
+                <option value="todas">Todas</option>
+                <option value="1">Villa Canziani</option>
+                <option value="2">Villa Bistro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mês</label>
+              <input type="month" class="form-control" id="bhMes" onchange="renderBH()">
+            </div>
+          </div>
+        </div>
+        <div id="listaBH"><div class="empty">Carregando...</div></div>
+      </div>
       <div id="sub-det" style="display:none">
         <div class="card">
           <div class="card-title">Detalhe por funcionário</div>
@@ -880,7 +899,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.58 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.60 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2751,8 +2770,7 @@ async function fecharMes(){
     S.fechamentos.unshift({id:ref.id,...fech});
     registrarLog('fechamento','Fechamento gerado: '+mesLabel,{detalhes:(S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho')+' · '+funcList.length+' funcionários'});
     renderFechamentos();
-    enviarEmail(fech);
-    toast('✅ Mês fechado com sucesso!');
+    toast('✅ Mês fechado! Use o botão 📧 para enviar por email.');
   }catch(e){toast('Erro ao fechar: '+e.message);}
 }
 function agruparDias(regs){
@@ -2839,10 +2857,9 @@ function verFechamento(id){
           <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--red)">${saida?saida.hora:'—'}</td>
           <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">${m2h(mins)}</td>
           <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:${isFerF?'#ea580c':saldo>=0?'var(--green)':'var(--red)'}">${isFerF?ferLabel:(saldo>=0?'+':'')+m2h(saldo)}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center">
-            ${temAtraso?'<span title="Atraso">⚠️</span>':''}
-            ${temAjuste?'<span class="ajuste-badge" style="font-size:9px">✏️</span>':''}
-            <button onclick="editarDiaFechamento('${func?func.id:'__nome__'+encodeURIComponent(r.nome)}','${data}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;margin-left:2px" title="Editar registros do dia">✏️</button>
+          <td style="padding:3px 2px;text-align:center;width:34px">
+            ${temAtraso?'<span style="font-size:9px">⚠️</span>':''}
+            <button onclick="editarDiaFechamento('${func?func.id:'__nome__'+encodeURIComponent(r.nome)}','${data}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 4px;font-size:10px;cursor:pointer" title="Editar dia">✏️</button>
           </td>
         </tr>`;
       });
@@ -2859,7 +2876,7 @@ function verFechamento(id){
       <td colspan="4" style="padding:7px 4px;font-size:11px;color:var(--gray);text-align:center">${r.presencas} presenças · ${r.faltas} faltas · ${r.atrasos} atraso(s)</td>
       <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:var(--blue)">${m2h(totalMinTrabalhado)}</td>
       <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:${bh>=0?'var(--green)':'var(--red)'}">${bh>=0?'+':''}${m2h(bh)}</td>
-      <td style="padding:4px;text-align:center"><button onclick="abrirEditDiaModal('${func?func.id:''}','${r.nome}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;white-space:nowrap" title="Editar dia">+ ✏️</button></td>
+      <td style="padding:3px 2px;text-align:center;width:34px"><button onclick="abrirEditDiaModal('${func?func.id:''}','${r.nome}')" style="background:var(--blue);color:#fff;border:none;border-radius:5px;padding:3px 5px;font-size:10px;cursor:pointer" title="Adicionar">+✏️</button></td>
     </tr>`;
 
     return `<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
@@ -2884,7 +2901,7 @@ function verFechamento(id){
               <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--red);text-align:center;border-bottom:2px solid var(--border)">Saída</th>
               <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--blue);text-align:center;border-bottom:2px solid var(--border)">Trabalhado</th>
               <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Saldo</th>
-              <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Obs</th>
+              <th style="padding:6px 2px;font-size:10px;font-weight:700;color:var(--blue);text-align:center;border-bottom:2px solid var(--border);width:34px">✏️</th>
             </tr>
           </thead>
           <tbody>${diasHtml||'<tr><td colspan="8" style="padding:12px;text-align:center;color:var(--gray);font-size:12px">Sem registros neste mês</td></tr>'}</tbody>
@@ -2947,12 +2964,23 @@ async function apagarFechamento(id,label){
   }catch(e){toast('Erro ao apagar: '+e.message);}
 }
 async function renderBH(){
-  const mes=new Date().toISOString().slice(0,7);let regs=[];
-  try{const snap=await db.collection('registros').where('mes','==',mes).get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+  const mesEl=document.getElementById('bhMes');
+  const empEl=document.getElementById('bhEmp');
+  const mes=mesEl&&mesEl.value?mesEl.value:new Date().toISOString().slice(0,7);
+  const empFiltro=empEl?empEl.value:'todas';
+  if(mesEl&&!mesEl.value) mesEl.value=mes;
   const el=document.getElementById('listaBH');
-  const lista=[...S.funcionarios].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  el.innerHTML='<div class="empty">Carregando...</div>';
+  let regs=[];
+  try{const snap=await db.collection('registros').where('mes','==',mes).get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+  const lista=[...S.funcionarios]
+    .filter(f=>!f.inativo&&!f.isAdmin&&f.cpf!=='495.256.629-34'&&(empFiltro==='todas'||f.empresa==empFiltro||f.empresa==='ambas'))
+    .sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   if(!lista.length){el.innerHTML='<div class="empty">Nenhum funcionário</div>';return;}
-  el.innerHTML=lista.map(f=>{const banco=calcBH(f,regs,mes),esc=S.escalas.find(e=>e.id===f.escalaId);const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();return `<div class="bh-card ${banco>0?'bh-pos':banco<0?'bh-neg':'bh-neu'}" style="display:flex;align-items:center;gap:11px"><div class="avatar" style="background:rgba(255,255,255,.5)">${ini}</div><div style="flex:1"><div style="font-weight:600;font-size:13px">${f.nome}</div><div style="font-size:11px;opacity:.8">${esc?.nome||'Sem escala'}</div></div><div style="font-size:20px;font-weight:700">${banco>=0?'+':''}${m2h(banco)}</div></div>`;}).join('');
+  const [ano,m]=mes.split('-').map(Number);
+  const mesLabel=new Date(ano,m-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  el.innerHTML='<div style="text-align:center;font-size:11px;color:var(--gray);margin-bottom:8px;font-weight:600">'+mesLabel.toUpperCase()+'</div>'+
+    lista.map(f=>{const banco=calcBH(f,regs,mes),esc=S.escalas.find(e=>e.id===f.escalaId);const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();return `<div class="bh-card ${banco>0?'bh-pos':banco<0?'bh-neg':'bh-neu'}" style="display:flex;align-items:center;gap:11px"><div class="avatar" style="background:rgba(255,255,255,.5)">${ini}</div><div style="flex:1"><div style="font-weight:600;font-size:13px">${f.nome}</div><div style="font-size:11px;opacity:.8">${esc?.nome||'Sem escala'}</div></div><div style="font-size:20px;font-weight:700">${banco>=0?'+':''}${m2h(banco)}</div></div>`;}).join('');
 }
 async function carregarDetalhe(){
   const fid=document.getElementById('detFunc').value,mes=document.getElementById('detMes').value;
@@ -3043,7 +3071,7 @@ async function carregarDetalhe(){
       <td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--red)">${saida?saida.hora:'—'}</td>
       <td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">${mins>0?m2h(mins):'—'}</td>
       ${statusCol}
-      <td style="padding:5px 4px;font-size:11px;text-align:center">${temAtraso?'⚠️':''}${temAjuste?'✏️':''}</td>
+      <td style="padding:3px 2px;font-size:11px;text-align:center">${temAtraso?'<span title="Atraso">⚠️</span>':''}${temAjuste?'<span class="ajuste-badge" style="font-size:9px">✏️</span>':''}<button onclick="editarDiaFechamento('${fid}','${dataBR}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 5px;font-size:10px;cursor:pointer;display:block;margin:2px auto" title="Editar dia">✏️</button></td>
     </tr>`;
   }
   const html=`<div class="card" style="padding:0;overflow:hidden">
@@ -3060,7 +3088,7 @@ async function carregarDetalhe(){
         <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--red);text-align:center;border-bottom:2px solid var(--border)">Saída</th>
         <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--blue);text-align:center;border-bottom:2px solid var(--border)">Trabalhado</th>
         <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Saldo</th>
-        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Obs</th>
+        <th style="padding:6px 2px;font-size:10px;font-weight:700;color:var(--blue);text-align:center;border-bottom:2px solid var(--border);width:34px">✏️</th>
       </tr></thead>
       <tbody>${linhas}</tbody>
       <tfoot><tr style="background:var(--gray-light);border-top:2px solid var(--border)">
