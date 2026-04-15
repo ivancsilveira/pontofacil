@@ -338,6 +338,13 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <!-- HISTÓRICO -->
     <div class="screen" id="sc-historico">
       <div class="card">
+        <!-- Seletor de funcionário (só admin) -->
+        <div id="hFuncWrap" style="display:none;margin-bottom:10px">
+          <label class="form-label">Funcionário</label>
+          <select class="form-control" id="hFunc" onchange="carregarHistorico()">
+            <option value="">— Selecione —</option>
+          </select>
+        </div>
         <div class="card-title">Período</div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">De</label><input type="date" class="form-control" id="hDe" onchange="carregarHistorico()"></div>
@@ -349,6 +356,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="stat-card"><div class="stat-label">Faltas</div><div class="stat-value c-red" id="hFalt">—</div></div>
         <div class="stat-card"><div class="stat-label">Folgas</div><div class="stat-value c-pink" id="hFolg">—</div></div>
         <div class="stat-card"><div class="stat-label">Banco</div><div class="stat-value c-teal" id="hBanco">—</div></div>
+      </div>
+      <div id="hNomeFuncCard" style="display:none" class="card" style="padding:10px 13px">
+        <div id="hNomeFunc" style="font-weight:700;font-size:14px"></div>
+        <div id="hCargoFunc" style="font-size:11px;color:var(--gray)"></div>
       </div>
       <div class="card"><div class="card-title">Registros</div><div id="historicoLista"><div class="empty">Selecione o período</div></div></div>
     </div>
@@ -574,7 +585,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <button class="nav-item active" onclick="goScreen('ponto','nav1')" id="nav1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Ponto
     </button>
-    <button class="nav-item admin-nav" onclick="goScreen('historico','nav2')" id="nav2" style="display:none">
+    <button class="nav-item" onclick="goScreen('historico','nav2')" id="nav2">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Histórico
     </button>
     <button class="nav-item admin-nav" onclick="goScreen('agenda','nav3')" id="nav3" style="display:none">
@@ -772,7 +783,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.35 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.37 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1593,7 +1604,29 @@ function goScreen(sc,navId){
   document.getElementById('sc-'+sc).classList.add('active');
   document.getElementById(navId).classList.add('active');
   if(sc==='dashboard')carregarDashboard();
-  if(sc==='historico')carregarHistorico();
+  if(sc==='historico'){
+    const wrap=document.getElementById('hFuncWrap');
+    const sel=document.getElementById('hFunc');
+    const nomeCard=document.getElementById('hNomeFuncCard');
+    if(S.isAdmin){
+      // Admin: mostra seletor de funcionário
+      if(wrap) wrap.style.display='block';
+      if(sel){
+        const lista=[...S.funcionarios].filter(f=>!f.inativo&&!f.isAdmin).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+        sel.innerHTML='<option value="">— Selecione funcionário —</option>'+lista.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
+      }
+    } else {
+      // Funcionário: oculta seletor, mostra só o dele com nome
+      if(wrap) wrap.style.display='none';
+      if(nomeCard){
+        nomeCard.style.display='block';
+        document.getElementById('hNomeFunc').textContent=S.user.nome;
+        const esc=S.escalas.find(e=>e.id===S.user.escalaId);
+        document.getElementById('hCargoFunc').textContent=(S.user.cargo||'')+(esc?' · '+esc.nome:'');
+      }
+    }
+    carregarHistorico();
+  }
   if(sc==='agenda'){renderEmpTabsAgenda();renderAgenda();}
   if(sc==='ajustes'){popularSelectFunc('ajFunc');document.getElementById('ajData').value=new Date().toISOString().slice(0,10);}
   if(sc==='escalas')renderEscalas();
@@ -1630,22 +1663,80 @@ function selEmp(n,prefix){
 function setDates(){const h=new Date(),y=h.getFullYear(),m=String(h.getMonth()+1).padStart(2,'0');document.getElementById('hDe').value=y+'-'+m+'-01';document.getElementById('hAte').value=h.toISOString().slice(0,10);document.getElementById('detMes').value=y+'-'+m;}
 
 async function carregarHistorico(){
-  const de=document.getElementById('hDe').value,ate=document.getElementById('hAte').value;if(!de||!ate)return;
+  const de=document.getElementById('hDe').value,ate=document.getElementById('hAte').value;
+  if(!de||!ate)return;
+
+  // Determina qual funcionário mostrar
+  let targetId, targetFunc;
+  if(S.isAdmin){
+    const hFunc=document.getElementById('hFunc');
+    if(!hFunc||!hFunc.value){
+      document.getElementById('historicoLista').innerHTML='<div class="empty">Selecione um funcionário acima</div>';
+      ['hPres','hFalt','hFolg','hBanco'].forEach(id=>{document.getElementById(id).textContent='—';});
+      return;
+    }
+    targetId=hFunc.value;
+    targetFunc=S.funcionarios.find(f=>f.id===targetId)||S.user;
+    // Atualiza card de nome para admin
+    const nomeCard=document.getElementById('hNomeFuncCard');
+    if(nomeCard){
+      nomeCard.style.display='block';
+      document.getElementById('hNomeFunc').textContent=targetFunc.nome||'';
+      const esc=S.escalas.find(e=>e.id===targetFunc.escalaId);
+      document.getElementById('hCargoFunc').textContent=(targetFunc.cargo||'')+(esc?' · '+esc.nome:'');
+    }
+  } else {
+    // Funcionário vê só o próprio histórico
+    targetId=S.user.id;
+    targetFunc=S.user;
+  }
+
   let regs=[];
-  try{const snap=await db.collection('registros').where('funcionarioId','==',S.user.id).orderBy('timestamp','desc').limit(400).get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){regs=S.registros;}
+  try{
+    const snap=await db.collection('registros')
+      .where('funcionarioId','==',targetId).get();
+    regs=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){regs=S.registros.filter(r=>r.funcionarioId===targetId);}
+
   const deTs=new Date(de).getTime(),ateTs=new Date(ate).getTime()+86400000;
   regs=regs.filter(r=>r.timestamp>=deTs&&r.timestamp<ateTs);
-  // Contar folgas no período
-  const mesKey=de.slice(0,7);
-  const folgasCount=Object.values(S.folgas).filter(f=>f.funcId===S.user.id&&f.mes===mesKey).length;
+  regs.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+
+  // Contar folgas no período (múltiplos meses)
+  const meses=new Set();
+  let d=new Date(de);while(d<=new Date(ate)){meses.add(d.toISOString().slice(0,7));d.setMonth(d.getMonth()+1);}
+  const folgasCount=Object.values(S.folgas).filter(f=>f.funcId===targetId&&meses.has(f.mes)).length;
+
   const diasCom=new Set(regs.filter(r=>r.tipo==='Entrada').map(r=>r.data));
   document.getElementById('hPres').textContent=diasCom.size;
   document.getElementById('hFalt').textContent=Math.max(0,22-diasCom.size-folgasCount);
   document.getElementById('hFolg').textContent=folgasCount;
-  document.getElementById('hBanco').textContent=m2h(calcBH(S.user,regs));
+  document.getElementById('hBanco').textContent=m2h(calcBH(targetFunc,regs));
+
   const el=document.getElementById('historicoLista');
-  if(!regs.length){el.innerHTML='<div class="empty">Nenhum registro</div>';return;}
-  el.innerHTML=regs.slice(0,100).map(r=>`<div class="reg-item"><div><div class="reg-type">${r.tipo}${r.atraso?` <span style="color:var(--amber);font-size:10px">⚠️</span>`:''}${r.ajuste?` <span class="ajuste-badge">✏️</span>`:''}</div><div class="reg-meta">${r.ajuste?'Ajuste: '+r.motivoLabel:(r.empresaNome||'—')+' · GPS ✓'}</div></div><div><div class="reg-time">${r.hora}</div><div class="reg-date">${r.data}</div></div></div>`).join('');
+  if(!regs.length){el.innerHTML='<div class="empty">Nenhum registro no período</div>';return;}
+
+  // Agrupar por data
+  const porDia={};
+  regs.forEach(r=>{if(!porDia[r.data])porDia[r.data]=[];porDia[r.data].push(r);});
+  const diasOrdenados=Object.keys(porDia).sort((a,b)=>b.localeCompare(a));
+
+  el.innerHTML=diasOrdenados.map(data=>{
+    const regsD=porDia[data].sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+    const mins=calcDia(regsD);
+    const temAtraso=regsD.some(r=>r.atraso);
+    return `<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="background:var(--gray-light);padding:7px 12px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:700;font-size:13px">${data} ${temAtraso?'<span style="color:var(--amber);font-size:11px">⚠️ Atraso</span>':''}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--blue)">${mins>0?m2h(mins):'—'}</div>
+      </div>
+      ${regsD.map(r=>`<div class="reg-item" style="padding:7px 12px">
+        <div><div class="reg-type">${r.tipo}${r.ajuste?` <span class="ajuste-badge">✏️ ${r.motivoLabel||''}</span>`:''}</div>
+        <div class="reg-meta">${r.ajuste?'por '+r.ajustadoPor:(r.empresaNome||'')}</div></div>
+        <div class="reg-time">${r.hora}</div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
 }
 
 /* AJUSTES */
