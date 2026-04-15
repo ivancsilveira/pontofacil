@@ -447,7 +447,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </div>
     </div>
 
-    <!-- CONFIG -->\n    <div class="screen" id="sc-config">
+    <!-- CONFIG -->
+    <div class="screen" id="sc-config">
       <div class="card">
         <div class="card-title">Empresa A</div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">Nome</label><input class="form-control" id="cfgA_nome"></div>
@@ -1199,7 +1200,7 @@ async function carregarDashboard(){
   const dataHoje=hoje.toLocaleDateString('pt-BR'),hojeISO=hoje.toISOString().slice(0,10);
   let regsHoje=[];
   try{const snap=await db.collection('registros').where('data','==',dataHoje).get();regsHoje=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
-  const funcOrdenados=[...S.funcionarios].filter(f=>!f.inativo).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const funcOrdenados=[...S.funcionarios].filter(f=>!f.inativo&&!f.isAdmin).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   let presentes=0,faltas=0,folgas=0,atrasos=0;
   const el=document.getElementById('dashLista');
   if(!funcOrdenados.length){el.innerHTML='<div class="empty">Nenhum funcionário cadastrado</div>';return;}
@@ -1429,7 +1430,7 @@ async function excluirEscala(id,nome){if(!confirm('Excluir "'+nome+'"?'))return;
 
 /* EQUIPE */
 async function carregarFuncionarios(){try{const snap=await db.collection('funcionarios').get();S.funcionarios=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}}
-function popularSelectFunc(id){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">— Selecione —</option>'+[...S.funcionarios].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');}
+function popularSelectFunc(id){const el=document.getElementById(id);if(!el)return;el.innerHTML='<option value="">— Selecione —</option>'+[...S.funcionarios].filter(f=>!f.isAdmin&&!f.inativo).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');}
 var _mostrarInativos=false;
 
 function renderEquipe(){
@@ -1658,18 +1659,84 @@ async function renderBH(){
   el.innerHTML=lista.map(f=>{const banco=calcBH(f,regs),esc=S.escalas.find(e=>e.id===f.escalaId);const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();return `<div class="bh-card ${banco>0?'bh-pos':banco<0?'bh-neg':'bh-neu'}" style="display:flex;align-items:center;gap:11px"><div class="avatar" style="background:rgba(255,255,255,.5)">${ini}</div><div style="flex:1"><div style="font-weight:600;font-size:13px">${f.nome}</div><div style="font-size:11px;opacity:.8">${esc?.nome||'Sem escala'}</div></div><div style="font-size:20px;font-weight:700">${banco>=0?'+':''}${m2h(banco)}</div></div>`;}).join('');
 }
 async function carregarDetalhe(){
-  const fid=document.getElementById('detFunc').value,mes=document.getElementById('detMes').value;if(!fid||!mes)return;
+  const fid=document.getElementById('detFunc').value,mes=document.getElementById('detMes').value;
+  if(!fid||!mes)return;
   const func=S.funcionarios.find(f=>f.id===fid);if(!func)return;
-  let regs=[];try{const snap=await db.collection('registros').where('funcionarioId','==',fid).where('mes','==',mes).orderBy('timestamp').get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+  let regs=[];
+  try{const snap=await db.collection('registros').where('funcionarioId','==',fid).where('mes','==',mes).orderBy('timestamp').get();regs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
   const diasMap=agruparDias(regs),banco=calcBH(func,regs),esc=S.escalas.find(e=>e.id===func.escalaId);
   const folgasMes=Object.values(S.folgas).filter(f=>f.funcId===fid&&f.mes===mes);
-  let html=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div style="font-weight:700;font-size:14px">${func.nome}</div><div style="font-size:11px;color:var(--gray)">${func.cargo||'—'} · ${esc?.nome||'Sem escala'}</div></div><div style="text-align:right"><div style="font-size:20px;font-weight:700;color:${banco>=0?'var(--green)':'var(--red)'}">${banco>=0?'+':''}${m2h(banco)}</div><div style="font-size:10px;color:var(--gray)">Banco horas</div></div></div>`;
-  // Mostrar folgas do mês
-  if(folgasMes.length>0){html+=`<div style="margin-bottom:10px"><div class="card-title">Folgas do mês</div>${folgasMes.map(f=>`<div style="font-size:12px;color:var(--pink);padding:4px 0">🌴 ${f.data}${f.tipo==='folga_dom'?' (Domingo)':''}</div>`).join('')}</div>`;}
-  html+=`<div class="card-title">Dia a dia</div>`;
-  if(!Object.keys(diasMap).length){html+='<div class="empty">Sem registros</div>';}
-  else{Object.entries(diasMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([data,regsD])=>{const mins=calcDia(regsD);const e=regsD.find(r=>r.tipo==='Entrada'),s=regsD.find(r=>r.tipo==='Saída');const temAjuste=regsD.some(r=>r.ajuste);html+=`<div class="dia-row"><div style="flex:1"><div style="font-weight:600;font-size:12px">${data}${regsD.some(r=>r.atraso)?' <span style="color:var(--amber);font-size:10px">⚠️</span>':''}${temAjuste?' <span class="ajuste-badge">✏️</span>':''}</div><div style="font-size:11px;color:var(--gray)">${e?'Entrada: '+e.hora:''} ${s?'· Saída: '+s.hora:''}</div></div><div style="font-weight:700;font-size:13px;color:var(--blue)">${m2h(mins)}</div></div>`;});}
-  html+='</div>';document.getElementById('detalheConteudo').innerHTML=html;
+  const [ano,mesN]=mes.split('-').map(Number);
+  const diasNoMes=new Date(ano,mesN,0).getDate();
+  let totalTrabalhado=0,linhas='';
+  for(let d=1;d<=diasNoMes;d++){
+    const dt=new Date(ano,mesN-1,d);
+    const iso=dt.toISOString().slice(0,10);
+    const dataBR=String(d).padStart(2,'0')+'/'+String(mesN).padStart(2,'0')+'/'+ano;
+    const diaSem=DIAS[dt.getDay()];
+    const isDom=dt.getDay()===0,isSab=dt.getDay()===6;
+    const ehFolga=folgasMes.some(f=>f.data===iso);
+    const regsD=diasMap[dataBR]||[];
+    const entrada=regsD.find(r=>r.tipo==='Entrada');
+    const iniInt=regsD.find(r=>r.tipo==='Início intervalo');
+    const retInt=regsD.find(r=>r.tipo==='Retorno intervalo');
+    const saida=regsD.find(r=>r.tipo==='Saída');
+    const temAtraso=regsD.some(r=>r.atraso);
+    const temAjuste=regsD.some(r=>r.ajuste);
+    const mins=calcDia(regsD);
+    totalTrabalhado+=mins;
+    let minPrev=0;
+    const trabalhaNesteDia=esc&&esc.tipo!=='especial'&&esc.dias&&esc.dias[diaSem]&&esc.dias[diaSem].ativo;
+    if(trabalhaNesteDia&&!ehFolga){
+      const cfg=esc.dias[diaSem];
+      minPrev=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
+    }
+    const saldo=mins-minPrev;
+    let bgRow='',statusCol='';
+    if(ehFolga){bgRow='background:#fdf2f8;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--pink)">🌴 Folga</td>';}
+    else if(!trabalhaNesteDia){bgRow='background:#f8fafc;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--gray)">—</td>';}
+    else if(regsD.length===0){bgRow='background:#fff5f5;';statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--red);font-weight:600">Falta</td>';}
+    else{statusCol=`<td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:${saldo>=0?'var(--green)':'var(--red)'}">${saldo>=0?'+':''}${m2h(saldo)}</td>`;}
+    linhas+=`<tr style="${bgRow}border-bottom:1px solid var(--border)">
+      <td style="padding:5px 4px;font-size:11px;font-weight:600;white-space:nowrap;color:${isDom?'var(--red)':isSab?'var(--blue)':'inherit'}">${String(d).padStart(2,'0')}/${String(mesN).padStart(2,'0')} <span style="font-weight:400;color:var(--gray);font-size:10px">${diaSem}</span></td>
+      <td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--green)">${entrada?entrada.hora:'—'}</td>
+      <td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--amber)">${iniInt?iniInt.hora:'—'}</td>
+      <td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--amber)">${retInt?retInt.hora:'—'}</td>
+      <td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--red)">${saida?saida.hora:'—'}</td>
+      <td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">${mins>0?m2h(mins):'—'}</td>
+      ${statusCol}
+      <td style="padding:5px 4px;font-size:11px;text-align:center">${temAtraso?'⚠️':''}${temAjuste?'✏️':''}</td>
+    </tr>`;
+  }
+  const html=`<div class="card" style="padding:0;overflow:hidden">
+    <div style="background:var(--blue);color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:700;font-size:15px">${func.nome}</div><div style="font-size:11px;opacity:.8">${func.cargo||'—'} · ${esc?.nome||'Sem escala'}</div></div>
+      <div style="text-align:right"><div style="font-size:20px;font-weight:700">${banco>=0?'+':''}${m2h(banco)}</div><div style="font-size:10px;opacity:.8">banco de horas</div></div>
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:420px">
+      <thead><tr style="background:var(--gray-light)">
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:left;border-bottom:2px solid var(--border)">Data</th>
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--green);text-align:center;border-bottom:2px solid var(--border)">Entrada</th>
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--amber);text-align:center;border-bottom:2px solid var(--border)">Almoço</th>
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--amber);text-align:center;border-bottom:2px solid var(--border)">Retorno</th>
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--red);text-align:center;border-bottom:2px solid var(--border)">Saída</th>
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--blue);text-align:center;border-bottom:2px solid var(--border)">Trabalhado</th>
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Saldo</th>
+        <th style="padding:6px 4px;font-size:10px;font-weight:700;color:var(--gray);text-align:center;border-bottom:2px solid var(--border)">Obs</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+      <tfoot><tr style="background:var(--gray-light);border-top:2px solid var(--border)">
+        <td style="padding:7px 4px;font-size:11px;font-weight:700">TOTAL</td>
+        <td colspan="4" style="padding:7px 4px;font-size:11px;color:var(--gray);text-align:center">${regs.filter(r=>r.tipo==='Entrada').length} presenças · ${folgasMes.length} folgas</td>
+        <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:var(--blue)">${m2h(totalTrabalhado)}</td>
+        <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:${banco>=0?'var(--green)':'var(--red)'}">${banco>=0?'+':''}${m2h(banco)}</td>
+        <td></td>
+      </tr></tfoot>
+    </table></div>
+  </div>`;
+  document.getElementById('detalheConteudo').innerHTML=html;
+}
+
 }
 
 /* CONFIG */
