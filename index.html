@@ -805,6 +805,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">Escala *</label><select class="form-control" id="fEscala"><option value="">— Selecione —</option></select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="fAdmissao"></div>
+        <div class="form-group"><label class="form-label">Início no sistema</label><input class="form-control" type="date" id="fInicioSistema"><div style="font-size:10px;color:var(--gray);margin-top:3px">Dias antes desta data não contam como falta</div></div>
         <div class="form-group"><label class="form-label">Horas/mês contratadas</label><input class="form-control" type="number" id="fHorasMes" placeholder="Ex: 220" min="1" max="300"></div>
       </div>
       <div class="form-row">
@@ -847,6 +848,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">Escala</label><select class="form-control" id="editEscala"><option value="">— Selecione —</option></select></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="editAdmissao"></div>
+        <div class="form-group"><label class="form-label">Início no sistema</label><input class="form-control" type="date" id="editInicioSistema"><div style="font-size:10px;color:var(--gray);margin-top:3px">Dias antes desta data não contam como falta</div></div>
         <div class="form-group"><label class="form-label">Horas/mês contratadas</label><input class="form-control" type="number" id="editHorasMes" placeholder="Ex: 220" min="1" max="300"></div>
       </div>
       <div class="form-row">
@@ -899,7 +901,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.61 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.62 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1275,8 +1277,31 @@ async function carregarFolgas(){
 
 function folgaKey(funcId,dataISO){return funcId+'_'+dataISO;}
 
-function isFolga(funcId,dataISO){return !!S.folgas[folgaKey(funcId,dataISO)];}
+function isFolga(funcId,dataISO){const f=S.folgas[folgaKey(funcId,dataISO)];return !!(f&&f.tipo!=='nao_descontado');}
 function isFolgaDom(funcId,dataISO){const f=S.folgas[folgaKey(funcId,dataISO)];return f&&f.tipo==='folga_dom';}
+function isNaoDescontado(funcId,dataISO){const f=S.folgas[folgaKey(funcId,dataISO)];return f&&f.tipo==='nao_descontado';}
+
+async function toggleNaoDescontado(funcId,dataISO){
+  const key=folgaKey(funcId,dataISO);
+  const jaND=isNaoDescontado(funcId,dataISO);
+  if(jaND){
+    // Remove
+    delete S.folgas[key];
+    try{await db.collection('folgas').doc(key).delete();}catch(e){}
+    toast('Dia voltou ao status normal');
+  } else {
+    // Remove qualquer folga existente neste dia antes
+    if(S.folgas[key]) {try{await db.collection('folgas').doc(key).delete();}catch(e){}}
+    const mes=dataISO.slice(0,7);
+    const func=S.funcionarios.find(f=>f.id===funcId);
+    const data={funcId,funcNome:func?func.nome:'',data:dataISO,mes,tipo:'nao_descontado',criadoEm:new Date().toISOString(),criadoPor:S.user?S.user.nome:'Admin'};
+    S.folgas[key]=data;
+    try{await db.collection('folgas').doc(key).set(data);}catch(e){}
+    registrarLog('ponto_editado','Dia marcado como não descontado',{funcId,funcNome:func?func.nome:'',detalhes:dataISO});
+    toast('✅ Dia marcado como não descontado');
+  }
+  carregarDashboard();
+}
 
 async function toggleFolga(funcId,dataISO,isDom){
   if(!S.isAdmin){toast('Somente o administrador pode gerenciar folgas');return;}
@@ -2086,6 +2111,7 @@ async function editarDiaFechamento(funcId, dataBR, origem){
     modal.innerHTML=`<div class="modal" style="max-width:420px">
       <h2 id="editDiaTit">✏️ Editar dia</h2>
       <div id="editDiaRegs" style="margin-bottom:14px"></div>
+      <div id="editDiaNDBtn" style="margin-bottom:10px;text-align:center"></div>
       <div style="background:var(--gray-light);border-radius:8px;padding:12px;margin-bottom:14px">
         <div class="card-title" style="margin-bottom:8px">Adicionar registro</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -2119,6 +2145,12 @@ async function editarDiaFechamento(funcId, dataBR, origem){
   document.getElementById('editDiaTit').textContent='✏️ '+nomeFuncionario+' — '+dataBR;
   document.getElementById('editDiaHora').value=new Date().toTimeString().slice(0,5);
   renderEditDiaRegs(regs, funcId, dataBR);
+  // Botão Não Descontado
+  var ndEl=document.getElementById('editDiaNDBtn');
+  if(ndEl){
+    var jaND=isNaoDescontado(funcId,modal._dataISO);
+    ndEl.innerHTML='<button onclick="toggleNaoDescontado(\''+funcId+'\',\''+modal._dataISO+'\').then(()=>{var ndEl=document.getElementById(\'editDiaNDBtn\');if(ndEl){var j=isNaoDescontado(\''+funcId+'\',\''+modal._dataISO+'\');ndEl.querySelector(\'button\').style.background=j?\'#15803d\':\'var(--gray-light)\';ndEl.querySelector(\'button\').style.color=j?\'#fff\':\'var(--gray)\';ndEl.querySelector(\'button\').textContent=j?\'✅ Dia não descontado (clique para remover)\':\'⬜ Marcar como não descontado\';}});" style="width:100%;border:1.5px solid '+(jaND?'#15803d':'var(--border)')+';border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;background:'+(jaND?'#15803d':'var(--gray-light)')+';color:'+(jaND?'#fff':'var(--gray)')+'">'+( jaND?'✅ Dia não descontado (clique para remover)':'⬜ Marcar como não descontado')+'</button>';
+  }
   modal.classList.add('open');
 }
 
@@ -2694,14 +2726,14 @@ async function cadastrarFunc(){
   if(!nome||!cpf||!senha){toast('Preencha nome, CPF e senha');return;}
   if(senha.length<6){toast('Senha mínimo 6 caracteres');return;}
   const fotoCadastro=document.getElementById('fFotoBase64').value||'';
-  const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,admissao:document.getElementById('fAdmissao').value||'',horasMes:parseInt(document.getElementById('fHorasMes').value)||220,email:document.getElementById('fEmail').value.trim()||'',telefone:document.getElementById('fTelefone').value.trim()||'',senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
+  const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,admissao:document.getElementById('fAdmissao').value||'',inicioSistema:document.getElementById('fInicioSistema').value||'',horasMes:parseInt(document.getElementById('fHorasMes').value)||220,email:document.getElementById('fEmail').value.trim()||'',telefone:document.getElementById('fTelefone').value.trim()||'',senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
   try{
     const ref=await db.collection('funcionarios').add(func);
     S.funcionarios.push({id:ref.id,...func});
     fecharModalFunc();renderEquipe();carregarDashboard();
     registrarLog('func_cadastrado','Funcionário cadastrado: '+nome,{funcId:ref.id,funcNome:nome,detalhes:'CPF: '+cpf});
     toast('✅ '+nome+' cadastrado!');
-    ['fNome','fCpf','fCargo','fSenha','fFotoBase64','fAdmissao','fHorasMes','fEmail','fTelefone'].forEach(id=>document.getElementById(id).value='');
+    ['fNome','fCpf','fCargo','fSenha','fFotoBase64','fAdmissao','fInicioSistema','fHorasMes','fEmail','fTelefone'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('fFotoPreview').innerHTML='👤';
   }catch(e){toast('Erro ao cadastrar');}
 }
@@ -2714,6 +2746,7 @@ function abrirModalEdit(id){
   document.getElementById('editEmpresa').value=f.empresa||'1';
   document.getElementById('editEscala').value=f.escalaId||'';
   document.getElementById('editAdmissao').value=f.admissao||'';
+  document.getElementById('editInicioSistema').value=f.inicioSistema||'';
   document.getElementById('editHorasMes').value=f.horasMes||220;
   document.getElementById('editEmail').value=f.email||'';
   document.getElementById('editTelefone').value=f.telefone||'';
@@ -2732,7 +2765,7 @@ function apagarFotoFunc(){
   if(prev)prev.innerHTML='👤';
   toast('Foto marcada para apagar. Clique em Salvar.');
 }
-async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);const fn=S.funcionarios.find(f=>f.id===id);registrarLog('func_editado','Funcionário editado: '+(fn?fn.nome:''),{funcId:id,funcNome:fn?fn.nome:'',detalhes:'Dados atualizados'});fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
+async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',inicioSistema:document.getElementById('editInicioSistema').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);const fn=S.funcionarios.find(f=>f.id===id);registrarLog('func_editado','Funcionário editado: '+(fn?fn.nome:''),{funcId:id,funcNome:fn?fn.nome:'',detalhes:'Dados atualizados'});fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
 async function excluirFunc(id,nome){
   if(!confirm('⚠️ EXCLUIR permanentemente '+nome+'?\n\nEsta ação não pode ser desfeita. Todos os registros de ponto serão mantidos, mas o funcionário não poderá mais fazer login.'))return;
   try{
@@ -2776,10 +2809,11 @@ async function fecharMes(){
   const resumos=funcList.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>{
     const regs=regsDoMes.filter(r=>r.funcionarioId===f.id);
     const diasCom=new Set(regs.filter(r=>r.tipo==='Entrada').map(r=>r.data));
-    const folgasMes=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual).length;
+    const folgasMes=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual&&v.tipo!=='nao_descontado').length;
+    const ndMes=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual&&v.tipo==='nao_descontado').length;
     const folgasDom=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual&&v.tipo==='folga_dom').length;
     const esc=S.escalas.find(e=>e.id===f.escalaId);
-    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size,faltas:Math.max(0,22-diasCom.size-folgasMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
+    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size+ndMes,faltas:Math.max(0,22-diasCom.size-folgasMes-ndMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
   });
   const fech={empresa:String(S.empFech),mes:mesAtual,mesLabel,totalFunc:funcList.length,resumos,criadoEm:new Date().toISOString(),emailContadora:S.config.emailContadora||''};
   try{
@@ -2820,6 +2854,7 @@ function verFechamento(id){
     <div style="font-size:12px;color:var(--blue)">${f.mesLabel} · ${f.totalFunc} funcionários</div>
   </div>`;
 
+  const fech=f;
   html+=f.resumos.map(r=>{
     const bh=r.banco||0;
 
@@ -2886,6 +2921,11 @@ function verFechamento(id){
     // Dias de folga
     if(r.folgas>0){
       diasHtml+=`<tr style="background:var(--pink-light)"><td colspan="8" style="padding:5px 4px;font-size:11px;color:var(--pink);font-weight:600">🌴 ${r.folgas} dia(s) de folga no mês${r.folgasDom?' ('+r.folgasDom+' domingo)':''}</td></tr>`;
+    }
+    // Dias não descontados
+    const ndDias=func?Object.values(S.folgas).filter(f=>f.funcId===func.id&&f.mes===fech.mes&&f.tipo==='nao_descontado').length:0;
+    if(ndDias>0){
+      diasHtml+=`<tr style="background:#f0fdf4"><td colspan="8" style="padding:5px 4px;font-size:11px;color:#15803d;font-weight:600">✅ ${ndDias} dia(s) marcado(s) como não descontado</td></tr>`;
     }
 
     // Linha de totais
@@ -3028,6 +3068,12 @@ async function carregarDetalhe(){
   const [ano,mesN]=mes.split('-').map(Number);
   const diasNoMes=new Date(ano,mesN,0).getDate();
   let totalTrabalhado=0,linhas='';
+  // inicioSistema: dias antes desta data não contam como falta
+  const inicioSist=func.inicioSistema||func.admissao||'';
+  // Calcula dias antes do inicio no mês atual
+  let diasAntesInicio=0;
+  if(inicioSist){const [ai,mi,di]=inicioSist.split('-').map(Number);if(ai===ano&&mi===mesN) diasAntesInicio=di-1;}
+
   for(let d=1;d<=diasNoMes;d++){
     const dt=new Date(ano,mesN-1,d);
     const iso=dt.toISOString().slice(0,10);
@@ -3035,7 +3081,10 @@ async function carregarDetalhe(){
     const dataBRShort=String(d).padStart(2,'0')+'/'+String(mesN).padStart(2,'0')+'/'+String(ano).slice(2);
     const diaSem=DIAS[dt.getDay()];
     const isDom=dt.getDay()===0,isSab=dt.getDay()===6;
-    const ehFolga=folgasMes.some(f=>f.data===iso);
+    const ehFolga=folgasMes.some(f=>f.data===iso&&f.tipo!=='nao_descontado');
+    const ehNaoDescontado=folgasMes.some(f=>f.data===iso&&f.tipo==='nao_descontado');
+    // Dia antes do início no sistema — não conta
+    const antesDoInicio=inicioSist&&iso<inicioSist;
     const regsD=diasMap[dataBR]||diasMap[dataBRShort]||[];
     const entrada=regsD.find(r=>r.tipo==='Entrada');
     const iniInt=regsD.find(r=>r.tipo==='Início intervalo');
@@ -3072,9 +3121,15 @@ async function carregarDetalhe(){
     } else if(isFer&&regsD.length===0){
       bgRow='background:#fff7ed;';
       statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#d97706">📅 Feriado</td>';
+    } else if(antesDoInicio){
+      bgRow='background:#f0fdf4;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#16a34a;font-weight:600">✅ Não descontado</td>';
     } else if(!trabalhaNesteDia){
       bgRow='background:#f8fafc;';
       statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--gray)">—</td>';
+    } else if(ehNaoDescontado&&regsD.length===0){
+      bgRow='background:#f0fdf4;';
+      statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:#15803d;font-weight:600">✅ N.Desc.</td>';
     } else if(regsD.length===0){
       bgRow='background:#fff5f5;';
       statusCol='<td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--red);font-weight:600">Falta</td>';
