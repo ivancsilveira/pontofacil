@@ -294,11 +294,12 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="dash-header">
         <div class="dash-date" id="dashDate">—</div>
         <div class="dash-title">Dashboard de Ponto</div>
-        <div class="dash-stats">
-          <div class="dash-stat" id="statPresentes" onclick="filtrarDash('presentes')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashPresentes">0</div><div class="dash-stat-l">Presentes</div></div>
-          <div class="dash-stat" id="statFaltas" onclick="filtrarDash('faltas')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFaltas">0</div><div class="dash-stat-l">Faltas</div></div>
-          <div class="dash-stat" id="statFolgas" onclick="filtrarDash('folgas')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFolgas">0</div><div class="dash-stat-l">Folgas</div></div>
-          <div class="dash-stat" id="statAtrasos" onclick="filtrarDash('atrasos')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashAtrasos">0</div><div class="dash-stat-l">Atrasos</div></div>
+        <div class="dash-stats" style="grid-template-columns:repeat(5,1fr)">
+          <div class="dash-stat" id="statPresentes" onclick="filtrarDash('presentes')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashPresentes">0</div><div class="dash-stat-l" style="font-size:8px">Presentes</div></div>
+          <div class="dash-stat" id="statFimJornada" onclick="filtrarDash('fim_jornada')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFimJornada">0</div><div class="dash-stat-l" style="font-size:8px">Fim Jornada</div></div>
+          <div class="dash-stat" id="statFaltas" onclick="filtrarDash('faltas')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFaltas">0</div><div class="dash-stat-l" style="font-size:8px">Faltas</div></div>
+          <div class="dash-stat" id="statFolgas" onclick="filtrarDash('folgas')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashFolgas">0</div><div class="dash-stat-l" style="font-size:8px">Folgas</div></div>
+          <div class="dash-stat" id="statAtrasos" onclick="filtrarDash('atrasos')" style="cursor:pointer;transition:.15s"><div class="dash-stat-v" id="dashAtrasos">0</div><div class="dash-stat-l" style="font-size:8px">Atrasos</div></div>
         </div>
       </div>
       <!-- Filtro de empresa -->
@@ -805,7 +806,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.43 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.45 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1675,7 +1676,7 @@ async function carregarDashboard(){
   // Reset filtro ao recarregar manualmente
   if(typeof _dashFiltro !== 'undefined' && _dashFiltro !== null){
     _dashFiltro=null;
-    ['Presentes','Faltas','Folgas','Atrasos'].forEach(function(t){
+    ['Presentes','FimJornada','Faltas','Folgas','Atrasos'].forEach(function(t){
       var el=document.getElementById('stat'+t);
       if(el) el.classList.remove('ativo');
     });
@@ -1689,7 +1690,7 @@ async function carregarDashboard(){
   let regsHoje=[];
   try{const snap=await db.collection('registros').where('data','==',dataHoje).get();regsHoje=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
   const funcOrdenados=[...S.funcionarios].filter(f=>!f.inativo&&!f.isAdmin).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-  let presentes=0,faltas=0,folgas=0,atrasos=0;
+  let presentes=0,fimJornada=0,faltas=0,folgas=0,atrasos=0;
   const el=document.getElementById('dashLista');
   if(!funcOrdenados.length){el.innerHTML='<div class="empty">Nenhum funcionário cadastrado</div>';return;}
   el.innerHTML=funcOrdenados.map(f=>{
@@ -1702,7 +1703,7 @@ async function carregarDashboard(){
     const ini=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
     let statusDot='sd-gray',statusTxt='Sem registro';
     if(ehFolga){statusDot='sd-pink';statusTxt=ehFolgaDom?'Folga (Dom)':'Folga';folgas++;}
-    else if(saida){statusDot='sd-gray';statusTxt='Saiu '+saida.hora;presentes++;if(atrasado)atrasos++;}
+    else if(saida){statusDot='sd-gray';statusTxt='Saiu '+saida.hora;fimJornada++;if(atrasado)atrasos++;}
     else if(retInt){statusDot='sd-green';statusTxt='Trabalhando';presentes++;if(atrasado)atrasos++;}
     else if(iniInt){statusDot='sd-amber';statusTxt='Em intervalo';presentes++;if(atrasado)atrasos++;}
     else if(entrada){statusDot='sd-green';statusTxt='Trabalhando';presentes++;if(atrasado)atrasos++;}
@@ -1713,11 +1714,13 @@ async function carregarDashboard(){
       pontos.map(p=>`<div class="ponto-linha"><div class="ponto-tipo">${p.tipo}</div><div class="ponto-hora">${p.hora}</div><div>${p.ajuste?`<span class="ajuste-badge">✏️ ${p.motivoLabel||''}</span>`:'<span style="font-size:10px;color:var(--gray)">GPS ✓</span>'}</div></div>`).join('')||'<div class="empty" style="padding:10px">Sem registros hoje</div>';
     const cardId='dc_'+f.id;
     // Determina categoria para filtro
+    // Categorias: presentes=na jornada, fim_jornada=saiu, faltas, folgas, atrasos
     let _filtroCard='faltas';
     if(ehFolga) _filtroCard='folgas';
-    else if(entrada||retInt||iniInt||saida) _filtroCard='presentes';
-    // Atrasado aparece em AMBOS: presentes e atrasos
-    const _filtroCardExtra=atrasado&&_filtroCard==='presentes'?'atrasos':'';
+    else if(saida) _filtroCard='fim_jornada';
+    else if(entrada||retInt||iniInt) _filtroCard='presentes';
+    // Atrasado aparece em AMBOS seu grupo e atrasos
+    const _filtroCardExtra=atrasado?'atrasos':'';
     return `<div class="func-dash-card" data-filtro="${_filtroCard}" data-filtro2="${_filtroCardExtra}" data-empresa="${f.empresa||'1'}">
       <div class="func-dash-header" onclick="toggleDashCard('${cardId}')">
         <div class="avatar" style="${ehFolga?'background:var(--pink-light);color:var(--pink)':''}">${ini}</div>
@@ -1737,6 +1740,7 @@ async function carregarDashboard(){
     </div>`;
   }).join('');
   document.getElementById('dashPresentes').textContent=presentes;
+  document.getElementById('dashFimJornada').textContent=fimJornada;
   document.getElementById('dashFaltas').textContent=faltas;
   document.getElementById('dashFolgas').textContent=folgas;
   document.getElementById('dashAtrasos').textContent=atrasos;
@@ -1829,12 +1833,12 @@ function filtrarDash(tipo){
     _dashFiltro=tipo;
   }
   // Atualiza visual dos cards
-  ['presentes','faltas','folgas','atrasos'].forEach(function(t){
+  ['presentes','fim_jornada','faltas','folgas','atrasos'].forEach(function(t){
     var el=document.getElementById('stat'+t.charAt(0).toUpperCase()+t.slice(1));
     if(el) el.classList.toggle('ativo', _dashFiltro===t);
   });
   // Atualiza label
-  var labels={presentes:'Presentes hoje',faltas:'Ausentes hoje',folgas:'De folga hoje',atrasos:'Com atraso hoje'};
+  var labels={presentes:'Na jornada agora',fim_jornada:'Fim de jornada',faltas:'Ausentes hoje',folgas:'De folga hoje',atrasos:'Com atraso hoje'};
   document.getElementById('dashFiltroLabel').textContent=_dashFiltro?labels[_dashFiltro]:'Funcionários — ordem alfabética';
   // Re-renderiza lista com filtro
   _renderDashLista();
@@ -1842,10 +1846,6 @@ function filtrarDash(tipo){
 
 function _renderDashLista(){
   var cards=document.querySelectorAll('#dashLista .func-dash-card');
-  if(!_dashFiltro){
-    cards.forEach(function(c){c.style.display='';});
-    return;
-  }
   cards.forEach(function(c){
     var filtro=c.getAttribute('data-filtro');
     var filtro2=c.getAttribute('data-filtro2')||'';
