@@ -247,8 +247,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="login-sub">Villa Canziani Donato</div>
     <div class="form-group" style="margin-bottom:11px"><label class="form-label">CPF</label><input class="form-control" type="text" id="loginCpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);" onkeydown="if(event.key==='Enter')document.getElementById('loginSenha').focus()"></div>
     <div class="form-group" style="margin-bottom:10px"><label class="form-label">Senha</label><input class="form-control" type="password" id="loginSenha" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <button class="btn btn-solid" onclick="doLogin()" style="margin-bottom:8px">Entrar</button>
-    <button class="btn btn-primary" onclick="loginFacial()" style="margin-bottom:4px">📷 Entrar com reconhecimento facial</button>
+    <button class="btn btn-solid" onclick="doLogin()">Entrar</button>
     <div id="loginErro" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-top:6px;font-weight:500"></div>
     <div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--border);font-size:11px;color:var(--gray);text-align:center">Admin: <strong>495.256.629-34</strong> / senha: <strong>Ivan252005</strong></div>
   </div>
@@ -554,7 +553,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <input type="hidden" id="admFotoBase64">
       </div>
       <div style="background:var(--blue-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blue-dark)">
-        💡 O admin pode entrar com <strong>CPF + senha</strong> ou com <strong>reconhecimento facial</strong> (se tiver foto cadastrada).
+        💡 O administrador entra com <strong>CPF + senha</strong>. A foto é usada para identificação no sistema.
       </div>
     </div>
     <div class="modal-actions">
@@ -1715,123 +1714,6 @@ async function salvarFotoMaster(){
 }
 async function salvarConfig(){S.config={empresaA:{nome:document.getElementById('cfgA_nome').value,cnpj:document.getElementById('cfgA_cnpj').value,end:document.getElementById('cfgA_end').value,lat:parseFloat(document.getElementById('cfgA_lat').value)||0,lng:parseFloat(document.getElementById('cfgA_lng').value)||0,raio:parseInt(document.getElementById('cfgA_raio').value)||150},empresaB:{nome:document.getElementById('cfgB_nome').value,cnpj:document.getElementById('cfgB_cnpj').value,end:document.getElementById('cfgB_end').value,lat:parseFloat(document.getElementById('cfgB_lat').value)||0,lng:parseFloat(document.getElementById('cfgB_lng').value)||0,raio:parseInt(document.getElementById('cfgB_raio').value)||200},emailContadora:document.getElementById('cfgEmail').value};try{await db.collection('config').doc('geral').set(S.config);toast('✅ Configurações salvas!');}catch(e){toast('Erro ao salvar');}}
 function usarLoc(emp){navigator.geolocation.getCurrentPosition(pos=>{document.getElementById('cfg'+emp+'_lat').value=pos.coords.latitude.toFixed(6);document.getElementById('cfg'+emp+'_lng').value=pos.coords.longitude.toFixed(6);toast('📍 Localização Empresa '+emp+' capturada!');},()=>toast('GPS negado'));}
-
-/* ===== LOGIN FACIAL ===== */
-var _loginFacialStream=null;
-
-async function loginFacial(){
-  const cpf=document.getElementById('loginCpf').value.trim();
-  if(cpf.replace(/\D/g,'').length<11){
-    document.getElementById('loginErro').textContent='Digite o CPF primeiro';
-    document.getElementById('loginErro').style.display='block';
-    return;
-  }
-  // Buscar usuário pelo CPF
-  let usuario=null;
-  if(cpf==='495.256.629-34'){
-    // Admin master — buscar foto no Firebase
-    try{
-      const doc=await db.collection('config').doc('master').get();
-      const foto=doc.exists?doc.data().fotoCadastro||'':'';
-      usuario={id:'admin',nome:'Administrador',cpf,empresa:'ambas',isAdmin:true,fotoCadastro:foto};
-    }catch(e){
-      usuario={id:'admin',nome:'Administrador',cpf,empresa:'ambas',isAdmin:true,fotoCadastro:''};
-    }
-  } else {
-    try{
-      const snap=await db.collection('funcionarios').where('cpf','==',cpf).get();
-      if(snap.empty){document.getElementById('loginErro').textContent='CPF não encontrado';document.getElementById('loginErro').style.display='block';return;}
-      const doc=snap.docs[0];
-      usuario={id:doc.id,...doc.data()};
-    }catch(e){document.getElementById('loginErro').textContent='Erro de conexão';document.getElementById('loginErro').style.display='block';return;}
-  }
-  if(!usuario.fotoCadastro){
-    document.getElementById('loginErro').textContent='Este usuário não tem foto cadastrada para reconhecimento facial';
-    document.getElementById('loginErro').style.display='block';
-    return;
-  }
-  // Abrir câmera para reconhecimento
-  const overlay=document.createElement('div');
-  overlay.id='loginFacialOverlay';
-  overlay.className='facial-overlay';
-  overlay.innerHTML=`
-    <div class="facial-title">🔐 Reconhecimento facial</div>
-    <div style="color:rgba(255,255,255,.8);font-size:13px;margin-bottom:10px">${usuario.nome}</div>
-    <div class="facial-video-wrap">
-      <video id="loginFacialVideo" autoplay playsinline muted style="width:100%;border-radius:12px;display:block"></video>
-      <div class="facial-guide"></div>
-    </div>
-    <div class="facial-status" id="loginFacialStatus">Posicione seu rosto no círculo</div>
-    <div id="loginFacialResult"></div>
-    <button class="facial-snap-btn" id="loginFacialBtn" onclick="confirmarLoginFacial('${usuario.id}')">📷 Confirmar identidade</button>
-    <button class="facial-cancel-btn" onclick="fecharLoginFacial()">Cancelar</button>`;
-  document.body.appendChild(overlay);
-  try{
-    _loginFacialStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
-    document.getElementById('loginFacialVideo').srcObject=_loginFacialStream;
-  }catch(e){
-    document.getElementById('loginFacialStatus').textContent='Câmera não disponível';
-  }
-  // Salvar usuário temporariamente
-  window._loginFacialUsuario=usuario;
-}
-
-function fecharLoginFacial(){
-  if(_loginFacialStream){_loginFacialStream.getTracks().forEach(t=>t.stop());_loginFacialStream=null;}
-  const el=document.getElementById('loginFacialOverlay');if(el)el.remove();
-  window._loginFacialUsuario=null;
-}
-
-async function confirmarLoginFacial(uid){
-  const btn=document.getElementById('loginFacialBtn');
-  const statusEl=document.getElementById('loginFacialStatus');
-  const resultEl=document.getElementById('loginFacialResult');
-  btn.disabled=true; btn.textContent='⏳ Verificando...';
-  const usuario=window._loginFacialUsuario;
-  if(!usuario){fecharLoginFacial();return;}
-  let fotoCapturada='';
-  try{
-    const video=document.getElementById('loginFacialVideo');
-    const canvas=document.createElement('canvas');canvas.width=320;canvas.height=240;
-    canvas.getContext('2d').drawImage(video,0,0,320,240);
-    fotoCapturada=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
-  }catch(e){statusEl.textContent='Erro ao capturar foto';btn.disabled=false;btn.textContent='📷 Tentar novamente';return;}
-
-  statusEl.textContent='🤖 Comparando com foto cadastrada...';
-  resultEl.innerHTML='<div class="facial-result facial-warn">⏳ Verificando identidade...</div>';
-
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:100,messages:[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:usuario.fotoCadastro}},
-        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:fotoCapturada}},
-        {type:'text',text:'São a mesma pessoa? Responda só JSON: {"match":true,"confianca":90}'}
-      ]}]})
-    });
-    const data=await resp.json();
-    const txt=((data.content&&data.content[0]&&data.content[0].text)||'{}').replace(/```json|```/g,'').trim();
-    const result=JSON.parse(txt);
-    if(result.match&&result.confianca>=65){
-      resultEl.innerHTML=`<div class="facial-result facial-ok">✅ Identidade confirmada · ${result.confianca}%</div>`;
-      statusEl.textContent='Entrando...';
-      setTimeout(function(){
-        fecharLoginFacial();
-        S.user=usuario; S.isAdmin=usuario.isAdmin||false;
-        document.getElementById('loginWrap').style.display='none';
-        document.getElementById('appWrap').style.display='flex';
-        iniciarApp();
-      },1200);
-    } else {
-      resultEl.innerHTML='<div class="facial-result facial-fail">❌ Não reconhecido · Tente novamente</div>';
-      statusEl.textContent='Rosto não reconhecido';
-      btn.disabled=false; btn.textContent='📷 Tentar novamente';
-    }
-  }catch(e){
-    resultEl.innerHTML='<div class="facial-result facial-warn">⚠️ IA indisponível · Use CPF e senha</div>';
-    btn.disabled=false; btn.textContent='📷 Tentar novamente';
-  }
-}
 
 /* ===== GESTÃO DE ADMINS ===== */
 var S_admins=[];
