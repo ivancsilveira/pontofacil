@@ -245,7 +245,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="login-logo">🕐</div>
     <div class="login-title">PontoFácil</div>
     <div class="login-sub">Villa Canziani Donato</div>
-    <div style="font-size:10px;color:var(--gray);text-align:center;margin-bottom:8px">v1.0.15 · 15/04/2026</div>
+    <div style="font-size:10px;color:var(--gray);text-align:center;margin-bottom:8px">v1.0.16 · 15/04/2026</div>
     <div class="form-group" style="margin-bottom:11px"><label class="form-label">CPF</label><input class="form-control" type="text" id="loginCpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);" onkeydown="if(event.key==='Enter')document.getElementById('loginSenha').focus()"></div>
     <div class="form-group" style="margin-bottom:10px"><label class="form-label">Senha</label><input class="form-control" type="password" id="loginSenha" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn btn-solid" onclick="doLogin()">Entrar</button>
@@ -776,8 +776,6 @@ async function enviarSenhaEmail(){
       showMsg('Email não encontrado. Contate o administrador.',false);
     }
   }catch(e){showMsg('Erro ao buscar. Contate o administrador.',false);}
-}
-
 }
 
 async function iniciarApp(){
@@ -1776,8 +1774,6 @@ async function carregarDetalhe(){
     </table></div>
   </div>`;
   document.getElementById('detalheConteudo').innerHTML=html;
-}
-
 }
 
 /* CONFIG */
