@@ -880,7 +880,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.54 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.55 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1965,9 +1965,56 @@ function _renderDashLista(){
 function irParaAjuste(fid,dataBR){goScreen('ajustes','nav4');document.getElementById('ajFunc').value=fid;const p=dataBR.split('/');document.getElementById('ajData').value=p[2]+'-'+p[1]+'-'+p[0];carregarPontosAjuste();}
 
 // Editar registros de um dia direto pelo fechamento
+// Abre mini modal para escolher a data antes de editar
+function abrirEditDiaModal(funcId, funcNome){
+  // resolve funcId pelo nome se necessário
+  if(!funcId){
+    var fn=S.funcionarios.find(f=>f.nome===funcNome);
+    if(fn) funcId=fn.id;
+    else{
+      var fnNorm=(funcNome||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      var fn2=S.funcionarios.find(f=>{
+        var n=(f.nome||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+        return n===fnNorm;
+      });
+      if(fn2) funcId=fn2.id;
+    }
+  }
+  if(!funcId){toast('Funcionário não encontrado: '+funcNome);return;}
+
+  var existente=document.getElementById('pickDateModal');
+  if(existente) existente.remove();
+
+  var m=document.createElement('div');
+  m.id='pickDateModal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  var hoje=new Date().toISOString().slice(0,10);
+  m.innerHTML=`<div style="background:#fff;border-radius:12px;padding:20px;width:100%;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-weight:700;font-size:15px;margin-bottom:4px">✏️ Editar dia</div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:14px">${funcNome}</div>
+    <div class="form-group">
+      <label class="form-label">Qual data deseja editar?</label>
+      <input type="date" id="pickDateInput" class="form-control" value="${hoje}">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="document.getElementById('pickDateModal').remove()" style="flex:1;background:var(--gray-light);color:var(--gray);border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button onclick="(function(){var d=document.getElementById('pickDateInput').value;if(!d)return;var p=d.split('-');var br=p[2]+'/'+p[1]+'/'+p[0];document.getElementById('pickDateModal').remove();editarDiaFechamento('${funcId}',br);})()" style="flex:2;background:var(--blue);color:#fff;border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Editar este dia</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',function(e){if(e.target===m)m.remove();});
+}
+
 async function editarDiaFechamento(funcId, dataBR){
   // dataBR = dd/mm/yyyy
   if(!funcId){toast('Funcionário não identificado');return;}
+  // Se veio como __nome__XXXX, busca pelo nome
+  if(funcId.startsWith('__nome__')){
+    const nomeBusca=decodeURIComponent(funcId.replace('__nome__',''));
+    const fn=S.funcionarios.find(f=>f.nome===nomeBusca);
+    if(fn) funcId=fn.id;
+    else{toast('Funcionário não encontrado no sistema');return;}
+  }
   const p=dataBR.split('/');
   const dataISO=p[2]+'-'+p[1]+'-'+p[0];
 
@@ -2683,7 +2730,7 @@ async function fecharMes(){
     const folgasMes=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual).length;
     const folgasDom=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual&&v.tipo==='folga_dom').length;
     const esc=S.escalas.find(e=>e.id===f.escalaId);
-    return {nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size,faltas:Math.max(0,22-diasCom.size-folgasMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
+    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size,faltas:Math.max(0,22-diasCom.size-folgasMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
   });
   const fech={empresa:String(S.empFech),mes:mesAtual,mesLabel,totalFunc:funcList.length,resumos,criadoEm:new Date().toISOString(),emailContadora:S.config.emailContadora||''};
   try{
@@ -2728,7 +2775,14 @@ function verFechamento(id){
     const bh=r.banco||0;
 
     // Calcular horas previstas por dia baseado na escala
-    const func=S.funcionarios.find(fn=>fn.nome===r.nome);
+    // Busca funcionário por ID (se salvo) ou por nome normalizado
+    const func=S.funcionarios.find(fn=>fn.id===r.funcId) ||
+               S.funcionarios.find(fn=>fn.nome===r.nome) ||
+               S.funcionarios.find(fn=>{
+                 const a=(fn.nome||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+                 const b=(r.nome||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+                 return a===b;
+               });
     const esc=func?S.escalas.find(e=>e.id===func.escalaId):null;
 
     // Dia a dia detalhado
@@ -2775,7 +2829,7 @@ function verFechamento(id){
           <td style="padding:6px 4px;font-size:11px;text-align:center">
             ${temAtraso?'<span title="Atraso">⚠️</span>':''}
             ${temAjuste?'<span class="ajuste-badge" style="font-size:9px">✏️</span>':''}
-            <button onclick="editarDiaFechamento('${func?func.id:''}','${data}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;margin-left:2px" title="Editar registros do dia">✏️</button>
+            <button onclick="editarDiaFechamento('${func?func.id:'__nome__'+encodeURIComponent(r.nome)}','${data}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 6px;font-size:11px;cursor:pointer;margin-left:2px" title="Editar registros do dia">✏️</button>
           </td>
         </tr>`;
       });
@@ -2792,7 +2846,7 @@ function verFechamento(id){
       <td colspan="4" style="padding:7px 4px;font-size:11px;color:var(--gray);text-align:center">${r.presencas} presenças · ${r.faltas} faltas · ${r.atrasos} atraso(s)</td>
       <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:var(--blue)">${m2h(totalMinTrabalhado)}</td>
       <td style="padding:7px 4px;font-size:11px;font-weight:700;text-align:center;color:${bh>=0?'var(--green)':'var(--red)'}">${bh>=0?'+':''}${m2h(bh)}</td>
-      <td></td>
+      <td style="padding:4px;text-align:center"><button onclick="abrirEditDiaModal('${func?func.id:''}','${r.nome}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;white-space:nowrap" title="Editar dia">+ ✏️</button></td>
     </tr>`;
 
     return `<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
