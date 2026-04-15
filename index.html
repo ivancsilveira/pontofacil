@@ -685,6 +685,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">Cargo</label><input class="form-control" id="fCargo" placeholder="Garçom, Camareira, Recepcionista..."></div>
       <div class="form-group"><label class="form-label">Empresa *</label><select class="form-control" id="fEmpresa"><option value="1">Empresa A</option><option value="2">Empresa B</option><option value="ambas">Ambas</option></select></div>
       <div class="form-group"><label class="form-label">Escala *</label><select class="form-control" id="fEscala"><option value="">— Selecione —</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="fAdmissao"></div>
+        <div class="form-group"><label class="form-label">Horas/mês contratadas</label><input class="form-control" type="number" id="fHorasMes" placeholder="Ex: 220" min="1" max="300"></div>
+      </div>
       <div class="form-group"><label class="form-label">Senha *</label><input class="form-control" type="password" id="fSenha" placeholder="Mínimo 6 caracteres"></div>
       <div class="form-group">
         <label class="form-label">Foto de referência (reconhecimento facial)</label>
@@ -719,6 +723,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="form-group"><label class="form-label">Cargo</label><input class="form-control" id="editCargo"></div>
       <div class="form-group"><label class="form-label">Empresa</label><select class="form-control" id="editEmpresa"><option value="1">Empresa A</option><option value="2">Empresa B</option><option value="ambas">Ambas</option></select></div>
       <div class="form-group"><label class="form-label">Escala</label><select class="form-control" id="editEscala"><option value="">— Selecione —</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Data de admissão</label><input class="form-control" type="date" id="editAdmissao"></div>
+        <div class="form-group"><label class="form-label">Horas/mês contratadas</label><input class="form-control" type="number" id="editHorasMes" placeholder="Ex: 220" min="1" max="300"></div>
+      </div>
       <div class="form-group"><label class="form-label">Nova senha (em branco = manter)</label><input class="form-control" type="password" id="editSenha"></div>
       <div class="form-group">
         <label class="form-label">Atualizar foto (facial)</label>
@@ -764,7 +772,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.22 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.23 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 document.addEventListener('DOMContentLoaded',function(){
   var el=document.getElementById('appVersionLabel');
   if(el)el.textContent=APP_VERSION;
@@ -1563,7 +1571,8 @@ function renderEquipe(){
       ${fotoHtml}
       <div>
         <div class="func-name">${f.nome} ${f.inativo?'<span style="background:var(--gray-light);color:var(--gray);font-size:10px;padding:1px 6px;border-radius:20px;font-weight:600">Inativo</span>':''}</div>
-        <div class="func-info">${f.cargo||'—'} · ${esc?`<span style="color:var(--purple)">${esc.nome}</span>`:'<span style="color:var(--red)">Sem escala</span>'}</div>
+        <div class="func-info">${f.cargo||'—'} · ${esc?`<span style="color:var(--purple)">${esc.nome}</span>`:`<span style="color:var(--red)">Sem escala</span>`}</div>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;display:flex;gap:8px">${f.admissao?'<span>📅 '+f.admissao.split('-').reverse().join('/')+'</span>':''} ${f.horasMes?'<span>⏱ '+f.horasMes+'h/mês</span>':''}</div>
       </div>
       <div class="func-actions">
         ${!f.inativo?`<button class="btn btn-primary btn-sm" onclick="abrirModalEdit('${f.id}')">Editar</button>`:''}
@@ -1592,13 +1601,13 @@ async function cadastrarFunc(){
   if(!nome||!cpf||!senha){toast('Preencha nome, CPF e senha');return;}
   if(senha.length<6){toast('Senha mínimo 6 caracteres');return;}
   const fotoCadastro=document.getElementById('fFotoBase64').value||'';
-  const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
+  const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,admissao:document.getElementById('fAdmissao').value||'',horasMes:parseInt(document.getElementById('fHorasMes').value)||220,senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
   try{
     const ref=await db.collection('funcionarios').add(func);
     S.funcionarios.push({id:ref.id,...func});
     fecharModalFunc();renderEquipe();carregarDashboard();
     toast('✅ '+nome+' cadastrado!');
-    ['fNome','fCpf','fCargo','fSenha','fFotoBase64'].forEach(id=>document.getElementById(id).value='');
+    ['fNome','fCpf','fCargo','fSenha','fFotoBase64','fAdmissao','fHorasMes'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('fFotoPreview').innerHTML='👤';
   }catch(e){toast('Erro ao cadastrar');}
 }
@@ -1610,6 +1619,8 @@ function abrirModalEdit(id){
   document.getElementById('editCargo').value=f.cargo||'';
   document.getElementById('editEmpresa').value=f.empresa||'1';
   document.getElementById('editEscala').value=f.escalaId||'';
+  document.getElementById('editAdmissao').value=f.admissao||'';
+  document.getElementById('editHorasMes').value=f.horasMes||220;
   document.getElementById('editSenha').value='';
   document.getElementById('editFotoBase64').value='';
   document.getElementById('editCpfDisplay').textContent=f.cpf||'—';
@@ -1618,7 +1629,7 @@ function abrirModalEdit(id){
   document.getElementById('modalEditFunc').classList.add('open');
 }
 function fecharModalEdit(){document.getElementById('modalEditFunc').classList.remove('open');}
-async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
+async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
 async function excluirFunc(id,nome){if(!confirm('Excluir '+nome+'?'))return;S.funcionarios=S.funcionarios.filter(f=>f.id!==id);try{await db.collection('funcionarios').doc(id).delete();renderEquipe();toast('Removido');}catch(e){toast('Erro');}}
 
 /* FECHAMENTO */
