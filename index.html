@@ -245,7 +245,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <div class="login-logo">🕐</div>
     <div class="login-title">PontoFácil</div>
     <div class="login-sub">Villa Canziani Donato</div>
-    <div style="font-size:10px;color:var(--gray);text-align:center;margin-bottom:8px">v1.0.16 · 15/04/2026</div>
+    <div style="font-size:10px;color:var(--gray);text-align:center;margin-bottom:8px">v1.0.17 · 15/04/2026</div>
     <div class="form-group" style="margin-bottom:11px"><label class="form-label">CPF</label><input class="form-control" type="text" id="loginCpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);" onkeydown="if(event.key==='Enter')document.getElementById('loginSenha').focus()"></div>
     <div class="form-group" style="margin-bottom:10px"><label class="form-label">Senha</label><input class="form-control" type="password" id="loginSenha" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn btn-solid" onclick="doLogin()">Entrar</button>
@@ -942,8 +942,19 @@ function m2h(m){const abs=Math.abs(m);return(m<0?'-':'')+Math.floor(abs/60)+'h '
 function calcDia(regs){
   const e=regs.find(r=>r.tipo==='Entrada'),s=regs.find(r=>r.tipo==='Saída');
   const ii=regs.find(r=>r.tipo==='Início intervalo'),fi=regs.find(r=>r.tipo==='Retorno intervalo');
-  if(!e||!s)return 0;let t=s.timestamp-e.timestamp;
-  if(ii&&fi)t-=(fi.timestamp-ii.timestamp);return Math.round(t/60000);
+  if(!e||!s)return 0;
+  // Usar timestamp se disponível, senão calcular pela hora
+  let tE=e.timestamp,tS=s.timestamp;
+  if(!tE||!tS){
+    // Calcular pela hora string (HH:MM)
+    tE=hp2m(e.hora);tS=hp2m(s.hora);
+    let intervalo=0;
+    if(ii&&fi)intervalo=hp2m(fi.hora)-hp2m(ii.hora);
+    return Math.max(0,tS-tE-intervalo);
+  }
+  let t=tS-tE;
+  if(ii&&fi&&fi.timestamp&&ii.timestamp)t-=(fi.timestamp-ii.timestamp);
+  return Math.round(t/60000);
 }
 function calcBH(func,regsArr){
   const esc=S.escalas.find(e=>e.id===func.escalaId);let banco=0;
@@ -1567,9 +1578,12 @@ async function fecharMes(){
   const agora=new Date(),mesAtual=agora.toISOString().slice(0,7),mesLabel=agora.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   if(!confirm('Fechar '+mesLabel+' — Empresa '+S.empFech+'?'))return;
   toast('Gerando...');
-  const funcList=S.funcionarios.filter(f=>f.empresa==S.empFech||f.empresa==='ambas');
+  const funcList=S.funcionarios.filter(f=>!f.isAdmin&&!f.inativo&&(f.empresa==S.empFech||f.empresa==='ambas'));
   let regsDoMes=[];
-  try{const snap=await db.collection('registros').where('mes','==',mesAtual).where('empresa','==',String(S.empFech)).get();regsDoMes=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
+  try{
+    const snap=await db.collection('registros').where('mes','==',mesAtual).get();
+    regsDoMes=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){toast('Erro ao buscar registros');return;}
   const resumos=funcList.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>{
     const regs=regsDoMes.filter(r=>r.funcionarioId===f.id);
     const diasCom=new Set(regs.filter(r=>r.tipo==='Entrada').map(r=>r.data));
@@ -1579,7 +1593,13 @@ async function fecharMes(){
     return {nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size,faltas:Math.max(0,22-diasCom.size-folgasMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs),diasMap:agruparDias(regs)};
   });
   const fech={empresa:String(S.empFech),mes:mesAtual,mesLabel,totalFunc:funcList.length,resumos,criadoEm:new Date().toISOString(),emailContadora:S.config.emailContadora||''};
-  try{const ref=await db.collection('fechamentos').add(fech);S.fechamentos.unshift({id:ref.id,...fech});renderFechamentos();enviarEmail(fech);toast('✅ Mês fechado!');}catch(e){toast('Erro ao fechar');}
+  try{
+    const ref=await db.collection('fechamentos').add(fech);
+    S.fechamentos.unshift({id:ref.id,...fech});
+    renderFechamentos();
+    enviarEmail(fech);
+    toast('✅ Mês fechado com sucesso!');
+  }catch(e){toast('Erro ao fechar: '+e.message);}
 }
 function agruparDias(regs){const map={};regs.forEach(r=>{if(!map[r.data])map[r.data]=[];map[r.data].push(r);});return map;}
 function verFechamento(id){
