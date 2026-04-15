@@ -899,7 +899,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.60 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.61 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2037,7 +2037,24 @@ function abrirEditDiaModal(funcId, funcNome){
   m.addEventListener('click',function(e){if(e.target===m)m.remove();});
 }
 
-async function editarDiaFechamento(funcId, dataBR){
+var _origemEdicao='relatorio'; // 'relatorio' ou 'porFunc'
+
+function concluirEdicaoDia(){
+  var modal=document.getElementById('modalEditDiaFech');
+  if(modal) modal.classList.remove('open');
+  if(_origemEdicao==='porFunc'){
+    // Veio do "Por Funcionário" — só fecha e recarrega
+    carregarDetalhe();
+  } else {
+    // Veio do relatório de fechamento — reabre o modal do relatório atualizado
+    var fechId=document._fechAtualId;
+    if(fechId) verFechamento(fechId);
+    else document.getElementById('modalFechDetalhe').classList.add('open');
+  }
+}
+
+async function editarDiaFechamento(funcId, dataBR, origem){
+  _origemEdicao=origem||'relatorio';
   // dataBR = dd/mm/yyyy
   if(!funcId){toast('Funcionário não identificado');return;}
   // Se veio como __nome__XXXX, busca pelo nome
@@ -2083,15 +2100,15 @@ async function editarDiaFechamento(funcId, dataBR){
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-solid btn-sm" style="flex:1" onclick="document.getElementById('modalEditDiaFech').classList.remove('open');document.getElementById('modalFechDetalhe').classList.add('open')">✅ Concluído</button>
+        <button class="btn btn-solid btn-sm" style="flex:1" onclick="concluirEdicaoDia()">✅ Concluído</button>
       </div>
     </div>`;
     document.body.appendChild(modal);
-    modal.addEventListener('click',function(e){if(e.target===modal){modal.classList.remove('open');document.getElementById('modalFechDetalhe').classList.add('open');}});
+    modal.addEventListener('click',function(e){if(e.target===modal){concluirEdicaoDia();}});
   }
 
   // Fecha o modal do fechamento e abre o de edição
-  document.getElementById('modalFechDetalhe').classList.remove('open');
+  if(_origemEdicao==='relatorio') document.getElementById('modalFechDetalhe').classList.remove('open');
 
   // Guarda contexto
   modal._funcId=funcId;
@@ -2794,6 +2811,7 @@ function agruparDias(regs){
   return map;
 }
 function verFechamento(id){
+  document._fechAtualId=id;
   const f=S.fechamentos.find(x=>x.id===id);if(!f)return;
   document.getElementById('modalFechTit').textContent='Fechamento — '+f.mesLabel;
 
@@ -3071,7 +3089,7 @@ async function carregarDetalhe(){
       <td style="padding:5px 4px;font-size:11px;text-align:center;color:var(--red)">${saida?saida.hora:'—'}</td>
       <td style="padding:5px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">${mins>0?m2h(mins):'—'}</td>
       ${statusCol}
-      <td style="padding:3px 2px;font-size:11px;text-align:center">${temAtraso?'<span title="Atraso">⚠️</span>':''}${temAjuste?'<span class="ajuste-badge" style="font-size:9px">✏️</span>':''}<button onclick="editarDiaFechamento('${fid}','${dataBR}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 5px;font-size:10px;cursor:pointer;display:block;margin:2px auto" title="Editar dia">✏️</button></td>
+      <td style="padding:3px 2px;font-size:11px;text-align:center">${temAtraso?'<span title="Atraso">⚠️</span>':''}${temAjuste?'<span class="ajuste-badge" style="font-size:9px">✏️</span>':''}<button onclick="editarDiaFechamento('${fid}','${dataBR}','porFunc')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 5px;font-size:10px;cursor:pointer;display:block;margin:2px auto" title="Editar dia">✏️</button></td>
     </tr>`;
   }
   const html=`<div class="card" style="padding:0;overflow:hidden">
