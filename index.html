@@ -236,7 +236,21 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 .face-fail{background:var(--red-light);color:var(--red)}
 .face-sem{background:var(--blue-light);color:var(--blue)}
 @media(min-width:521px){body{background:#dde3f0}.app{margin:14px auto;height:calc(100vh - 28px);border-radius:18px;overflow:hidden}}
-@media print{.no-print{display:none!important}}
+@media print{
+  .no-print{display:none!important}
+  body{background:#fff!important;margin:0!important;padding:0!important}
+  .app{height:auto!important;overflow:visible!important;border-radius:0!important;margin:0!important;box-shadow:none!important;display:block!important}
+  .screens{height:auto!important;overflow:visible!important}
+  .screen{display:none!important;height:auto!important;overflow:visible!important}
+  .screen.active{display:block!important}
+  .topbar{display:none!important}
+  .bottom-nav{display:none!important}
+  #sc-agenda{display:block!important;height:auto!important;overflow:visible!important;padding-bottom:20px}
+  #agendaConteudo{height:auto!important;overflow:visible!important}
+  .func-agenda-bloco{page-break-inside:avoid;margin-bottom:16px}
+  .cal-grid{break-inside:avoid}
+  .card{box-shadow:none!important;border:1px solid #ddd!important}
+}
 </style>
 </head>
 <body>
@@ -966,7 +980,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.69 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.70 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1961,7 +1975,7 @@ function renderAgenda(){
       return `<tr>${celulas}</tr>`;
     }).join('');
 
-    return `<div class="cal-func-card">
+    return `<div class="cal-func-card func-agenda-bloco">
       <div class="cal-func-header">
         <div class="avatar" style="width:30px;height:30px;font-size:11px;flex-shrink:0">${ini}</div>
         <div style="flex:1;min-width:0">
