@@ -533,8 +533,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="card">
         <div class="card-title">Selecionar funcionário e data</div>
         <div class="form-row" style="margin-bottom:10px">
-          <div class="form-group"><label class="form-label">Funcionário</label><select class="form-control" id="ajFunc" onchange="carregarPontosAjuste()"><option value="">— Selecione —</option></select></div>
-          <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-control" id="ajData" onchange="carregarPontosAjuste()"></div>
+          <div class="form-group"><label class="form-label">Funcionário</label><select class="form-control" id="ajFunc" onchange="carregarPontosAjuste();verificarTipoAjuste()"><option value="">— Selecione —</option></select></div>
+          <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-control" id="ajData" onchange="carregarPontosAjuste();verificarTipoAjuste()"></div>
         </div>
         <div id="ajPontosHoje"><div class="empty">Selecione funcionário e data</div></div>
       </div>
@@ -542,7 +542,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="card-title">Adicionar registro</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div class="form-group"><label class="form-label">Tipo</label>
-            <select class="form-control" id="ajTipo"><option>Entrada</option><option>Início intervalo</option><option>Retorno intervalo</option><option>Saída</option></select>
+            <select class="form-control" id="ajTipo" onchange="verificarTipoAjuste()"><option>Entrada</option><option>Início intervalo</option><option>Retorno intervalo</option><option>Saída</option></select>
           </div>
           <div class="form-group"><label class="form-label">Horário</label><input class="form-control" type="time" id="ajHora"></div>
           <div class="form-group"><label class="form-label">Motivo *</label>
@@ -1070,7 +1070,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.74 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.75 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2520,6 +2520,18 @@ async function adicionarRegEditDia(){
   const p=dataBR.split('/');
   const bd=new Date(p[2]+'-'+p[1]+'-'+p[0]+'T'+hora+':00');
   const func=S.funcionarios.find(f=>f.id===funcId);
+  // Verifica duplicado
+  const dupEdit=await verificarDuplicado(funcId,dataBR,tipo,null);
+  if(dupEdit){
+    const horaExist=dupEdit.data().hora;
+    if(!confirm('⚠️ Já existe um registro de "'+tipo+'" às '+horaExist+' neste dia.\n\nDeseja substituir pelo novo horário ('+hora+')?'))return;
+    await db.collection('registros').doc(dupEdit.id).update({hora,timestamp:bd.getTime(),ajuste:true,motivo:'edicao_fechamento',motivoLabel:'Substituído no fechamento',ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString()});
+    toast('✅ Horário atualizado: '+tipo+' às '+hora);
+    const snap2=await db.collection('registros').where('funcionarioId','==',funcId).where('data','==',dataBR).get();
+    const regs2=snap2.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+    renderEditDiaRegs(regs2, funcId, dataBR);
+    return;
+  }
   const reg={
     funcionarioId:funcId, funcionarioNome:func?func.nome:'',
     tipo, data:dataBR, hora, timestamp:bd.getTime(),
@@ -2790,6 +2802,34 @@ async function salvarEdicaoRegHistorico(){
 /* AJUSTES */
 function toggleMotivoOutro(){document.getElementById('ajOutroWrap').style.display=document.getElementById('ajMotivo').value==='outro'?'block':'none';}
 
+// Avisa quando o tipo selecionado já existe no dia
+async function verificarTipoAjuste(){
+  var fid=document.getElementById('ajFunc').value;
+  var di=document.getElementById('ajData').value;
+  var tipo=document.getElementById('ajTipo').value;
+  if(!fid||!di||!tipo) return;
+  var btnSalvar=document.querySelector('#ajFormCard .btn-orange');
+  // Se está em modo edição, não avisa
+  if(btnSalvar&&btnSalvar.getAttribute('data-editando')) return;
+  var diParts=di.split('-');
+  var dataBR=diParts[2]+'/'+diParts[1]+'/'+diParts[0];
+  var dup=await verificarDuplicado(fid,dataBR,tipo,null);
+  var avisoEl=document.getElementById('ajTipoAviso');
+  if(!avisoEl){
+    avisoEl=document.createElement('div');
+    avisoEl.id='ajTipoAviso';
+    avisoEl.style.cssText='font-size:11px;color:#b45309;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px;margin-top:4px';
+    var tipoEl=document.getElementById('ajTipo');
+    tipoEl.parentNode.appendChild(avisoEl);
+  }
+  if(dup){
+    avisoEl.textContent='⚠️ Já existe "'+tipo+'" às '+dup.data().hora+' — ao salvar, o horário será substituído.';
+    avisoEl.style.display='block';
+  } else {
+    avisoEl.style.display='none';
+  }
+}
+
 async function carregarPontosAjuste(){
   const fid=document.getElementById('ajFunc').value,di=document.getElementById('ajData').value;
   if(!fid||!di){document.getElementById('ajFormCard').style.display='none';return;}
@@ -2860,6 +2900,15 @@ function editarReg(id,tipoAtual,horaAtual){
   toast('Edite o horário e clique em Salvar edição');
 }
 
+// Verifica se já existe registro do mesmo tipo no dia para o funcionário
+async function verificarDuplicado(funcId, dataBR, tipo, ignorarId){
+  try{
+    const snap=await db.collection('registros').where('funcionarioId','==',funcId).where('data','==',dataBR).get();
+    const existente=snap.docs.find(d=>d.data().tipo===tipo && d.id!==ignorarId);
+    return existente?existente:null;
+  }catch(e){return null;}
+}
+
 async function salvarAjuste(){
   const fid=document.getElementById('ajFunc').value,di=document.getElementById('ajData').value;if(!fid||!di){toast('Selecione funcionário e data');return;}
   const motivo=document.getElementById('ajMotivo').value;
@@ -2883,6 +2932,17 @@ async function salvarAjuste(){
         if(hrMin>heMin+tol){atrasoAj=true;minAtrasoAj=hrMin-heMin;}
       }
     }
+  }
+  // Verifica duplicado
+  const dupAj=await verificarDuplicado(fid,dataBR,tipoAj,null);
+  if(dupAj){
+    const horaExist=dupAj.data().hora;
+    if(!confirm('⚠️ Já existe um registro de "'+tipoAj+'" às '+horaExist+' neste dia.\n\nDeseja substituir pelo novo horário ('+hora+')?'))return;
+    // Atualiza o existente em vez de criar novo
+    await db.collection('registros').doc(dupAj.id).update({hora,timestamp:bd.getTime(),ajuste:true,motivo,motivoLabel,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj});
+    registrarLog('ajuste_ponto','Ajuste substituído: '+tipoAj+' às '+hora,{funcId:fid,funcNome:func?.nome||'',detalhes:'Anterior: '+horaExist+' → Novo: '+hora});
+    toast('✅ Horário atualizado: '+tipoAj+' às '+hora);
+    carregarPontosAjuste();carregarDashboard();return;
   }
   const reg={funcionarioId:fid,funcionarioNome:func?.nome||'',tipo:tipoAj,empresa:empId,empresaNome:empId==='2'?S.config.empresaB.nome:S.config.empresaA.nome,data:dataBR,hora,timestamp:bd.getTime(),mes:di.slice(0,7),ajuste:true,motivo,motivoLabel,obs:document.getElementById('ajObs').value,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj};
   try{await db.collection('registros').add(reg);registrarLog('ajuste_ponto','Ajuste de ponto: '+reg.tipo+' às '+reg.hora,{funcId:fid,funcNome:reg.funcionarioNome,detalhes:reg.motivoLabel+' · '+reg.data+' '+reg.hora});toast('✅ Ajuste salvo com identificação');carregarPontosAjuste();carregarDashboard();}catch(e){toast('Erro ao salvar');}
