@@ -347,6 +347,57 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   </div>
 </div>
 
+<!-- PRIMEIRO ACESSO (fora do loginWrap) -->
+<div id="primeiroAcessoWrap2" style="display:none" class="login-wrap">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:32px;margin-bottom:8px">👋</div>
+      <div style="font-weight:700;font-size:17px;color:var(--blue-dark)">Bem-vindo!</div>
+      <div style="font-size:13px;color:var(--gray);margin-top:4px" id="primeiroNome2">Este é seu primeiro acesso.</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px">Crie uma senha para continuar.</div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Nova senha *</label>
+      <input class="form-control" type="password" id="novaSenha1b" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')document.getElementById('novaSenha2b').focus()">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Confirmar senha *</label>
+      <input class="form-control" type="password" id="novaSenha2b" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')salvarPrimeiraSenhaB()">
+    </div>
+    <div id="primeiroErro2" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:10px"></div>
+    <button class="btn btn-solid" onclick="salvarPrimeiraSenhaB()">✅ Criar senha e entrar</button>
+  </div>
+</div>
+
+<!-- TROCAR SENHA (fora do loginWrap) -->
+<div id="trocarSenhaWrap2" style="display:none" class="login-wrap">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:32px;margin-bottom:8px">🔐</div>
+      <div style="font-weight:700;font-size:17px;color:var(--blue-dark)">Crie sua senha</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:6px" id="trocarNome2">Você está usando uma senha temporária.</div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Nova senha *</label>
+      <input class="form-control" type="password" id="trocarSenha1b" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')document.getElementById('trocarSenha2b').focus()">
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Confirmar nova senha *</label>
+      <input class="form-control" type="password" id="trocarSenha2b" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')confirmarTrocarSenhaB()">
+    </div>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:#0369a1;margin-bottom:6px">📷 Foto para login facial (opcional)</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="trocarFotoPreview2" style="width:52px;height:52px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden">👤</div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('trocarB')" style="width:auto">📷 Tirar foto</button>
+      </div>
+      <input type="hidden" id="trocarBFotoBase64">
+    </div>
+    <div id="trocarErro2" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:10px"></div>
+    <button class="btn btn-solid" onclick="confirmarTrocarSenhaB()">✅ Salvar e entrar</button>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="appWrap" class="app" style="display:none">
   <div class="topbar no-print">
@@ -1019,7 +1070,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.73 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.74 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1238,6 +1289,55 @@ async function confirmarTrocarSenha(){
   }catch(e){showErr('Erro ao salvar: '+e.message);}
 }
 
+async function salvarPrimeiraSenhaB(){
+  var s1=document.getElementById('novaSenha1b').value;
+  var s2=document.getElementById('novaSenha2b').value;
+  var erroEl=document.getElementById('primeiroErro2');
+  function showErr(msg){erroEl.textContent=msg;erroEl.style.display='block';}
+  if(!s1||s1.length<6){showErr('A senha precisa ter pelo menos 6 caracteres.');return;}
+  if(s1!==s2){showErr('As senhas não coincidem.');return;}
+  var doc=window._primeiroAcessoDoc||window._trocarSenhaDoc;
+  if(!doc){showErr('Erro: dados não encontrados.');return;}
+  try{
+    await db.collection('funcionarios').doc(doc.id).update({senha:s1,primeiroAcessoEm:new Date().toISOString()});
+    doc.data.senha=s1;
+    S.user=Object.assign({id:doc.id},doc.data);
+    S.isAdmin=S.user.isAdmin||false;
+    try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
+    window._trocarSenhaDoc=null;
+    document.getElementById('primeiroAcessoWrap2').style.display='none';
+    document.getElementById('appWrap').style.display='flex';
+    iniciarApp();
+  }catch(e){showErr('Erro ao salvar: '+e.message);}
+}
+
+async function confirmarTrocarSenhaB(){
+  var s1=document.getElementById('trocarSenha1b').value;
+  var s2=document.getElementById('trocarSenha2b').value;
+  var erroEl=document.getElementById('trocarErro2');
+  function showErr(msg){erroEl.textContent=msg;erroEl.style.display='block';}
+  if(!s1||s1.length<6){showErr('A senha precisa ter pelo menos 6 caracteres.');return;}
+  if(s1==='123456'){showErr('Não use a senha temporária como nova senha!');return;}
+  if(s1!==s2){showErr('As senhas não coincidem.');return;}
+  var doc=window._trocarSenhaDoc;
+  if(!doc){showErr('Erro: dados não encontrados.');return;}
+  var foto=document.getElementById('trocarBFotoBase64').value||'';
+  var upd={senha:s1,senhaAlteradaEm:new Date().toISOString()};
+  if(foto) upd.fotoCadastro=foto;
+  try{
+    await db.collection('funcionarios').doc(doc.id).update(upd);
+    doc.data.senha=s1;
+    if(foto) doc.data.fotoCadastro=foto;
+    S.user=Object.assign({id:doc.id},doc.data);
+    S.isAdmin=S.user.isAdmin||false;
+    try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
+    window._trocarSenhaDoc=null;
+    document.getElementById('trocarSenhaWrap2').style.display='none';
+    document.getElementById('appWrap').style.display='flex';
+    iniciarApp();
+  }catch(e){showErr('Erro ao salvar: '+e.message);}
+}
+
 async function salvarPrimeiraSenha(){
   var s1=document.getElementById('novaSenha1').value;
   var s2=document.getElementById('novaSenha2').value;
@@ -1312,10 +1412,10 @@ async function doLogin(){
       // Primeiro acesso sem senha
       window._trocarSenhaDoc={id:doc.id,data:data};
       document.getElementById('loginWrap').style.display='none';
-      document.getElementById('primeiroAcessoWrap').style.display='block';
-      document.getElementById('primeiroNome').textContent='Olá, '+data.nome.split(' ')[0]+'! Este é seu primeiro acesso.';
-      document.getElementById('novaSenha1').value='';document.getElementById('novaSenha2').value='';
-      document.getElementById('primeiroErro').style.display='none';
+      document.getElementById('primeiroAcessoWrap2').style.display='flex';
+      document.getElementById('primeiroNome2').textContent='Olá, '+data.nome.split(' ')[0]+'! Este é seu primeiro acesso.';
+      document.getElementById('novaSenha1b').value='';document.getElementById('novaSenha2b').value='';
+      document.getElementById('primeiroErro2').style.display='none';
       return;
     }
     if(!senha){showErro('Digite sua senha');return;}
@@ -1324,12 +1424,12 @@ async function doLogin(){
     if(senha==='123456'){
       window._trocarSenhaDoc={id:doc.id,data:data};
       document.getElementById('loginWrap').style.display='none';
-      document.getElementById('trocarSenhaWrap').style.display='block';
-      document.getElementById('trocarNome').textContent='Olá, '+data.nome.split(' ')[0]+'! Você está usando a senha temporária. Crie sua senha pessoal para continuar.';
-      document.getElementById('trocarSenha1').value='';document.getElementById('trocarSenha2').value='';
-      document.getElementById('trocarFotoBase64').value='';
-      document.getElementById('trocarFotoPreview').innerHTML='👤';
-      document.getElementById('trocarErro').style.display='none';
+      document.getElementById('trocarSenhaWrap2').style.display='flex';
+      document.getElementById('trocarNome2').textContent='Olá, '+data.nome.split(' ')[0]+'! Você está usando a senha temporária. Crie sua senha pessoal para continuar.';
+      document.getElementById('trocarSenha1b').value='';document.getElementById('trocarSenha2b').value='';
+      document.getElementById('trocarBFotoBase64').value='';
+      document.getElementById('trocarFotoPreview2').innerHTML='👤';
+      document.getElementById('trocarErro2').style.display='none';
       return;
     }
     S.user=Object.assign({id:doc.id},data);
