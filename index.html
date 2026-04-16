@@ -828,6 +828,45 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   </div>
 </div>
 
+<!-- MODAL EDITAR ADMIN -->
+<div class="modal-bg" id="modalEditAdmin">
+  <div class="modal">
+    <h2>✏️ Editar administrador</h2>
+    <input type="hidden" id="editAdminId">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="form-group"><label class="form-label">Nome completo *</label><input class="form-control" id="editAdminNome"></div>
+      <div class="form-group"><label class="form-label">CPF *</label><input class="form-control" id="editAdminCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00"
+        oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);">
+      </div>
+      <div class="form-group"><label class="form-label">Nova senha (em branco = manter)</label><input class="form-control" type="password" id="editAdminSenha" placeholder="Deixe em branco para não alterar"></div>
+      <div class="form-group">
+        <label class="form-label">Foto facial</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+          <div id="editAdminFotoPreview" style="width:60px;height:60px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden">👤</div>
+          <div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('editAdmin')" style="width:auto;margin-bottom:5px">📷 Nova foto</button>
+            <button type="button" class="btn btn-sm" onclick="document.getElementById('editAdminFotoBase64').value='__APAGAR__';document.getElementById('editAdminFotoPreview').innerHTML='👤'" style="width:auto;font-size:11px">🗑 Remover</button>
+          </div>
+        </div>
+        <input type="hidden" id="editAdminFotoBase64">
+      </div>
+      <div style="background:var(--gray-light);border-radius:8px;padding:10px 12px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="editAdminAparecerLista" style="width:18px;height:18px;cursor:pointer">
+          <div>
+            <div style="font-weight:600;font-size:13px">Aparecer na lista de funcionários</div>
+            <div style="font-size:11px;color:var(--gray);margin-top:2px">Admin aparece no dashboard e relatórios</div>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-saida btn-sm" style="flex:1" onclick="document.getElementById('modalEditAdmin').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-solid btn-sm" style="flex:1" onclick="salvarEdicaoAdmin()">✅ Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- FACIAL OVERLAY -->
 <div id="facialOverlay" style="display:none" class="facial-overlay">
   <div class="facial-title" id="facialTitle">Verificação facial</div>
@@ -980,7 +1019,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.70 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.73 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1252,8 +1291,19 @@ async function doLogin(){
   }
   // Funcionário normal
   try{
-    var snap=await db.collection('funcionarios').where('cpf','==',cpf).get();
-    if(snap.empty){showErro('CPF não encontrado');return;}
+    // Tenta com CPF formatado, se não achar tenta sem formatação
+  var snap=await db.collection('funcionarios').where('cpf','==',cpf).get();
+  if(snap.empty){
+    // Tenta buscar todos e comparar normalizando
+    var snapAll=await db.collection('funcionarios').get();
+    var cpfLimpo=cpf.replace(/\D/g,'');
+    var found=snapAll.docs.find(d=>{
+      var docCpf=(d.data().cpf||'').replace(/\D/g,'');
+      return docCpf===cpfLimpo;
+    });
+    if(found) snap={empty:false,docs:[found]};
+  }
+  if(snap.empty){showErro('CPF não encontrado');return;}
     var doc=snap.docs[0];
     var data=doc.data();
     if(data.inativo){showErro('Usuário inativo. Fale com o administrador.');return;}
@@ -2894,6 +2944,10 @@ async function cadastrarFunc(){
   const nome=document.getElementById('fNome').value.trim(),cpf=document.getElementById('fCpf').value.trim(),senha=document.getElementById('fSenha').value;
   if(!nome||!cpf||!senha){toast('Preencha nome, CPF e senha');return;}
   if(senha.length<6){toast('Senha mínimo 6 caracteres');return;}
+  // Verifica CPF duplicado
+  const cpfLimpo=cpf.replace(/\D/g,'');
+  const cpfDup=S.funcionarios.find(f=>(f.cpf||'').replace(/\D/g,'')===cpfLimpo);
+  if(cpfDup){toast('❌ CPF '+cpf+' já está cadastrado para: '+cpfDup.nome);return;}
   const fotoCadastro=document.getElementById('fFotoBase64').value||'';
   const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,admissao:document.getElementById('fAdmissao').value||'',inicioSistema:document.getElementById('fInicioSistema').value||'',horasMes:parseInt(document.getElementById('fHorasMes').value)||220,email:document.getElementById('fEmail').value.trim()||'',telefone:document.getElementById('fTelefone').value.trim()||'',senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
   try{
@@ -3638,7 +3692,7 @@ async function renderAdmins(){
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <button onclick="toggleAparecerLista('${a.id}',${!a.aparecerNaLista})" style="background:${a.aparecerNaLista?'var(--green-light)':'var(--gray-light)'};color:${a.aparecerNaLista?'var(--green)':'var(--gray)'};border:1px solid ${a.aparecerNaLista?'#a7d7b0':'var(--border)'};border-radius:6px;padding:3px 7px;font-size:10px;font-weight:600;cursor:pointer">${a.aparecerNaLista?'👁 Na lista':'👁 Oculto'}</button>
-        ${a.id!=='master'?`<button class="btn btn-danger-sm btn-sm" onclick="excluirAdmin('${a.id}','${a.nome}')" style="padding:4px 8px;font-size:11px">✕</button>`:'<span style="font-size:10px;color:var(--blue);opacity:.6">Master</span>'}
+        ${a.id!=='master'?`<div style="display:flex;gap:4px"><button class="btn btn-primary btn-sm" onclick="abrirModalEditAdmin('${a.id}')" style="padding:4px 8px;font-size:11px">✏️</button><button class="btn btn-danger-sm btn-sm" onclick="excluirAdmin('${a.id}','${a.nome}')" style="padding:4px 8px;font-size:11px">✕</button></div>`:'<span style="font-size:10px;color:var(--blue);opacity:.6">Master</span>'}
       </div>
       </div>
     </div>`;
@@ -3663,6 +3717,10 @@ async function cadastrarAdmin(){
   const foto=document.getElementById('admFotoBase64').value||'';
   if(!nome||!cpf||!senha){toast('Preencha nome, CPF e senha');return;}
   if(senha.length<6){toast('Senha mínimo 6 caracteres');return;}
+  // Verifica CPF duplicado
+  const cpfLimpoAdm=cpf.replace(/\D/g,'');
+  const cpfDupAdm=S.funcionarios.find(f=>(f.cpf||'').replace(/\D/g,'')===cpfLimpoAdm);
+  if(cpfDupAdm){toast('❌ CPF '+cpf+' já está cadastrado para: '+cpfDupAdm.nome);return;}
   if(!foto) toast('⚠️ Sem foto — login facial não estará disponível');
   const aparecerNaLista=document.getElementById('admAparecerLista').checked;
   const admin={nome,cpf,senha,fotoCadastro:foto,isAdmin:true,aparecerNaLista,cargo:'Administrador',empresa:'ambas',criadoEm:new Date().toISOString()};
@@ -3673,6 +3731,58 @@ async function cadastrarAdmin(){
     renderAdmins();
     toast('✅ Administrador '+nome+' cadastrado!');
   }catch(e){toast('Erro ao cadastrar: '+e.message);}
+}
+
+function abrirModalEditAdmin(id){
+  const a=S_admins.find(x=>x.id===id);
+  if(!a){toast('Admin não encontrado');return;}
+  document.getElementById('editAdminId').value=id;
+  document.getElementById('editAdminNome').value=a.nome||'';
+  document.getElementById('editAdminCpf').value=a.cpf||'';
+  document.getElementById('editAdminSenha').value='';
+  document.getElementById('editAdminAparecerLista').checked=a.aparecerNaLista||false;
+  document.getElementById('editAdminFotoBase64').value='';
+  if(a.fotoCadastro){
+    document.getElementById('editAdminFotoPreview').innerHTML=`<img src="data:image/jpeg;base64,${a.fotoCadastro}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    document.getElementById('editAdminFotoPreview').innerHTML='👤';
+  }
+  document.getElementById('modalEditAdmin').classList.add('open');
+}
+
+async function salvarEdicaoAdmin(){
+  const id=document.getElementById('editAdminId').value;
+  const nome=document.getElementById('editAdminNome').value.trim();
+  const cpf=document.getElementById('editAdminCpf').value.trim();
+  const novaSenha=document.getElementById('editAdminSenha').value;
+  const aparecerNaLista=document.getElementById('editAdminAparecerLista').checked;
+  const fotoVal=document.getElementById('editAdminFotoBase64').value;
+
+  if(!nome||!cpf){toast('Preencha nome e CPF');return;}
+
+  // Verifica CPF duplicado (exceto o próprio)
+  const cpfLimpo=cpf.replace(/\D/g,'');
+  const dup=S.funcionarios.find(f=>f.id!==id&&(f.cpf||'').replace(/\D/g,'')===cpfLimpo);
+  if(dup){toast('❌ CPF já cadastrado para: '+dup.nome);return;}
+
+  const upd={nome,cpf,aparecerNaLista,isAdmin:true};
+  if(novaSenha){
+    if(novaSenha.length<6){toast('Senha mínimo 6 caracteres');return;}
+    upd.senha=novaSenha;
+  }
+  if(fotoVal==='__APAGAR__') upd.fotoCadastro='';
+  else if(fotoVal) upd.fotoCadastro=fotoVal;
+
+  try{
+    await db.collection('funcionarios').doc(id).update(upd);
+    const idx=S_admins.findIndex(a=>a.id===id);
+    if(idx>=0) S_admins[idx]=Object.assign(S_admins[idx],upd);
+    const fi=S.funcionarios.findIndex(f=>f.id===id);
+    if(fi>=0) S.funcionarios[fi]=Object.assign(S.funcionarios[fi],upd);
+    document.getElementById('modalEditAdmin').classList.remove('open');
+    renderAdmins();
+    toast('✅ Administrador atualizado!');
+  }catch(e){toast('Erro ao salvar: '+e.message);}
 }
 
 async function excluirAdmin(id,nome){
