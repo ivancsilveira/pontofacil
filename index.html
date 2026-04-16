@@ -966,7 +966,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.66 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.69 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -3781,7 +3781,7 @@ async function carregarLogs(){
 /* ===== ZERAR BANCO DE DADOS (MASTER ONLY) ===== */
 async function zerarBancoDados(){
   // Dupla confirmação
-  if(!confirm('⚠️ ATENÇÃO\n\nEsta operação irá apagar PERMANENTEMENTE:\n\n• Todos os registros de ponto\n• Todos os logs do sistema\n• Todos os fechamentos mensais\n\nSerão PRESERVADOS:\n✅ Cadastros de funcionários\n✅ Escalas\n✅ Folgas e férias\n✅ Feriados\n✅ Configurações\n\nDeseja continuar?')) return;
+  if(!confirm('⚠️ ATENÇÃO\n\nEsta operação irá apagar PERMANENTEMENTE:\n\n• Todos os registros de ponto\n• Todos os logs do sistema\n• Todos os fechamentos mensais\n• Todas as folgas marcadas\n• Todas as férias\n\nSerão PRESERVADOS:\n✅ Cadastros de funcionários\n✅ Escalas\n✅ Feriados\n✅ Configurações\n\nDeseja continuar?')) return;
 
   var confirmacao=prompt('Para confirmar, digite: CONFIRMAR EXCLUSÃO');
   if(confirmacao!=='CONFIRMAR EXCLUSÃO'){
@@ -3817,10 +3817,14 @@ async function zerarBancoDados(){
   await apagarColecao('registros');
   await apagarColecao('logs');
   await apagarColecao('fechamentos');
+  await apagarColecao('folgas');
+  await apagarColecao('ferias');
 
   // Limpa memória local
   S.registros=[];
   S.fechamentos=[];
+  S.folgas={};
+  if(typeof S_ferias!=='undefined') S_ferias=[];
 
   // Registra o próprio log desta operação (irônico mas útil)
   try{
