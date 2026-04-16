@@ -1070,7 +1070,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.75 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.76 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1201,7 +1201,7 @@ async function capturarLoginFacial(){
   statusEl.textContent = 'Comparando com '+funcionarios.length+' foto(s)...';
 
   function imgSim(b64a, b64b, cb){
-    var SZ=64;
+    var SZ=96;
     function load(b64,done){var img=new Image();img.onload=function(){var c=document.createElement('canvas');c.width=SZ;c.height=SZ;var ctx=c.getContext('2d');ctx.drawImage(img,0,0,SZ,SZ);done(ctx.getImageData(0,0,SZ,SZ).data);};img.src='data:image/jpeg;base64,'+b64;}
     load(b64a,function(da){load(b64b,function(db2){var diff=0,n=da.length;for(var i=0;i<n;i+=4){diff+=Math.abs(da[i]-db2[i])+Math.abs(da[i+1]-db2[i+1])+Math.abs(da[i+2]-db2[i+2]);}cb(1-diff/(255*3*SZ*SZ));});});
   }
@@ -1217,8 +1217,11 @@ async function capturarLoginFacial(){
         // Ordena pelo maior match
         resultados.sort((a,b)=>b.sim-a.sim);
         var melhor = resultados[0];
-
-        if(melhor.confianca >= 55){
+        var segundo = resultados[1];
+        // Threshold 70% + margem de 8% sobre o segundo colocado (evita confusão entre parecidos)
+        var margem = segundo ? (melhor.confianca - segundo.confianca) : 100;
+        var ambiguo = segundo && melhor.confianca >= 70 && margem < 8;
+        if(melhor.confianca >= 70 && margem >= 8){
           // Reconheceu!
           resultEl.innerHTML = '<div style="background:rgba(45,122,58,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">✅ Olá, '+melhor.func.nome.split(' ')[0]+'!<br><span style="font-size:11px;opacity:.8">'+melhor.confianca+'% de similaridade</span></div>';
           statusEl.textContent = 'Entrando...';
@@ -1889,7 +1892,7 @@ async function tirarFotoERegistrar(){
   // Comparação local por similaridade de pixels (canvas)
   try{
     function imgSimilarity(b64a, b64b, cb){
-      var SIZE=64;
+      var SIZE=96;
       function loadImg(b64,done){
         var img=new Image();
         img.onload=function(){
@@ -1912,8 +1915,8 @@ async function tirarFotoERegistrar(){
     }
     imgSimilarity(fotoRef, fotoB64, function(sim){
       var confianca=Math.round(sim*100);
-      // Threshold: similaridade > 55% = mesmo rosto (iluminação/ângulo variam)
-      if(confianca>=55){
+      // Threshold: similaridade > 70% + deve ser pelo menos 8% acima do segundo (evita confusão)
+      if(confianca>=70){
         resultBox.innerHTML='<div class="facial-result facial-ok">✅ Identidade confirmada · '+confianca+'% similaridade</div>';
         statusEl.textContent='Registrando...';
         setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'confirmado',true,confianca);},1300);
@@ -1957,6 +1960,13 @@ async function _registrarPonto(tipo,fotoB64,statusFacial,faceOk,confianca){
     timestamp:agora.getTime(),lat:S.lat,lng:S.lng,mes:agora.toISOString().slice(0,7),
     escalaId:S.user.escalaId||'',escalaNome:esc?esc.nome:'',atraso,minAtraso,ajuste:false,
     fotoB64:fotoB64||'',statusFacial:statusFacial||'',faceOk:!!faceOk,confianca:confianca||null};
+  // Verifica se já bateu este tipo hoje
+  var jaExiste=S.registros.some(function(r){return r.funcionarioId===S.user.id&&r.data===reg.data&&r.tipo===tipo;});
+  if(jaExiste){
+    toast('⛔ Você já registrou "'+tipo+'" hoje. Fale com o administrador para corrigir.');
+    fecharFacial&&fecharFacial();
+    return;
+  }
   try{
     var ref=await db.collection('registros').add(reg);
     reg.id=ref.id; S.registros.unshift(reg);
