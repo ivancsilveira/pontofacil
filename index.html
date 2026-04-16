@@ -266,6 +266,56 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     </div>
   </div>
 
+  <!-- PRIMEIRO ACESSO -->
+  <div id="primeiroAcessoWrap" style="display:none" class="login-card">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:32px;margin-bottom:8px">👋</div>
+      <div style="font-weight:700;font-size:17px;color:var(--blue-dark)">Bem-vindo!</div>
+      <div style="font-size:13px;color:var(--gray);margin-top:4px" id="primeiroNome">Este é seu primeiro acesso.</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px">Crie uma senha para continuar.</div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Nova senha *</label>
+      <input class="form-control" type="password" id="novaSenha1" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')document.getElementById('novaSenha2').focus()">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Confirmar senha *</label>
+      <input class="form-control" type="password" id="novaSenha2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')salvarPrimeiraSenha()">
+    </div>
+    <div id="primeiroErro" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:10px"></div>
+    <button class="btn btn-solid" onclick="salvarPrimeiraSenha()">✅ Criar senha e entrar</button>
+  </div>
+
+  <!-- TROCAR SENHA OBRIGATÓRIA -->
+  <div id="trocarSenhaWrap" style="display:none" class="login-card">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:32px;margin-bottom:8px">🔐</div>
+      <div style="font-weight:700;font-size:17px;color:var(--blue-dark)">Crie sua senha</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:6px" id="trocarNome">Você está usando uma senha temporária.<br>Crie uma senha pessoal para continuar.</div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Nova senha *</label>
+      <input class="form-control" type="password" id="trocarSenha1" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')document.getElementById('trocarSenha2').focus()">
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Confirmar nova senha *</label>
+      <input class="form-control" type="password" id="trocarSenha2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')confirmarTrocarSenha()">
+    </div>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:#0369a1;margin-bottom:6px">📷 Foto para login facial (opcional)</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="trocarFotoPreview" style="width:52px;height:52px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden">👤</div>
+        <div>
+          <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('trocar')" style="width:auto;margin-bottom:3px">📷 Tirar foto</button>
+          <div style="font-size:10px;color:var(--gray)">Permite entrar pelo reconhecimento facial</div>
+        </div>
+      </div>
+      <input type="hidden" id="trocarFotoBase64">
+    </div>
+    <div id="trocarErro" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:10px"></div>
+    <button class="btn btn-solid" onclick="confirmarTrocarSenha()">✅ Salvar e entrar</button>
+  </div>
+
   <!-- ESQUECI SENHA -->
   <div id="esqueciWrap" style="display:none" class="login-card">
     <div style="text-align:center;margin-bottom:14px">
@@ -661,6 +711,21 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <button class="btn btn-sm" onclick="carregarFeriadosBR()" style="width:auto;padding:6px 12px;background:#f59e0b;color:#fff;border:none;border-radius:var(--radius);font-size:12px;margin-bottom:10px">🇧🇷 Carregar feriados nacionais do ano</button>
         <div id="listaFeriados"><div class="empty">Nenhum feriado cadastrado</div></div>
       </div>
+      <!-- ZONA MASTER -->
+      <div id="zonaMaster" style="display:none;border:2px solid #dc2626;border-radius:var(--radius);background:#fef2f2">
+        <div style="background:#dc2626;padding:10px 14px;border-radius:6px 6px 0 0;display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">⚠️</span>
+          <div style="color:#fff;font-weight:700;font-size:14px">Zona Master — Operações Críticas</div>
+        </div>
+        <div style="padding:14px">
+          <div style="font-size:12px;color:#991b1b;margin-bottom:14px;line-height:1.5">
+            As operações abaixo são <strong>irreversíveis</strong>. Os cadastros de funcionários, escalas, folgas e férias são preservados. Apenas os registros de ponto e logs serão apagados.
+          </div>
+          <button onclick="zerarBancoDados()" style="width:100%;background:#dc2626;color:#fff;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            🗑️ Zerar todos os registros de ponto e logs
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -901,7 +966,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.62 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.66 · 15/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1091,13 +1156,70 @@ async function capturarLoginFacial(){
   });
 }
 
+// ===== PRIMEIRO ACESSO =====
+async function confirmarTrocarSenha(){
+  var s1=document.getElementById('trocarSenha1').value;
+  var s2=document.getElementById('trocarSenha2').value;
+  var erroEl=document.getElementById('trocarErro');
+  function showErr(msg){erroEl.textContent=msg;erroEl.style.display='block';}
+  if(!s1||s1.length<6){showErr('A senha precisa ter pelo menos 6 caracteres.');return;}
+  if(s1==='123456'){showErr('Não use a senha temporária como nova senha!');return;}
+  if(s1!==s2){showErr('As senhas não coincidem.');return;}
+  var doc=window._trocarSenhaDoc;
+  if(!doc){showErr('Erro: dados não encontrados.');return;}
+  var foto=document.getElementById('trocarFotoBase64').value||'';
+  var upd={senha:s1,senhaAlteradaEm:new Date().toISOString()};
+  if(foto) upd.fotoCadastro=foto;
+  try{
+    await db.collection('funcionarios').doc(doc.id).update(upd);
+    doc.data.senha=s1;
+    if(foto) doc.data.fotoCadastro=foto;
+    S.user=Object.assign({id:doc.id},doc.data);
+    S.isAdmin=S.user.isAdmin||false;
+    try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
+    window._trocarSenhaDoc=null;
+    registrarLog('login','Senha alterada no primeiro acesso: '+S.user.nome,{funcId:S.user.id,funcNome:S.user.nome,detalhes:foto?'Senha + foto cadastrados':'Senha definida'});
+    document.getElementById('trocarSenhaWrap').style.display='none';
+    document.getElementById('appWrap').style.display='flex';
+    iniciarApp();
+  }catch(e){showErr('Erro ao salvar: '+e.message);}
+}
+
+async function salvarPrimeiraSenha(){
+  var s1=document.getElementById('novaSenha1').value;
+  var s2=document.getElementById('novaSenha2').value;
+  var erroEl=document.getElementById('primeiroErro');
+  function showErr(msg){erroEl.textContent=msg;erroEl.style.display='block';}
+
+  if(!s1||s1.length<6){showErr('A senha precisa ter pelo menos 6 caracteres.');return;}
+  if(s1!==s2){showErr('As senhas não coincidem. Tente novamente.');return;}
+
+  var doc=window._primeiroAcessoDoc||window._trocarSenhaDoc;
+  if(!doc){showErr('Erro: dados não encontrados. Volte e tente novamente.');return;}
+
+  try{
+    await db.collection('funcionarios').doc(doc.id).update({senha:s1,primeiroAcessoEm:new Date().toISOString()});
+    doc.data.senha=s1;
+    S.user=Object.assign({id:doc.id},doc.data);
+    S.isAdmin=S.user.isAdmin||false;
+    try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
+    window._primeiroAcessoDoc=null;
+    registrarLog('login','Primeiro acesso — senha criada: '+S.user.nome,{funcId:S.user.id,funcNome:S.user.nome,detalhes:'Senha definida no primeiro acesso'});
+    document.getElementById('primeiroAcessoWrap').style.display='none';
+    document.getElementById('appWrap').style.display='flex';
+    iniciarApp();
+  }catch(e){
+    showErr('Erro ao salvar senha: '+e.message);
+  }
+}
+
 async function doLogin(){
   var cpf=document.getElementById('loginCpf').value.trim();
   var senha=document.getElementById('loginSenha').value;
   var erroEl=document.getElementById('loginErro');
   function showErro(msg){erroEl.textContent=msg;erroEl.style.display='block';setTimeout(function(){erroEl.style.display='none';},4000);}
   if(!cpf){showErro('Digite seu CPF');return;}
-  if(!senha){showErro('Digite sua senha');return;}
+  // Allow empty senha — will check for first access below
   // Admin master
   if(cpf==='495.256.629-34'){
     if(senha==='Ivan252005'){
@@ -1121,10 +1243,36 @@ async function doLogin(){
     var doc=snap.docs[0];
     var data=doc.data();
     if(data.inativo){showErro('Usuário inativo. Fale com o administrador.');return;}
+    // Primeiro acesso: sem senha cadastrada
+    if(!data.senha||data.senha===''){
+      // Primeiro acesso sem senha
+      window._trocarSenhaDoc={id:doc.id,data:data};
+      document.getElementById('loginWrap').style.display='none';
+      document.getElementById('primeiroAcessoWrap').style.display='block';
+      document.getElementById('primeiroNome').textContent='Olá, '+data.nome.split(' ')[0]+'! Este é seu primeiro acesso.';
+      document.getElementById('novaSenha1').value='';document.getElementById('novaSenha2').value='';
+      document.getElementById('primeiroErro').style.display='none';
+      return;
+    }
+    if(!senha){showErro('Digite sua senha');return;}
     if(data.senha!==senha){showErro('Senha incorreta');document.getElementById('loginSenha').value='';return;}
+    // Senha padrão 123456 — forçar troca
+    if(senha==='123456'){
+      window._trocarSenhaDoc={id:doc.id,data:data};
+      document.getElementById('loginWrap').style.display='none';
+      document.getElementById('trocarSenhaWrap').style.display='block';
+      document.getElementById('trocarNome').textContent='Olá, '+data.nome.split(' ')[0]+'! Você está usando a senha temporária. Crie sua senha pessoal para continuar.';
+      document.getElementById('trocarSenha1').value='';document.getElementById('trocarSenha2').value='';
+      document.getElementById('trocarFotoBase64').value='';
+      document.getElementById('trocarFotoPreview').innerHTML='👤';
+      document.getElementById('trocarErro').style.display='none';
+      return;
+    }
     S.user=Object.assign({id:doc.id},data);
     S.isAdmin=data.isAdmin||false;
+    if(data.cpf==='495.256.629-34'){S.isAdmin=true;S.user.isAdmin=true;}
     try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
+    registrarLog('login','Login: '+S.user.nome,{funcId:S.user.id,funcNome:S.user.nome,detalhes:'Acesso ao sistema'});
     document.getElementById('loginWrap').style.display='none';
     document.getElementById('appWrap').style.display='flex';
     iniciarApp();
@@ -1455,8 +1603,11 @@ function calcBH(func,regsArr,mesRef){
   // Dias úteis da escala no mês
   let diasUteisEscala=0;
   let minsPorDiaUtil=0;
+  const inicioSistBH=func.inicioSistema||func.admissao||'';
   if(esc&&esc.tipo!=='especial'&&esc.dias){
     for(let d=1;d<=diasNoMes;d++){
+      const isoD=ano+'-'+String(mesN).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      if(inicioSistBH&&isoD<inicioSistBH) continue; // antes do início no sistema
       const dt=new Date(ano,mesN-1,d);
       const diaSem=DIAS[dt.getDay()];
       const cfg=esc.dias[diaSem];
@@ -2264,7 +2415,11 @@ function goScreen(sc,navId){
     var mRef=document.getElementById('fechMesRef');
     if(mRef&&!mRef.value) mRef.value=new Date().toISOString().slice(0,7);
   }
-  if(sc==='config'){carregarConfigUI();renderFeriados();}
+  if(sc==='config'){
+    carregarConfigUI();renderFeriados();
+    var zm=document.getElementById('zonaMaster');
+    if(zm) zm.style.display=(S.user&&S.user.cpf==='495.256.629-34')?'block':'none';
+  }
   if(sc==='logs'){
     popularSelectFunc('logFunc');
     var ld=document.getElementById('logData');
@@ -2806,6 +2961,9 @@ async function fecharMes(){
     const snap=await db.collection('registros').where('mes','==',mesAtual).get();
     regsDoMes=snap.docs.map(d=>({id:d.id,...d.data()}));
   }catch(e){toast('Erro ao buscar registros');return;}
+  const [anoFech,mesFechN]=mesAtual.split('-').map(Number);
+  const diasNoMesFech=new Date(anoFech,mesFechN,0).getDate();
+
   const resumos=funcList.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>{
     const regs=regsDoMes.filter(r=>r.funcionarioId===f.id);
     const diasCom=new Set(regs.filter(r=>r.tipo==='Entrada').map(r=>r.data));
@@ -2813,7 +2971,18 @@ async function fecharMes(){
     const ndMes=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual&&v.tipo==='nao_descontado').length;
     const folgasDom=Object.values(S.folgas).filter(v=>v.funcId===f.id&&v.mes===mesAtual&&v.tipo==='folga_dom').length;
     const esc=S.escalas.find(e=>e.id===f.escalaId);
-    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size+ndMes,faltas:Math.max(0,22-diasCom.size-folgasMes-ndMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
+    // Calcula dias úteis esperados descontando dias antes do inicioSistema
+    const inicioSist=f.inicioSistema||f.admissao||'';
+    let diasUteisEsperados=0;
+    for(let d=1;d<=diasNoMesFech;d++){
+      const isoD=anoFech+'-'+String(mesFechN).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      if(inicioSist&&isoD<inicioSist) continue; // antes do início no sistema
+      const diaSem=new Date(anoFech,mesFechN-1,d).getDay();
+      const nomeDia=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][diaSem];
+      if(esc&&esc.tipo!=='especial'&&esc.dias&&esc.dias[nomeDia]&&esc.dias[nomeDia].ativo) diasUteisEsperados++;
+    }
+    if(!esc||esc.tipo==='especial') diasUteisEsperados=22; // fallback sem escala
+    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size+ndMes,faltas:Math.max(0,diasUteisEsperados-diasCom.size-folgasMes-ndMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
   });
   const fech={empresa:String(S.empFech),mes:mesAtual,mesLabel,totalFunc:funcList.length,resumos,criadoEm:new Date().toISOString(),emailContadora:S.config.emailContadora||''};
   try{
@@ -3609,10 +3778,82 @@ async function carregarLogs(){
 }
 
 
+/* ===== ZERAR BANCO DE DADOS (MASTER ONLY) ===== */
+async function zerarBancoDados(){
+  // Dupla confirmação
+  if(!confirm('⚠️ ATENÇÃO\n\nEsta operação irá apagar PERMANENTEMENTE:\n\n• Todos os registros de ponto\n• Todos os logs do sistema\n• Todos os fechamentos mensais\n\nSerão PRESERVADOS:\n✅ Cadastros de funcionários\n✅ Escalas\n✅ Folgas e férias\n✅ Feriados\n✅ Configurações\n\nDeseja continuar?')) return;
+
+  var confirmacao=prompt('Para confirmar, digite: CONFIRMAR EXCLUSÃO');
+  if(confirmacao!=='CONFIRMAR EXCLUSÃO'){
+    toast('❌ Operação cancelada — texto incorreto');
+    return;
+  }
+
+  // Só o master pode executar
+  if(!S.user||S.user.cpf!=='495.256.629-34'){
+    toast('❌ Operação restrita ao Administrador Master');
+    return;
+  }
+
+  toast('⏳ Apagando registros...');
+
+  var total=0,erros=0;
+
+  async function apagarColecao(nome){
+    try{
+      var snap=await db.collection(nome).get();
+      var batch=db.batch();
+      var count=0;
+      for(var doc of snap.docs){
+        batch.delete(doc.ref);
+        count++;
+        total++;
+        if(count===500){await batch.commit();batch=db.batch();count=0;}
+      }
+      if(count>0) await batch.commit();
+    }catch(e){erros++;console.error('Erro ao apagar '+nome+':',e);}
+  }
+
+  await apagarColecao('registros');
+  await apagarColecao('logs');
+  await apagarColecao('fechamentos');
+
+  // Limpa memória local
+  S.registros=[];
+  S.fechamentos=[];
+
+  // Registra o próprio log desta operação (irônico mas útil)
+  try{
+    await db.collection('logs').add({
+      tipo:'outro',
+      descricao:'🗑️ ZERAR BANCO: '+total+' registros apagados pelo Master',
+      operadorId:'master',
+      operadorNome:'Administrador Master (Ivan)',
+      operadorAdmin:true,
+      timestamp:new Date().getTime(),
+      data:new Date().toLocaleDateString('pt-BR'),
+      hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      detalhes:'Registros de ponto, logs e fechamentos apagados'
+    });
+  }catch(e){}
+
+  if(erros===0){
+    toast('✅ Concluído! '+total+' registros apagados. Cadastros preservados.');
+  } else {
+    toast('⚠️ Concluído com '+erros+' erro(s). Verifique o console.');
+  }
+}
+
 /* TOAST */
 function toast(msg){const o=document.getElementById('_t');if(o)o.remove();const el=document.createElement('div');el.id='_t';el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3500);}
 
-document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  // Não fechar ao clicar fora nos modais de cadastro (evita perda de dados)
+  var naoFechar=['modalFunc','modalAdmin','modalEscala','modalEdit'];
+  bg.addEventListener('click',function(e){
+    if(e.target===bg && !naoFechar.includes(bg.id)) bg.classList.remove('open');
+  });
+});
 </script>
 </body>
 </html>
