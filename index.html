@@ -1163,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.85 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.86 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1872,7 +1872,8 @@ function calcBH(func,regsArr,mesRef){
     Object.entries(map).forEach(([data,regs])=>{
       const trab=calcDia(regs);
       if(!esc||esc.tipo==='especial'){banco+=trab;return;}
-      const dt=new Date(data.split('/').reverse().join('-')),dia=DIAS[dt.getDay()];
+      const [dd,mm,yyyy]=data.split('/').map(Number);
+      const dt=new Date(yyyy,mm-1,dd),dia=DIAS[dt.getDay()];
       const cfg=esc.dias&&esc.dias[dia];
       if(!cfg||!cfg.ativo){banco+=trab;return;}
       const prev=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
@@ -3526,7 +3527,8 @@ function verFechamento(id){
 
     if(r.diasMap&&Object.keys(r.diasMap).length>0){
       Object.entries(r.diasMap).sort(([a],[b])=>a.localeCompare(b,'pt-BR')).forEach(([data,regs])=>{
-        const dt=new Date(data.split('/').reverse().join('-'));
+        const [dd,mm,yyyy]=data.split('/').map(Number);
+      const dt=new Date(yyyy,mm-1,dd);
         const diaSem=DIAS[dt.getDay()];
         const mins=calcDia(regs);
         totalMinTrabalhado+=mins;
