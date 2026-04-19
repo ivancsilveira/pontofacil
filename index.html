@@ -1163,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.83 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.84 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1669,7 +1669,8 @@ async function iniciarApp(){
     // Funcionário: busca registros de hoje do Firebase
     try{
       const hj=new Date();
-      const dataHoje=String(hj.getDate()).padStart(2,'0')+'/'+String(hj.getMonth()+1).padStart(2,'0')+'/'+hj.getFullYear();
+      const dataTrabalhoHoje=getDataTrabalho();
+      const dataHoje=dataTrabalhoHoje.dataBR;
       const snap=await db.collection('registros')
         .where('funcionarioId','==',S.user.id)
         .where('data','==',dataHoje).get();
@@ -2072,11 +2073,17 @@ async function _registrarPonto(tipo,fotoB64,statusFacial,faceOk,confianca){
     var dia=DIAS[agora.getDay()],cfg=esc.dias&&esc.dias[dia];
     if(cfg&&cfg.ativo){var tol=parseInt(esc.tolerancia)||10,hr=agora.getHours()*60+agora.getMinutes(),he=hp2m(cfg.entrada);if(hr>he+tol){atraso=true;minAtraso=hr-he;}}
   }
+  // Calcula data de trabalho considerando virada de turno
+  var dataTrabalho = getDataTrabalho(agora.getTime());
+  var horaReal = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  var virada = isViradaTurno(agora.getTime());
+  
   var reg={funcionarioId:S.user.id,funcionarioNome:S.user.nome,tipo,empresa:empId,empresaNome:empNome,
-    data:String(agora.getDate()).padStart(2,'0')+'/'+String(agora.getMonth()+1).padStart(2,'0')+'/'+agora.getFullYear(),hora:agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-    timestamp:agora.getTime(),lat:S.lat,lng:S.lng,mes:agora.toISOString().slice(0,7),
+    data:dataTrabalho.dataBR,hora:horaReal,
+    timestamp:agora.getTime(),lat:S.lat,lng:S.lng,mes:dataTrabalho.mes,
     escalaId:S.user.escalaId||'',escalaNome:esc?esc.nome:'',atraso,minAtraso,ajuste:false,
-    fotoB64:fotoB64||'',statusFacial:statusFacial||'',faceOk:!!faceOk,confianca:confianca||null};
+    fotoB64:fotoB64||'',statusFacial:statusFacial||'',faceOk:!!faceOk,confianca:confianca||null,
+    viradaTurno:virada};
   // Verifica se já bateu este tipo hoje
   var jaExiste=S.registros.some(function(r){return r.funcionarioId===S.user.id&&r.data===reg.data&&r.tipo===tipo;});
   if(jaExiste){
@@ -2131,13 +2138,20 @@ function capturarFotoCadastro(){
 }
 
 function renderRegistrosHoje(){
-  const hj=new Date();const hoje=String(hj.getDate()).padStart(2,'0')+'/'+String(hj.getMonth()+1).padStart(2,'0')+'/'+hj.getFullYear();
+  const hj=new Date();
+  const dataHojeTrabalho=getDataTrabalho();
+  const hoje=dataHojeTrabalho.dataBR;
   const regs=S.registros.filter(r=>r.data===hoje&&r.funcionarioId===S.user.id);
   const el=document.getElementById('registrosHoje');
   if(!regs.length){el.innerHTML='<div class="empty">Nenhum registro hoje</div>';return;}
   el.innerHTML=regs.map(r=>`<div class="reg-item"><div><div class="reg-type">${r.tipo}${r.atraso?` <span style="color:var(--amber);font-size:10px">⚠️ +${r.minAtraso}min</span>`:''}${r.ajuste?` <span class="ajuste-badge">✏️</span>`:''}</div><div class="reg-meta">${r.ajuste?'Ajuste: '+r.motivoLabel:r.empresaNome+' · GPS ✓'}</div></div><div><div class="reg-time">${r.hora}</div></div></div>`).join('');
 }
-function calcTotal(){const hj2=new Date();const hoje=String(hj2.getDate()).padStart(2,'0')+'/'+String(hj2.getMonth()+1).padStart(2,'0')+'/'+hj2.getFullYear();const regs=S.registros.filter(r=>r.data===hoje&&r.funcionarioId===S.user.id);document.getElementById('totalHoje').textContent=m2h(calcDia(regs));}
+function calcTotal(){
+  const dataTrabalhoAtual=getDataTrabalho();
+  const hoje=dataTrabalhoAtual.dataBR;
+  const regs=S.registros.filter(r=>r.data===hoje&&r.funcionarioId===S.user.id);
+  document.getElementById('totalHoje').textContent=m2h(calcDia(regs));
+}
 
 /* ===== AGENDA DE FOLGAS ===== */
 function navAgenda(dir){
@@ -2293,7 +2307,8 @@ async function carregarDashboard(){
   const hoje=new Date();
   document.getElementById('dashDate').textContent=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   const hojeISO=hoje.toISOString().slice(0,10);
-  const dataHoje=String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
+  const dataTrabalhoAtual=getDataTrabalho();
+  const dataHoje=dataTrabalhoAtual.dataBR;
   let regsHoje=[];
   try{const snap=await db.collection('registros').where('data','==',dataHoje).get();regsHoje=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}
   const funcOrdenados=[...S.funcionarios].filter(f=>!f.inativo&&(!f.isAdmin||f.aparecerNaLista)&&f.cpf!=='495.256.629-34').sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
@@ -4297,6 +4312,31 @@ async function zerarBancoDados(){
   } else {
     toast('⚠️ Concluído com '+erros+' erro(s). Verifique o console.');
   }
+}
+
+/* ===== VIRADA DE TURNO (Shift Turnover) ===== */
+// Calcula a data de trabalho considerando registros após meia-noite
+function getDataTrabalho(timestamp) {
+  const dt = timestamp ? new Date(timestamp) : new Date();
+  const hora = dt.getHours();
+  
+  // Se registrou entre 00:00 e 05:59 = considera como dia anterior
+  // (funcionário que saiu após meia-noite)
+  if (hora >= 0 && hora < 6) {
+    dt.setDate(dt.getDate() - 1);
+  }
+  
+  return {
+    dataBR: String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear(),
+    mes: dt.toISOString().slice(0,7),
+    original: timestamp ? new Date(timestamp) : new Date()
+  };
+}
+
+// Verifica se um horário está em "virada de turno"
+function isViradaTurno(timestamp) {
+  const hora = (timestamp ? new Date(timestamp) : new Date()).getHours();
+  return hora >= 0 && hora < 6;
 }
 
 /* ===== FACE-API.JS (reconhecimento facial aprimorado) ===== */
