@@ -88,6 +88,19 @@ input,select,button,textarea{font-family:inherit;font-size:inherit}
 .func-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
 .func-item:last-child{border-bottom:none}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--blue-light);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+
+/* Circular photo fix */
+img[src*="base64"][style*="border-radius:50%"] {
+  object-fit: cover !important;
+  object-position: center !important;
+}
+
+/* Circular containers for photos */
+[id*="FotoPreview"] img, 
+[id*="fotoPreview"] img {
+  object-fit: cover !important;
+  object-position: center !important;
+}
 .func-name{font-weight:600;font-size:13px}
 .func-info{font-size:11px;color:var(--gray);margin-top:1px}
 .func-actions{margin-left:auto;display:flex;gap:5px;flex-shrink:0}
@@ -1071,7 +1084,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.77 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.78 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2290,11 +2303,11 @@ async function carregarRevisaoFacial(){
         <div style="display:flex;gap:8px;align-items:flex-start">
           ${r.fotoB64?`<div style="flex:1;text-align:center">
             <div style="font-size:10px;color:var(--gray);margin-bottom:4px;font-weight:600">FOTO REGISTRADA</div>
-            <img src="data:image/jpeg;base64,${r.fotoB64}" style="width:100%;max-width:120px;border-radius:8px;border:2px solid #fca5a5">
+            <img src="data:image/jpeg;base64,${r.fotoB64}" style="width:100%;max-width:120px;border-radius:8px;border:2px solid #fca5a5;object-fit:cover;aspect-ratio:1">
           </div>`:''}
           ${fotoRef?`<div style="flex:1;text-align:center">
             <div style="font-size:10px;color:var(--gray);margin-bottom:4px;font-weight:600">FOTO CADASTRADA</div>
-            <img src="data:image/jpeg;base64,${fotoRef}" style="width:100%;max-width:120px;border-radius:8px;border:2px solid #93c5fd">
+            <img src="data:image/jpeg;base64,${fotoRef}" style="width:100%;max-width:120px;border-radius:8px;border:2px solid #93c5fd;object-fit:cover;aspect-ratio:1">
           </div>`:''}
         </div>
         <div style="display:flex;gap:6px;margin-top:8px">
