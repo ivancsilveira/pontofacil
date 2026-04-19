@@ -1176,7 +1176,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.96 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.97 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1322,6 +1322,15 @@ async function capturarLoginFacial(){
   }
 
   statusEl.textContent = 'Comparando com '+funcionarios.length+' foto(s)...';
+  
+  // TIMEOUT DE SEGURANÇA (10 segundos)
+  var timeoutId = setTimeout(() => {
+    console.error('⏰ Timeout na comparação facial');
+    statusEl.textContent = '⏰ Timeout na análise. Tente novamente.';
+    btn.disabled = false;
+    btn.textContent = '📸 Tentar novamente';
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-weight:600">⏰ Análise demorou muito. Tente login com CPF + senha</div>';
+  }, 10000);
 
   var resultados = [];
   for(var i=0;i<funcionarios.length;i++){
@@ -1353,8 +1362,12 @@ async function capturarLoginFacial(){
     var DIST_OK = 0.55;
     var MARGEM_OK = 0.08;
     var ambiguo = segundo && melhor.dist < DIST_OK && margem < MARGEM_OK;
+    // LIMPA TIMEOUT
+    clearTimeout(timeoutId);
+    
     if(melhor.dist < DIST_OK && margem >= MARGEM_OK){
           // Reconheceu!
+          console.log('✅ Reconhecimento bem-sucedido:', melhor.func.nome, melhor.confianca+'%');
           resultEl.innerHTML = '<div style="background:rgba(45,122,58,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">✅ Olá, '+melhor.func.nome.split(' ')[0]+'!<br><span style="font-size:11px;opacity:.8">'+melhor.confianca+'% de similaridade</span></div>';
           statusEl.textContent = 'Entrando...';
           setTimeout(async function(){
@@ -2054,6 +2067,11 @@ async function tirarFotoERegistrar(){
         statusEl.textContent='Registrando...';
         setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'confirmado',true,confianca);},1300);
       } else {
+        // LIMPA TIMEOUT
+        clearTimeout(timeoutId);
+        
+        console.log('❌ Não reconhecido. Melhor match:', melhor.func.nome, melhor.confianca+'%');
+        
         // Salva foto para revisão do admin mesmo sem reconhecer
         var _fotoParaRevisao=fotoB64;
         var _tipoParaRevisao=_tipoPendente;
