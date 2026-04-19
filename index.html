@@ -1163,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.80 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.81 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -4387,7 +4387,7 @@ document.querySelectorAll('.modal-bg').forEach(bg=>{
 <!-- Modal de foto expandida -->
 <div id="fotoModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;z-index:9999;justify-content:center;align-items:center" onclick="fecharFotoModal()">
   <div style="position:absolute;top:20px;right:20px;color:white;font-size:24px;cursor:pointer;background:rgba(0,0,0,0.5);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center">×</div>
-  <img id="fotoModalImg" src="" alt="Foto expandida" style="max-width:90%;max-height:90%;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5)" onclick="event.stopPropagation()">
+  <img id="fotoModalImg" src="" alt="Foto expandida" style="max-width:90%;max-height:90%;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);object-fit:contain;object-position:center" onclick="event.stopPropagation()">
 </div>
 
 </body>
