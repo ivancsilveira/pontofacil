@@ -8,6 +8,7 @@
 <title>PontoFácil · Villa Canziani Donato</title>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;background:#f0f4fa;color:#1a1a2e}
@@ -1070,7 +1071,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.76 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.77 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1197,31 +1198,57 @@ async function capturarLoginFacial(){
     return;
   }
 
-  // Compara com cada funcionário
-  statusEl.textContent = 'Comparando com '+funcionarios.length+' foto(s)...';
+  // Compara com cada funcionário usando face-api (embeddings)
+  statusEl.textContent = '🤖 Carregando IA facial...';
 
-  function imgSim(b64a, b64b, cb){
-    var SZ=96;
-    function load(b64,done){var img=new Image();img.onload=function(){var c=document.createElement('canvas');c.width=SZ;c.height=SZ;var ctx=c.getContext('2d');ctx.drawImage(img,0,0,SZ,SZ);done(ctx.getImageData(0,0,SZ,SZ).data);};img.src='data:image/jpeg;base64,'+b64;}
-    load(b64a,function(da){load(b64b,function(db2){var diff=0,n=da.length;for(var i=0;i<n;i+=4){diff+=Math.abs(da[i]-db2[i])+Math.abs(da[i+1]-db2[i+1])+Math.abs(da[i+2]-db2[i+2]);}cb(1-diff/(255*3*SZ*SZ));});});
+  var modelosOk = await carregarFaceModels();
+  if(!modelosOk){
+    statusEl.textContent = '⚠️ IA facial indisponível. Use CPF + senha.';
+    btn.disabled=false; btn.textContent='📸 Tentar novamente';
+    return;
   }
 
-  var resultados = [];
-  var pending = funcionarios.length;
+  statusEl.textContent = '🔍 Detectando seu rosto...';
+  var descCapturada = await extrairDescritorFacial(fotoCapturada);
+  if(!descCapturada){
+    statusEl.textContent = '❌ Rosto não detectado. Melhor iluminação e posicione centralizado.';
+    btn.disabled=false; btn.textContent='📸 Tentar novamente';
+    return;
+  }
 
-  funcionarios.forEach(function(f){
-    imgSim(f.fotoCadastro, fotoCapturada, function(sim){
-      resultados.push({func:f, sim:sim, confianca:Math.round(sim*100)});
-      pending--;
-      if(pending === 0){
-        // Ordena pelo maior match
-        resultados.sort((a,b)=>b.sim-a.sim);
-        var melhor = resultados[0];
-        var segundo = resultados[1];
-        // Threshold 70% + margem de 8% sobre o segundo colocado (evita confusão entre parecidos)
-        var margem = segundo ? (melhor.confianca - segundo.confianca) : 100;
-        var ambiguo = segundo && melhor.confianca >= 70 && margem < 8;
-        if(melhor.confianca >= 70 && margem >= 8){
+  statusEl.textContent = 'Comparando com '+funcionarios.length+' foto(s)...';
+
+  var resultados = [];
+  for(var i=0;i<funcionarios.length;i++){
+    var f=funcionarios[i];
+    var descFunc=await getDescritorFunc(f);
+    if(!descFunc){
+      // Foto antiga ou ruim — pula
+      continue;
+    }
+    var dist=distanciaDescritor(descCapturada, descFunc);
+    var conf=distParaConfianca(dist);
+    resultados.push({func:f, dist:dist, confianca:conf});
+  }
+
+  if(resultados.length===0){
+    statusEl.textContent = '⚠️ Nenhuma foto de funcionário pôde ser analisada.';
+    btn.disabled=false; btn.textContent='📸 Tentar novamente';
+    return;
+  }
+
+  // Processa resultados
+  {
+    // Ordena pela menor distância (= mais parecido)
+    resultados.sort((a,b)=>a.dist-b.dist);
+    var melhor = resultados[0];
+    var segundo = resultados[1];
+    // Threshold: dist < 0.55 (= ~85% conf) + margem de 0.08 sobre o segundo
+    var margem = segundo ? (segundo.dist - melhor.dist) : 1;
+    var DIST_OK = 0.55;
+    var MARGEM_OK = 0.08;
+    var ambiguo = segundo && melhor.dist < DIST_OK && margem < MARGEM_OK;
+    if(melhor.dist < DIST_OK && margem >= MARGEM_OK){
           // Reconheceu!
           resultEl.innerHTML = '<div style="background:rgba(45,122,58,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">✅ Olá, '+melhor.func.nome.split(' ')[0]+'!<br><span style="font-size:11px;opacity:.8">'+melhor.confianca+'% de similaridade</span></div>';
           statusEl.textContent = 'Entrando...';
@@ -1258,9 +1285,7 @@ async function capturarLoginFacial(){
           statusEl.textContent = 'Tente novamente com melhor iluminação';
           btn.disabled=false; btn.textContent='🔄 Tentar novamente';
         }
-      }
-    });
-  });
+  }
 }
 
 // ===== PRIMEIRO ACESSO =====
@@ -1887,36 +1912,36 @@ async function tirarFotoERegistrar(){
     setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'sem_referencia',true);},1200);
     return;
   }
-  statusEl.textContent='🤖 Comparando com foto cadastrada...';
+  statusEl.textContent='🤖 Carregando IA facial...';
   resultBox.innerHTML='<div class="facial-result facial-warn">⏳ Verificando...</div>';
-  // Comparação local por similaridade de pixels (canvas)
   try{
-    function imgSimilarity(b64a, b64b, cb){
-      var SIZE=96;
-      function loadImg(b64,done){
-        var img=new Image();
-        img.onload=function(){
-          var c=document.createElement('canvas');c.width=SIZE;c.height=SIZE;
-          var ctx=c.getContext('2d');ctx.drawImage(img,0,0,SIZE,SIZE);
-          done(ctx.getImageData(0,0,SIZE,SIZE).data);
-        };
-        img.src='data:image/jpeg;base64,'+b64;
-      }
-      loadImg(b64a,function(da){
-        loadImg(b64b,function(db){
-          var diff=0,n=da.length;
-          for(var i=0;i<n;i+=4){
-            diff+=Math.abs(da[i]-db[i])+Math.abs(da[i+1]-db[i+1])+Math.abs(da[i+2]-db[i+2]);
-          }
-          var maxDiff=255*3*(SIZE*SIZE);
-          cb(1-diff/maxDiff);
-        });
-      });
+    var modelosOk2=await carregarFaceModels();
+    if(!modelosOk2){
+      resultBox.innerHTML='<div class="facial-result facial-warn">⚠️ IA indisponível · Foto salva para revisão</div>';
+      setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'revisao_manual',true);},1500);
+      return;
     }
-    imgSimilarity(fotoRef, fotoB64, function(sim){
-      var confianca=Math.round(sim*100);
-      // Threshold: similaridade > 70% + deve ser pelo menos 8% acima do segundo (evita confusão)
-      if(confianca>=70){
+    statusEl.textContent='🔍 Detectando rosto...';
+    var descCap=await extrairDescritorFacial(fotoB64);
+    if(!descCap){
+      resultBox.innerHTML='<div class="facial-result facial-fail">❌ Rosto não detectado · Posicione melhor e tente de novo</div>';
+      statusEl.textContent='Melhore a iluminação e centralize o rosto';
+      btn.disabled=false; btn.textContent='🔄 Tentar novamente';
+      return;
+    }
+    statusEl.textContent='Comparando...';
+    // Busca funcionário atual e compara
+    var funcAtual=S.funcionarios.find(function(f){return f.id===S.user.id;})||S.user;
+    var descRef=await getDescritorFunc(funcAtual);
+    if(!descRef){
+      resultBox.innerHTML='<div class="facial-result facial-warn">⚠️ Foto de cadastro não reconhecida · Salva para revisão</div>';
+      setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'sem_descritor',false);},1500);
+      return;
+    }
+    var dist=distanciaDescritor(descCap, descRef);
+    var confianca=distParaConfianca(dist);
+    // face-api: distância < 0.55 = match bom (~85% conf)
+    if(dist < 0.55){
         resultBox.innerHTML='<div class="facial-result facial-ok">✅ Identidade confirmada · '+confianca+'% similaridade</div>';
         statusEl.textContent='Registrando...';
         setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'confirmado',true,confianca);},1300);
@@ -1939,7 +1964,6 @@ async function tirarFotoERegistrar(){
         statusEl.textContent='Foto salva para revisão do administrador.';
         btn.disabled=false; btn.textContent='🔄 Tentar novamente';
       }
-    });
   }catch(e){
     resultBox.innerHTML='<div class="facial-result facial-warn">⚠️ Erro na comparação · Foto salva para revisão</div>';
     setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'revisao_manual',true);},1200);
@@ -4140,6 +4164,83 @@ async function zerarBancoDados(){
   } else {
     toast('⚠️ Concluído com '+erros+' erro(s). Verifique o console.');
   }
+}
+
+/* ===== FACE-API.JS (reconhecimento facial aprimorado) ===== */
+var FACE_MODELS_LOADED = false;
+var FACE_MODELS_LOADING = false;
+var FACE_DESCRIPTORS_CACHE = {}; // { funcId: Float32Array }
+
+async function carregarFaceModels(){
+  if(FACE_MODELS_LOADED) return true;
+  if(FACE_MODELS_LOADING){
+    // Aguarda carregamento em andamento
+    while(FACE_MODELS_LOADING) await new Promise(r=>setTimeout(r,200));
+    return FACE_MODELS_LOADED;
+  }
+  if(typeof faceapi==='undefined'){
+    console.warn('face-api ainda não carregado');
+    return false;
+  }
+  FACE_MODELS_LOADING = true;
+  try{
+    var MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    FACE_MODELS_LOADED = true;
+    FACE_MODELS_LOADING = false;
+    return true;
+  }catch(e){
+    console.error('Erro ao carregar modelos:',e);
+    FACE_MODELS_LOADING = false;
+    return false;
+  }
+}
+
+// Extrai embedding (descriptor) de uma foto base64
+async function extrairDescritorFacial(b64){
+  if(!FACE_MODELS_LOADED){
+    var ok=await carregarFaceModels();
+    if(!ok) return null;
+  }
+  try{
+    var img=new Image();
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src='data:image/jpeg;base64,'+b64;});
+    var det=await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
+      .withFaceLandmarks(true)
+      .withFaceDescriptor();
+    if(!det) return null;
+    return det.descriptor;
+  }catch(e){console.error('Erro extraindo descritor:',e);return null;}
+}
+
+// Compara dois descritores — retorna distância euclidiana (menor = mais parecido)
+function distanciaDescritor(d1, d2){
+  if(!d1||!d2) return 999;
+  var s=0;
+  for(var i=0;i<d1.length;i++){var x=d1[i]-d2[i];s+=x*x;}
+  return Math.sqrt(s);
+}
+
+// Converte distância para % de confiança (0.4 = ~97%, 0.6 = ~85%, 0.9 = ~50%)
+function distParaConfianca(dist){
+  var conf=Math.max(0,Math.min(100, (1-dist/1.2)*100));
+  return Math.round(conf);
+}
+
+// Retorna descriptor de um funcionário (com cache)
+async function getDescritorFunc(func){
+  if(!func||!func.fotoCadastro) return null;
+  if(FACE_DESCRIPTORS_CACHE[func.id]) return FACE_DESCRIPTORS_CACHE[func.id];
+  var d=await extrairDescritorFacial(func.fotoCadastro);
+  if(d) FACE_DESCRIPTORS_CACHE[func.id]=d;
+  return d;
+}
+
+// Pré-carrega modelos quando o sistema iniciar
+if(typeof window!=='undefined'){
+  setTimeout(function(){carregarFaceModels();},2000);
 }
 
 /* TOAST */
