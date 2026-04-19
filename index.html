@@ -1163,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.84 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.85 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -3341,7 +3341,35 @@ async function excluirFunc(id,nome){
 }
 
 /* FECHAMENTO */
-async function carregarFechamentos(){try{const snap=await db.collection('fechamentos').orderBy('criadoEm','desc').limit(24).get();S.fechamentos=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){}}
+async function carregarFechamentos(){
+  try{
+    const snap=await db.collection('fechamentos').orderBy('criadoEm','desc').limit(24).get();
+    const fechamentos = snap.docs.map(d=>({id:d.id,...d.data()}));
+    
+    // Para cada fechamento, carrega grupos adicionais se houver
+    for (let fech of fechamentos) {
+      if (fech.totalGrupos > 1) {
+        try {
+          const gruposSnap = await db.collection('fechamentos_grupos')
+            .where('fechamentoId', '==', fech.id)
+            .orderBy('grupoIndex', 'asc')
+            .get();
+          
+          const gruposAdicionais = gruposSnap.docs.map(d => d.data());
+          
+          // Junta todos os resumos
+          for (let grupo of gruposAdicionais) {
+            fech.resumos = fech.resumos.concat(grupo.resumos);
+          }
+        } catch(e) {
+          console.warn('Erro ao carregar grupos do fechamento:', e);
+        }
+      }
+    }
+    
+    S.fechamentos = fechamentos;
+  }catch(e){console.error('Erro ao carregar fechamentos:', e);}
+}
 function renderFechamentos(){
   const lista=S.fechamentos.filter(f=>f.empresa==S.empFech);
   const el=document.getElementById('listaFechamentos');
@@ -3371,6 +3399,21 @@ async function fecharMes(){
   const [anoFech,mesFechN]=mesAtual.split('-').map(Number);
   const diasNoMesFech=new Date(anoFech,mesFechN,0).getDate();
 
+  // Função para otimizar dados e reduzir tamanho
+  function otimizarDiaMap(diasMap) {
+    const otimizado = {};
+    for (const [data, regs] of Object.entries(diasMap)) {
+      otimizado[data] = regs.map(r => ({
+        tipo: r.tipo,
+        hora: r.hora,
+        atraso: r.atraso || false,
+        ajuste: r.ajuste || false,
+        virada: r.viradaTurno || false
+      }));
+    }
+    return otimizado;
+  }
+
   const resumos=funcList.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(f=>{
     const regs=regsDoMes.filter(r=>r.funcionarioId===f.id);
     const diasCom=new Set(regs.filter(r=>r.tipo==='Entrada').map(r=>r.data));
@@ -3389,15 +3432,46 @@ async function fecharMes(){
       if(esc&&esc.tipo!=='especial'&&esc.dias&&esc.dias[nomeDia]&&esc.dias[nomeDia].ativo) diasUteisEsperados++;
     }
     if(!esc||esc.tipo==='especial') diasUteisEsperados=22; // fallback sem escala
-    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size+ndMes,faltas:Math.max(0,diasUteisEsperados-diasCom.size-folgasMes-ndMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:agruparDias(regs)};
+    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size+ndMes,faltas:Math.max(0,diasUteisEsperados-diasCom.size-folgasMes-ndMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:otimizarDiaMap(agruparDias(regs))};
   });
-  const fech={empresa:String(S.empFech),mes:mesAtual,mesLabel,totalFunc:funcList.length,resumos,criadoEm:new Date().toISOString(),emailContadora:S.config.emailContadora||''};
+  // Divide relatório para evitar limite de 1MB do Firestore
+  const MAX_RESUMOS_POR_DOC = 15; // ~70KB por funcionário
+  const grupos = [];
+  for (let i = 0; i < resumos.length; i += MAX_RESUMOS_POR_DOC) {
+    grupos.push(resumos.slice(i, i + MAX_RESUMOS_POR_DOC));
+  }
+  
+  const fechPrincipal = {
+    empresa: String(S.empFech),
+    mes: mesAtual,
+    mesLabel,
+    totalFunc: funcList.length,
+    totalGrupos: grupos.length,
+    resumos: grupos[0] || [], // Primeiro grupo no documento principal
+    criadoEm: new Date().toISOString(),
+    emailContadora: S.config.emailContadora || ''
+  };
   try{
-    const ref=await db.collection('fechamentos').add(fech);
-    S.fechamentos.unshift({id:ref.id,...fech});
-    registrarLog('fechamento','Fechamento gerado: '+mesLabel,{detalhes:(S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho')+' · '+funcList.length+' funcionários'});
+    // Salva documento principal
+    const refPrincipal = await db.collection('fechamentos').add(fechPrincipal);
+    const fechamentoId = refPrincipal.id;
+    
+    // Salva grupos adicionais se houver
+    for (let i = 1; i < grupos.length; i++) {
+      const grupoDoc = {
+        fechamentoId,
+        grupoIndex: i,
+        mes: mesAtual,
+        resumos: grupos[i],
+        criadoEm: new Date().toISOString()
+      };
+      await db.collection('fechamentos_grupos').add(grupoDoc);
+    }
+    
+    S.fechamentos.unshift({id: fechamentoId, ...fechPrincipal});
+    registrarLog('fechamento','Fechamento gerado: '+mesLabel,{detalhes:(S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho')+' · '+funcList.length+' funcionários em '+grupos.length+' partes'});
     renderFechamentos();
-    toast('✅ Mês fechado! Use o botão 📧 para enviar por email.');
+    toast(`✅ Mês fechado em ${grupos.length} partes! Use o botão 📧 para enviar por email.`);
   }catch(e){toast('Erro ao fechar: '+e.message);}
 }
 function agruparDias(regs){
