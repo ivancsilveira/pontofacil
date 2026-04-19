@@ -807,7 +807,17 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     </div>
 
     <!-- CONFIG -->
-    <div class="screen" id="sc-config">
+    <div class="screen" id="sc-empresas">
+      <div class="card">
+        <h3>🏢 Empresas Cadastradas</h3>
+        <div id="empresasList">
+          <p style="color:var(--gray);text-align:center;padding:20px">Carregando empresas...</p>
+        </div>
+        <button id="btnAddEmpresa" class="btn btn-blue" style="margin-top:12px">+ Nova Empresa</button>
+      </div>
+    </div>
+
+        <div class="screen" id="sc-config">
       <div class="card">
         <div class="card-title">Villa Canziani Donato</div>
         <div class="form-group" style="margin-bottom:9px"><label class="form-label">Nome</label><input class="form-control" id="cfgA_nome"></div>
@@ -1153,7 +1163,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 
 <script>
 // Estado global
-var S={user:null,isAdmin:false,registros:[],funcionarios:[],escalas:[],folgas:{},fechamentos:[],config:{empresaA:{nome:'',cnpj:'',end:'',lat:-23.55,lng:-46.63,raio:150},empresaB:{nome:'',cnpj:'',end:'',lat:-23.55,lng:-46.63,raio:200},emailContadora:''},agendaMes:new Date().getMonth(),agendaAno:new Date().getFullYear(),empAgenda:1,empEquipe:1,geoOk:false,lat:0,lng:0};
+var S={user:null,isAdmin:false,registros:[],funcionarios:[],escalas:[],folgas:{},empresas:[],fechamentos:[],config:{empresaA:{nome:'',cnpj:'',end:'',lat:-23.55,lng:-46.63,raio:150},empresaB:{nome:'',cnpj:'',end:'',lat:-23.55,lng:-46.63,raio:200},emailContadora:''},agendaMes:new Date().getMonth(),agendaAno:new Date().getFullYear(),empAgenda:1,empEquipe:1,geoOk:false,lat:0,lng:0};
 
 var FIREBASE_CONFIG = {
   apiKey: "AIzaSyC6hVTaaDd7UPS5TqSdLZj2G6LFidcFr9c",
@@ -1166,7 +1176,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.91 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.92 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2741,6 +2751,7 @@ function goScreen(sc,navId){
     var mRef=document.getElementById('fechMesRef');
     if(mRef&&!mRef.value) mRef.value=new Date().toISOString().slice(0,7);
   }
+  if(sc==='empresas'){renderEmpresas();}
   if(sc==='config'){
     carregarConfigUI();renderFeriados();
     var zm=document.getElementById('zonaMaster');
@@ -3977,6 +3988,214 @@ async function carregarFeriadosBR(){
 
 /* FÉRIAS */
 var S_ferias=[];
+async 
+// SISTEMA DE EMPRESAS
+async function carregarEmpresas(){
+  if(S.empresas.length>0) return;
+  try{
+    const snap=await db.collection('empresas').orderBy('nome').get();
+    S.empresas=snap.docs.map(d=>({id:d.id,...d.data()}));
+    
+    // Se não tem empresas, cria as padrão
+    if(S.empresas.length===0){
+      await criarEmpresasPadrao();
+    }
+  }catch(e){
+    console.error('Erro ao carregar empresas:',e);
+    await criarEmpresasPadrao();
+  }
+}
+
+async function criarEmpresasPadrao(){
+  const empresasPadrao=[
+    {
+      id:'1',
+      nome:'VILLA CANZIANI DONATO',
+      cnpj:'00.000.000/0001-00',
+      endereco:'',
+      telefone:'',
+      email:'',
+      ativo:true,
+      criadoEm:new Date().toISOString()
+    },
+    {
+      id:'2', 
+      nome:'VILLA BISTRO PATACHO',
+      cnpj:'00.000.000/0001-01',
+      endereco:'',
+      telefone:'',
+      email:'',
+      ativo:true,
+      criadoEm:new Date().toISOString()
+    }
+  ];
+  
+  for(const emp of empresasPadrao){
+    try{
+      await db.collection('empresas').doc(emp.id).set(emp);
+      S.empresas.push(emp);
+      console.log('Empresa padrão criada:',emp.nome);
+    }catch(e){
+      console.error('Erro ao criar empresa padrão:',e);
+    }
+  }
+}
+
+function renderEmpresas(){
+  const container=document.getElementById('empresasList');
+  if(!container) {
+    console.error('Container empresasList não encontrado!');
+    return;
+  }
+  
+  console.log('🏢 Renderizando empresas:', S.empresas.length);
+  
+  if(S.empresas.length===0){
+    container.innerHTML='<p style="color:var(--gray);text-align:center;padding:20px">Carregando empresas...</p>';
+    // Tenta carregar as empresas
+    carregarEmpresas().then(() => {
+      if(S.empresas.length > 0) {
+        renderEmpresas(); // Re-chama após carregar
+      }
+    });
+    return;
+  }
+  
+  container.innerHTML=S.empresas.map(emp=>`
+    <div class="card" style="margin-bottom:12px;${emp.ativo?'':'opacity:0.6'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px;color:var(--blue-dark)">${emp.nome}</div>
+          <div style="font-size:12px;color:var(--gray);margin-top:2px">CNPJ: ${emp.cnpj||'Não informado'}</div>
+          ${emp.endereco?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📍 ${emp.endereco}</div>`:''}
+          ${emp.telefone?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📞 ${emp.telefone}</div>`:''}
+          ${emp.email?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📧 ${emp.email}</div>`:''}
+          <div style="font-size:10px;color:var(--gray);margin-top:4px">
+            ${emp.ativo?'🟢 Ativa':'🔴 Inativa'} • ID: ${emp.id}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-direction:column">
+          <button onclick="editarEmpresa('${emp.id}')" class="btn btn-sm btn-blue" style="padding:4px 8px;font-size:11px">✏️</button>
+          <button onclick="toggleEmpresaStatus('${emp.id}')" class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:${emp.ativo?'var(--red-light)':'var(--green-light)'};color:${emp.ativo?'var(--red)':'var(--green)'}">${emp.ativo?'🔴':'🟢'}</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleEmpresaStatus(empId){
+  const emp=S.empresas.find(e=>e.id===empId);
+  if(!emp) return;
+  
+  if(confirm(`${emp.ativo?'Desativar':'Ativar'} a empresa "${emp.nome}"?`)){
+    try{
+      emp.ativo=!emp.ativo;
+      emp.atualizadoEm=new Date().toISOString();
+      await db.collection('empresas').doc(empId).update({ativo:emp.ativo,atualizadoEm:emp.atualizadoEm});
+      renderEmpresas();
+      alert(`Empresa ${emp.ativo?'ativada':'desativada'} com sucesso!`);
+    }catch(e){
+      console.error('Erro ao alterar status:',e);
+      alert('Erro ao alterar status da empresa');
+      emp.ativo=!emp.ativo; // revert
+    }
+  }
+}
+
+function editarEmpresa(empId){
+  const emp=empId?S.empresas.find(e=>e.id===empId):null;
+  
+  const modal=document.createElement('div');
+  modal.id='modalEmpresa';
+  modal.className='modal-bg';
+  modal.style.display='block';
+  modal.innerHTML=`
+    <div class="modal" style="max-width:420px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="margin:0">${emp?'✏️ Editar Empresa':'🏢 Nova Empresa'}</h2>
+        <button onclick="document.getElementById('modalEmpresa').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray)">&times;</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">Nome da Empresa *</label>
+          <input type="text" id="empNome" value="${emp?.nome||''}" placeholder="Ex: VILLA CANZIANI DONATO" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">CNPJ</label>
+          <input type="text" id="empCnpj" value="${emp?.cnpj||''}" placeholder="00.000.000/0001-00" maxlength="18" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">Endereço</label>
+          <input type="text" id="empEndereco" value="${emp?.endereco||''}" placeholder="Rua, número, bairro, cidade" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">Telefone</label>
+          <input type="text" id="empTelefone" value="${emp?.telefone||''}" placeholder="(11) 99999-9999" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">E-mail</label>
+          <input type="email" id="empEmail" value="${emp?.email||''}" placeholder="contato@empresa.com" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button onclick="document.getElementById('modalEmpresa').remove()" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--gray);cursor:pointer">Cancelar</button>
+        <button onclick="salvarEmpresa('${empId||''}')" style="flex:1;padding:10px;border:none;border-radius:6px;background:var(--blue);color:#fff;cursor:pointer;font-weight:600">💾 Salvar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById('empNome').focus();
+  
+  // Format CNPJ
+  document.getElementById('empCnpj').addEventListener('input',function(e){
+    let v=e.target.value.replace(/[^0-9]/g,'');
+    if(v.length<=14){
+      v=v.replace(/^(\d{2})(\d)/, '$1.$2');
+      v=v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+      v=v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+      v=v.replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    e.target.value=v;
+  });
+}
+
+async function salvarEmpresa(empId){
+  const nome=document.getElementById('empNome').value.trim();
+  if(!nome){
+    alert('Nome da empresa é obrigatório!');
+    return;
+  }
+  
+  const dados={
+    nome:nome.toUpperCase(),
+    cnpj:document.getElementById('empCnpj').value.trim(),
+    endereco:document.getElementById('empEndereco').value.trim(),
+    telefone:document.getElementById('empTelefone').value.trim(),
+    email:document.getElementById('empEmail').value.trim(),
+    ativo:true,
+    atualizadoEm:new Date().toISOString()
+  };
+  
+  try{
+    if(empId){
+      await db.collection('empresas').doc(empId).update(dados);
+      Object.assign(S.empresas.find(e=>e.id===empId),dados);
+      alert('Empresa atualizada com sucesso!');
+    }else{
+      dados.criadoEm=new Date().toISOString();
+      const docRef=await db.collection('empresas').add(dados);
+      S.empresas.push({id:docRef.id,...dados});
+      alert('Empresa cadastrada com sucesso!');
+    }
+    
+    document.getElementById('modalEmpresa').remove();
+    renderEmpresas();
+  }catch(e){
+    console.error('Erro ao salvar:',e);
+    alert('Erro ao salvar empresa!');
+  }
+}
+
 async function carregarFerias(){
   try{
     const snap=await db.collection('ferias').orderBy('inicio','desc').get();
