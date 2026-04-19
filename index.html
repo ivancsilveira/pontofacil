@@ -1163,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.87 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.88 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -3607,8 +3607,8 @@ function verFechamento(id){
       <div style="background:var(--blue);color:#fff;padding:10px 12px">
         <!-- Empresa e período -->
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:6px">
-          <div style="font-weight:700;font-size:12px">${f.empresa==='1'?'VILLA CANZIANI DONATO':'VILLA BISTRO PATACHO'}</div>
-          <div style="font-size:10px;opacity:.8">CNPJ: ${f.empresa==='1'?'00.000.000/0001-00':'00.000.000/0001-01'} • ${f.mesLabel}</div>
+          <div style="font-weight:700;font-size:12px">${S.empresas.find(e=>e.id===f.empresa)?.nome||'Empresa não encontrada'}</div>
+          <div style="font-size:10px;opacity:.8">CNPJ: ${S.empresas.find(e=>e.id===f.empresa)?.cnpj||'N/A'} • ${f.mesLabel}</div>
         </div>
         <!-- Funcionário -->
         <div style="display:flex;justify-content:space-between;align-items:center">
