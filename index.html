@@ -1163,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.81 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.83 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1993,8 +1993,9 @@ async function tirarFotoERegistrar(){
   try{
     var video=document.getElementById('facialVideo');
     var canvas=document.getElementById('facialCanvas');
-    canvas.width=320;canvas.height=240;
-    canvas.getContext('2d').drawImage(video,0,0,320,240);
+    canvas.width=video.videoWidth || 320;
+    canvas.height=video.videoHeight || 240;
+    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
     fotoB64=canvas.toDataURL('image/jpeg',0.75).split(',')[1];
   }catch(e){}
   var fotoRef=S.user.fotoCadastro||'';
@@ -2116,8 +2117,10 @@ function fecharCameraFoto(){
 
 function capturarFotoCadastro(){
   var video=document.getElementById('cameraFotoVideo');
-  var canvas=document.createElement('canvas');canvas.width=320;canvas.height=240;
-  canvas.getContext('2d').drawImage(video,0,0,320,240);
+  var canvas=document.createElement('canvas');
+  canvas.width=video.videoWidth || 320;
+  canvas.height=video.videoHeight || 240;
+  canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
   var b64=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
   document.getElementById(_fotoTarget+'FotoBase64').value=b64;
   var prev=document.getElementById(_fotoTarget+'FotoPreview');
@@ -3950,7 +3953,7 @@ async function carregarFotoMaster(){
     const doc=await db.collection('config').doc('master').get();
     if(doc.exists&&doc.data().fotoCadastro){
       const foto=doc.data().fotoCadastro;
-      document.getElementById('masterFotoPreview').innerHTML=`<img src="data:image/jpeg;base64,${foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      document.getElementById('masterFotoPreview').innerHTML=`<img src="data:image/jpeg;base64,${foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" ondblclick="expandirFoto('data:image/jpeg;base64,${foto}', 'Administrador Master (Ivan)')">`;
       document.getElementById('masterFotoBase64').value=foto;
       document.getElementById('masterFotoStatus').textContent='✅ Foto cadastrada — login facial ativo';
       // Atualizar fotoCadastro do user se for o master logado
@@ -4385,9 +4388,9 @@ document.querySelectorAll('.modal-bg').forEach(bg=>{
 });
 </script>
 <!-- Modal de foto expandida -->
-<div id="fotoModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;z-index:9999;justify-content:center;align-items:center" onclick="fecharFotoModal()">
+<div id="fotoModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);display:none;z-index:9999;justify-content:center;align-items:center;padding:20px;box-sizing:border-box" onclick="fecharFotoModal()">
   <div style="position:absolute;top:20px;right:20px;color:white;font-size:24px;cursor:pointer;background:rgba(0,0,0,0.5);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center">×</div>
-  <img id="fotoModalImg" src="" alt="Foto expandida" style="max-width:90%;max-height:90%;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);object-fit:contain;object-position:center" onclick="event.stopPropagation()">
+  <img id="fotoModalImg" src="" alt="Foto expandida" style="max-width:calc(100vw - 40px);max-height:calc(100vh - 40px);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);object-fit:scale-down;display:block" onclick="event.stopPropagation()">
 </div>
 
 </body>
