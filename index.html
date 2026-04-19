@@ -924,6 +924,9 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <button class="nav-item admin-nav" onclick="goScreen('logs','navL')" id="navL">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Logs
       </button>
+      <button class="nav-item admin-nav" onclick="goScreen('empresas','navE')" id="navE" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18M3 12h18m-9 5h9M3 17h18"/></svg>Empresas
+      </button>
       <button class="nav-item admin-nav" onclick="goScreen('config','nav8')" id="nav8">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Config
       </button>
@@ -1163,7 +1166,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.89 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.91 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -3510,8 +3513,20 @@ function agruparDias(regs){
   return map;
 }
 function verFechamento(id){
+  console.log('🔍 verFechamento chamado com ID:', id);
+  console.log('📋 S.fechamentos:', S.fechamentos);
+  
   document._fechAtualId=id;
-  const f=S.fechamentos.find(x=>x.id===id);if(!f)return;
+  const f=S.fechamentos.find(x=>x.id===id);
+  
+  if(!f){
+    console.error('❌ Fechamento não encontrado! ID:', id);
+    console.log('📋 IDs disponíveis:', S.fechamentos.map(x => x.id));
+    alert('Erro: Relatório não encontrado. Tente recarregar a página.');
+    return;
+  }
+  
+  console.log('✅ Fechamento encontrado:', f.mesLabel);
   document.getElementById('modalFechTit').textContent='Fechamento — '+f.mesLabel;
 
   let html=`<div style="text-align:center;margin-bottom:14px;padding:10px;background:var(--blue-light);border-radius:8px">
@@ -3643,7 +3658,15 @@ function verFechamento(id){
   }).join('');
 
   document.getElementById('modalFechConteudo').innerHTML=html||'<div class="empty">Sem dados</div>';
-  document.getElementById('modalFechDetalhe').classList.add('open');
+  
+  console.log('🎯 Abrindo modal de fechamento...');
+  const modal = document.getElementById('modalFechDetalhe');
+  if(modal) {
+    modal.classList.add('open');
+    console.log('✅ Modal aberto com sucesso!');
+  } else {
+    console.error('❌ Modal não encontrado!');
+  }
 }
 function enviarEmail(f){if(!f.emailContadora)return;let c='Fechamento de Ponto — '+f.mesLabel+'\nVilla Canziani Donato\n\n';f.resumos.forEach(r=>{c+=r.nome+' ('+r.cargo+')\nPresenças: '+r.presencas+' | Faltas: '+r.faltas+' | Folgas: '+r.folgas+' ('+r.folgasDom+' dom.) | Banco: '+(r.banco>=0?'+':'')+m2h(r.banco||0)+'\n\n';});window.open('mailto:'+f.emailContadora+'?subject='+encodeURIComponent('Ponto '+f.mesLabel)+' — Villa Canziani Donato'+'&body='+encodeURIComponent(c));}
 function reenviar(id){const f=S.fechamentos.find(x=>x.id===id);if(f)enviarEmail(f);}
