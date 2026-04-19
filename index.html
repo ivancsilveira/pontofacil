@@ -243,24 +243,34 @@ img[src*="base64"][style*="border-radius:50%"]:hover {
 .cal-btn.cb-folga-dom{background:var(--pink);color:#fff;border-color:var(--pink)}
 .cal-btn.cb-vazio{background:#f8fafc;color:#cbd5e1;border-color:transparent;cursor:default}
 .cal-btn.cb-hoje{box-shadow:0 0 0 2px var(--blue)}
-// Expandir foto ao clicar
+
+
+// Modal de foto expandida
 function expandirFoto(src, nome) {
+  console.log('Expandindo foto:', nome);
   const modal = document.getElementById('fotoModal');
   const img = document.getElementById('fotoModalImg');
+  if (!modal || !img) {
+    console.error('Modal elements not found');
+    return;
+  }
   img.src = src;
   img.alt = 'Foto de ' + nome;
   modal.style.display = 'flex';
-  // Prevent modal from closing when clicking the image
-  img.onclick = (e) => e.stopPropagation();
 }
 
 function fecharFotoModal() {
-  document.getElementById('fotoModal').style.display = 'none';
+  const modal = document.getElementById('fotoModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
 }
 
-// Close modal on ESC key
+// Close on ESC key
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') fecharFotoModal();
+  if (e.key === 'Escape') {
+    fecharFotoModal();
+  }
 });
 
 /* ESCALAS */
@@ -1153,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.79 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.80 · 16/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -2111,7 +2121,9 @@ function capturarFotoCadastro(){
   var b64=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
   document.getElementById(_fotoTarget+'FotoBase64').value=b64;
   var prev=document.getElementById(_fotoTarget+'FotoPreview');
-  if(prev)prev.innerHTML='<img src="data:image/jpeg;base64,'+b64+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" onclick="expandirFoto(\'data:image/jpeg;base64,'+b64+'\', \'Foto capturada\')">'; 
+  if(prev){
+    prev.innerHTML='<img src="data:image/jpeg;base64,'+b64+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" ondblclick="expandirFoto(\'data:image/jpeg;base64,'+b64+'\', \'Foto capturada\')">';
+  } 
   fecharCameraFoto(); toast('✅ Foto capturada!');
 }
 
@@ -3064,24 +3076,34 @@ async function salvarAjuste(){
   try{await db.collection('registros').add(reg);registrarLog('ajuste_ponto','Ajuste de ponto: '+reg.tipo+' às '+reg.hora,{funcId:fid,funcNome:reg.funcionarioNome,detalhes:reg.motivoLabel+' · '+reg.data+' '+reg.hora});toast('✅ Ajuste salvo com identificação');carregarPontosAjuste();carregarDashboard();}catch(e){toast('Erro ao salvar');}
 }
 
-// Expandir foto ao clicar
+
+
+// Modal de foto expandida
 function expandirFoto(src, nome) {
+  console.log('Expandindo foto:', nome);
   const modal = document.getElementById('fotoModal');
   const img = document.getElementById('fotoModalImg');
+  if (!modal || !img) {
+    console.error('Modal elements not found');
+    return;
+  }
   img.src = src;
   img.alt = 'Foto de ' + nome;
   modal.style.display = 'flex';
-  // Prevent modal from closing when clicking the image
-  img.onclick = (e) => e.stopPropagation();
 }
 
 function fecharFotoModal() {
-  document.getElementById('fotoModal').style.display = 'none';
+  const modal = document.getElementById('fotoModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
 }
 
-// Close modal on ESC key
+// Close on ESC key
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') fecharFotoModal();
+  if (e.key === 'Escape') {
+    fecharFotoModal();
+  }
 });
 
 /* ESCALAS */
@@ -3206,7 +3228,7 @@ function renderEquipe(){
     const fotoHtml=f.fotoCadastro?
       `<img src="data:image/jpeg;base64,${f.fotoCadastro}" 
               style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid ${f.inativo?'var(--gray)':'var(--green)'};flex-shrink:0;${f.inativo?'filter:grayscale(1);opacity:.6':''}" 
-              onclick="expandirFoto('data:image/jpeg;base64,${f.fotoCadastro}', '${f.nome.replace(/'/g, '\'')}')"
+              ondblclick="expandirFoto('data:image/jpeg;base64,${f.fotoCadastro}', '${f.nome}')" style="cursor:pointer"
               title="Clique para expandir a foto de ${f.nome}">`:
       `<div class="avatar" style="${f.inativo?'background:var(--gray-light);color:var(--gray);opacity:.6':''}">${ini}</div>`;
     return `<div class="func-item" style="${f.inativo?'opacity:.7':''}">
@@ -3276,7 +3298,7 @@ function abrirModalEdit(id){
   document.getElementById('editFotoBase64').value='';
   document.getElementById('editCpfDisplay').textContent=f.cpf||'—';
   const prev=document.getElementById('editFotoPreview');
-  if(prev)prev.innerHTML=f.fotoCadastro?`<img src="data:image/jpeg;base64,${f.fotoCadastro}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" onclick="expandirFoto('data:image/jpeg;base64,${f.fotoCadastro}', '${f.nome.replace(/'/g, '\\\'')}')">`:'👤';
+  if(prev)prev.innerHTML=f.fotoCadastro?`<img src="data:image/jpeg;base64,${f.fotoCadastro}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" ondblclick="expandirFoto('data:image/jpeg;base64,${f.fotoCadastro}', '${f.nome}')">`:'👤';
   document.getElementById('modalEditFunc').classList.add('open');
 }
 function fecharModalEdit(){document.getElementById('modalEditFunc').classList.remove('open');}
@@ -3981,7 +4003,7 @@ async function renderAdmins(){
     const fotoHtml=a.fotoCadastro?
       `<img src="data:image/jpeg;base64,${a.fotoCadastro}" 
                   style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--blue);flex-shrink:0" 
-                  onclick="expandirFoto('data:image/jpeg;base64,${a.fotoCadastro}', '${a.nome.replace(/'/g, '\'')}')"
+                  ondblclick="expandirFoto('data:image/jpeg;base64,${a.fotoCadastro}', '${a.nome}')" style="cursor:pointer"
                   title="Clique para expandir a foto de ${a.nome}">`:
       `<div style="width:34px;height:34px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${ini}</div>`;
     const facial=a.fotoCadastro?'<span class="face-badge face-ok" style="font-size:9px">🤖 Facial</span>':'<span class="face-badge face-fail" style="font-size:9px">Sem foto</span>';
@@ -4362,5 +4384,11 @@ document.querySelectorAll('.modal-bg').forEach(bg=>{
   });
 });
 </script>
+<!-- Modal de foto expandida -->
+<div id="fotoModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;z-index:9999;justify-content:center;align-items:center" onclick="fecharFotoModal()">
+  <div style="position:absolute;top:20px;right:20px;color:white;font-size:24px;cursor:pointer;background:rgba(0,0,0,0.5);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center">×</div>
+  <img id="fotoModalImg" src="" alt="Foto expandida" style="max-width:90%;max-height:90%;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5)" onclick="event.stopPropagation()">
+</div>
+
 </body>
 </html>
