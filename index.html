@@ -1163,7 +1163,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.86 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.87 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -3433,7 +3433,21 @@ async function fecharMes(){
       if(esc&&esc.tipo!=='especial'&&esc.dias&&esc.dias[nomeDia]&&esc.dias[nomeDia].ativo) diasUteisEsperados++;
     }
     if(!esc||esc.tipo==='especial') diasUteisEsperados=22; // fallback sem escala
-    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size+ndMes,faltas:Math.max(0,diasUteisEsperados-diasCom.size-folgasMes-ndMes),folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:otimizarDiaMap(agruparDias(regs))};
+    // Debug para entender faltas
+    const faltasCalculadas = Math.max(0,diasUteisEsperados-diasCom.size-folgasMes-ndMes);
+    if(f.nome.includes('JESSICA')) {
+      console.log('DEBUG JESSICA:', {
+        diasUteisEsperados,
+        diasTrabalhados: diasCom.size,
+        folgasMes,
+        ndMes,
+        faltasCalculadas,
+        escala: esc?.nome,
+        escalaTipo: esc?.tipo
+      });
+    }
+    
+    return {funcId:f.id,nome:f.nome,cargo:f.cargo||'',escala:esc?.nome||'—',presencas:diasCom.size+ndMes,faltas:faltasCalculadas,folgas:folgasMes,folgasDom,atrasos:regs.filter(r=>r.atraso).length,ajustes:regs.filter(r=>r.ajuste).length,banco:calcBH(f,regs,mesAtual),diasMap:otimizarDiaMap(agruparDias(regs))};
   });
   // Divide relatório para evitar limite de 1MB do Firestore
   const MAX_RESUMOS_POR_DOC = 15; // ~70KB por funcionário
@@ -3590,14 +3604,22 @@ function verFechamento(id){
     </tr>`;
 
     return `<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-      <div style="background:var(--blue);color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:700;font-size:14px">${r.nome}</div>
-          <div style="font-size:11px;opacity:.8">${r.cargo} · ${r.escala}</div>
+      <div style="background:var(--blue);color:#fff;padding:10px 12px">
+        <!-- Empresa e período -->
+        <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:6px">
+          <div style="font-weight:700;font-size:12px">${f.empresa==='1'?'VILLA CANZIANI DONATO':'VILLA BISTRO PATACHO'}</div>
+          <div style="font-size:10px;opacity:.8">CNPJ: ${f.empresa==='1'?'00.000.000/0001-00':'00.000.000/0001-01'} • ${f.mesLabel}</div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:18px;font-weight:700">${bh>=0?'+':''}${m2h(bh)}</div>
-          <div style="font-size:10px;opacity:.8">banco de horas</div>
+        <!-- Funcionário -->
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:700;font-size:14px">${r.nome}</div>
+            <div style="font-size:11px;opacity:.8">CPF: ${func?.cpf || 'N/A'} • ${r.cargo} • ${r.escala}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:700">${bh>=0?'+':''}${m2h(bh)}</div>
+            <div style="font-size:10px;opacity:.8">banco de horas</div>
+          </div>
         </div>
       </div>
       <div style="overflow-x:auto">
