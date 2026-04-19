@@ -1176,7 +1176,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.92 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.95 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -3540,9 +3540,9 @@ function verFechamento(id){
   console.log('✅ Fechamento encontrado:', f.mesLabel);
   document.getElementById('modalFechTit').textContent='Fechamento — '+f.mesLabel;
 
-  let html=`<div style="text-align:center;margin-bottom:14px;padding:10px;background:var(--blue-light);border-radius:8px">
-    <div style="font-weight:700;font-size:14px;color:var(--blue-dark)">Villa Canziani Donato</div>
-    <div style="font-size:12px;color:var(--blue)">${f.mesLabel} · ${f.totalFunc} funcionários</div>
+  let html=`<div style="text-align:center;margin-bottom:14px;padding:12px;background:var(--blue);border-radius:8px;border:1px solid var(--blue)">
+    <div style="font-weight:800;font-size:16px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)">Villa Canziani Donato</div>
+    <div style="font-size:13px;color:#fff;opacity:0.95;font-weight:600">${f.mesLabel} · ${f.totalFunc} funcionários</div>
   </div>`;
 
   const fech=f;
@@ -3633,18 +3633,18 @@ function verFechamento(id){
       <div style="background:var(--blue);color:#fff;padding:10px 12px">
         <!-- Empresa e período -->
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:6px">
-          <div style="font-weight:700;font-size:12px">${S.empresas.find(e=>e.id===f.empresa)?.nome||'Empresa não encontrada'}</div>
-          <div style="font-size:10px;opacity:.8">CNPJ: ${S.empresas.find(e=>e.id===f.empresa)?.cnpj||'N/A'} • ${f.mesLabel}</div>
+          <div style="font-weight:800;font-size:13px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)">${S.empresas.find(e=>e.id===f.empresa)?.nome||'Empresa não encontrada'}</div>
+          <div style="font-size:11px;color:#fff;opacity:0.95;font-weight:600">CNPJ: ${S.empresas.find(e=>e.id===f.empresa)?.cnpj||'N/A'} • ${f.mesLabel}</div>
         </div>
         <!-- Funcionário -->
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
-            <div style="font-weight:700;font-size:14px">${r.nome}</div>
-            <div style="font-size:11px;opacity:.8">CPF: ${func?.cpf || 'N/A'} • ${r.cargo} • ${r.escala}</div>
+            <div style="font-weight:800;font-size:15px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)">${r.nome}</div>
+            <div style="font-size:12px;color:#fff;opacity:0.95;font-weight:600">CPF: ${func?.cpf || 'N/A'} • ${r.cargo} • ${r.escala}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:18px;font-weight:700">${bh>=0?'+':''}${m2h(bh)}</div>
-            <div style="font-size:10px;opacity:.8">banco de horas</div>
+            <div style="font-size:19px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)">${bh>=0?'+':''}${m2h(bh)}</div>
+            <div style="font-size:11px;color:#fff;opacity:0.95;font-weight:600">banco de horas</div>
           </div>
         </div>
       </div>
@@ -4015,6 +4015,9 @@ async function criarEmpresasPadrao(){
       endereco:'',
       telefone:'',
       email:'',
+      latitude:null,
+      longitude:null,
+      raio:150,
       ativo:true,
       criadoEm:new Date().toISOString()
     },
@@ -4025,6 +4028,9 @@ async function criarEmpresasPadrao(){
       endereco:'',
       telefone:'',
       email:'',
+      latitude:null,
+      longitude:null,
+      raio:200,
       ativo:true,
       criadoEm:new Date().toISOString()
     }
@@ -4068,6 +4074,7 @@ function renderEmpresas(){
           <div style="font-weight:600;font-size:14px;color:var(--blue-dark)">${emp.nome}</div>
           <div style="font-size:12px;color:var(--gray);margin-top:2px">CNPJ: ${emp.cnpj||'Não informado'}</div>
           ${emp.endereco?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📍 ${emp.endereco}</div>`:''}
+          ${emp.latitude&&emp.longitude?`<div style="font-size:11px;color:var(--blue);margin-top:1px">🌍 ${emp.latitude.toFixed(4)}, ${emp.longitude.toFixed(4)} (${emp.raio||150}m)</div>`:''}
           ${emp.telefone?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📞 ${emp.telefone}</div>`:''}
           ${emp.email?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📧 ${emp.email}</div>`:''}
           <div style="font-size:10px;color:var(--gray);margin-top:4px">
@@ -4136,6 +4143,26 @@ function editarEmpresa(empId){
           <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">E-mail</label>
           <input type="email" id="empEmail" value="${emp?.email||''}" placeholder="contato@empresa.com" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
         </div>
+        
+        <!-- GEOLOCALIZAÇÃO -->
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+          <h4 style="margin:0 0 8px 0;font-size:13px;color:var(--blue);font-weight:700">📍 Geolocalização (Cerca Eletrônica)</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">Latitude</label>
+              <input type="number" step="any" id="empLatitude" value="${emp?.latitude||''}" placeholder="-23.123456" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+            </div>
+            <div>
+              <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">Longitude</label>
+              <input type="number" step="any" id="empLongitude" value="${emp?.longitude||''}" placeholder="-46.123456" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+            </div>
+          </div>
+          <div style="margin-top:8px">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--gray);margin-bottom:4px">Raio da cerca (metros)</label>
+            <input type="number" id="empRaio" value="${emp?.raio||150}" placeholder="150" min="50" max="1000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <button type="button" onclick="obterMinhaLocalizacao()" style="width:100%;margin-top:8px;padding:8px;background:var(--green-light);color:var(--green);border:1px solid var(--green);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">📍 Usar minha localização atual</button>
+        </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px">
         <button onclick="document.getElementById('modalEmpresa').remove()" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--gray);cursor:pointer">Cancelar</button>
@@ -4159,6 +4186,53 @@ function editarEmpresa(empId){
   });
 }
 
+
+
+function obterMinhaLocalizacao(){
+  if(!navigator.geolocation){
+    alert('Geolocalização não suportada pelo navegador');
+    return;
+  }
+  
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '📍 Obtendo localização...';
+  
+  navigator.geolocation.getCurrentPosition(
+    function(position){
+      document.getElementById('empLatitude').value = position.coords.latitude.toFixed(6);
+      document.getElementById('empLongitude').value = position.coords.longitude.toFixed(6);
+      btn.disabled = false;
+      btn.textContent = '📍 Usar minha localização atual';
+      alert('Localização obtida com sucesso!\nLat: ' + position.coords.latitude.toFixed(6) + '\nLng: ' + position.coords.longitude.toFixed(6));
+    },
+    function(error){
+      btn.disabled = false;
+      btn.textContent = '📍 Usar minha localização atual';
+      let msg = 'Erro ao obter localização: ';
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          msg += 'Permissão negada. Permita acesso à localização.';
+          break;
+        case error.POSITION_UNAVAILABLE:
+          msg += 'Localização indisponível.';
+          break;
+        case error.TIMEOUT:
+          msg += 'Timeout. Tente novamente.';
+          break;
+        default:
+          msg += 'Erro desconhecido.';
+          break;
+      }
+      alert(msg);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+}
 async function salvarEmpresa(empId){
   const nome=document.getElementById('empNome').value.trim();
   if(!nome){
@@ -4172,6 +4246,9 @@ async function salvarEmpresa(empId){
     endereco:document.getElementById('empEndereco').value.trim(),
     telefone:document.getElementById('empTelefone').value.trim(),
     email:document.getElementById('empEmail').value.trim(),
+    latitude:parseFloat(document.getElementById('empLatitude').value) || null,
+    longitude:parseFloat(document.getElementById('empLongitude').value) || null,
+    raio:parseInt(document.getElementById('empRaio').value) || 150,
     ativo:true,
     atualizadoEm:new Date().toISOString()
   };
