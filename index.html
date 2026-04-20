@@ -50,6 +50,64 @@ async function loginComoFuncionario(funcId) {
     alert('Erro no login. Tente novamente.');
   }
 }
+
+
+// Pré-carrega cache de descritores em background
+async function preCarregarCacheFaces(){
+  try {
+    console.log('🚀 Iniciando pré-carregamento de cache facial...');
+    if(!FACE_MODELS_LOADED) {
+      await carregarFaceModels();
+    }
+    
+    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
+    console.log('📋 Funcionários com foto:', funcionarios.length);
+    
+    var carregados = 0;
+    var falhas = 0;
+    
+    for(var func of funcionarios) {
+      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
+        try {
+          var desc = await extrairDescritorFacial(func.fotoCadastro);
+          if(desc) {
+            FACE_DESCRIPTORS_CACHE[func.id] = desc;
+            carregados++;
+          } else {
+            falhas++;
+            console.warn('⚠️ Não detectou rosto em:', func.nome);
+          }
+        } catch(e) {
+          falhas++;
+          console.error('❌ Erro pré-carregando:', func.nome, e);
+        }
+      }
+    }
+    
+    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
+  } catch(e) {
+    console.error('Erro no pré-carregamento:', e);
+  }
+}
+
+
+// Valida se a foto cadastrada tem rosto detectável
+async function validarFotoCadastro(b64) {
+  if(!FACE_MODELS_LOADED) {
+    await carregarFaceModels();
+  }
+  
+  if(!FACE_MODELS_LOADED) {
+    return {ok: true, aviso: 'Modelos ainda carregando...'};
+  }
+  
+  var desc = await extrairDescritorFacial(b64);
+  if(!desc) {
+    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
+  }
+  
+  return {ok: true, qualidade: 'boa'};
+}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js">
 
@@ -95,6 +153,64 @@ async function loginComoFuncionario(funcId) {
     alert('Erro no login. Tente novamente.');
   }
 }
+
+
+// Pré-carrega cache de descritores em background
+async function preCarregarCacheFaces(){
+  try {
+    console.log('🚀 Iniciando pré-carregamento de cache facial...');
+    if(!FACE_MODELS_LOADED) {
+      await carregarFaceModels();
+    }
+    
+    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
+    console.log('📋 Funcionários com foto:', funcionarios.length);
+    
+    var carregados = 0;
+    var falhas = 0;
+    
+    for(var func of funcionarios) {
+      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
+        try {
+          var desc = await extrairDescritorFacial(func.fotoCadastro);
+          if(desc) {
+            FACE_DESCRIPTORS_CACHE[func.id] = desc;
+            carregados++;
+          } else {
+            falhas++;
+            console.warn('⚠️ Não detectou rosto em:', func.nome);
+          }
+        } catch(e) {
+          falhas++;
+          console.error('❌ Erro pré-carregando:', func.nome, e);
+        }
+      }
+    }
+    
+    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
+  } catch(e) {
+    console.error('Erro no pré-carregamento:', e);
+  }
+}
+
+
+// Valida se a foto cadastrada tem rosto detectável
+async function validarFotoCadastro(b64) {
+  if(!FACE_MODELS_LOADED) {
+    await carregarFaceModels();
+  }
+  
+  if(!FACE_MODELS_LOADED) {
+    return {ok: true, aviso: 'Modelos ainda carregando...'};
+  }
+  
+  var desc = await extrairDescritorFacial(b64);
+  if(!desc) {
+    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
+  }
+  
+  return {ok: true, qualidade: 'boa'};
+}
 </script>
 <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js">
 
@@ -139,6 +255,64 @@ async function loginComoFuncionario(funcId) {
     console.error('Erro no login manual:', e);
     alert('Erro no login. Tente novamente.');
   }
+}
+
+
+// Pré-carrega cache de descritores em background
+async function preCarregarCacheFaces(){
+  try {
+    console.log('🚀 Iniciando pré-carregamento de cache facial...');
+    if(!FACE_MODELS_LOADED) {
+      await carregarFaceModels();
+    }
+    
+    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
+    console.log('📋 Funcionários com foto:', funcionarios.length);
+    
+    var carregados = 0;
+    var falhas = 0;
+    
+    for(var func of funcionarios) {
+      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
+        try {
+          var desc = await extrairDescritorFacial(func.fotoCadastro);
+          if(desc) {
+            FACE_DESCRIPTORS_CACHE[func.id] = desc;
+            carregados++;
+          } else {
+            falhas++;
+            console.warn('⚠️ Não detectou rosto em:', func.nome);
+          }
+        } catch(e) {
+          falhas++;
+          console.error('❌ Erro pré-carregando:', func.nome, e);
+        }
+      }
+    }
+    
+    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
+  } catch(e) {
+    console.error('Erro no pré-carregamento:', e);
+  }
+}
+
+
+// Valida se a foto cadastrada tem rosto detectável
+async function validarFotoCadastro(b64) {
+  if(!FACE_MODELS_LOADED) {
+    await carregarFaceModels();
+  }
+  
+  if(!FACE_MODELS_LOADED) {
+    return {ok: true, aviso: 'Modelos ainda carregando...'};
+  }
+  
+  var desc = await extrairDescritorFacial(b64);
+  if(!desc) {
+    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
+  }
+  
+  return {ok: true, qualidade: 'boa'};
 }
 </script>
 <style>
@@ -1308,7 +1482,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.98 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.99 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1504,7 +1678,7 @@ async function capturarLoginFacial(){
     var segundo = resultados[1];
     // Threshold: dist < 0.55 (= ~85% conf) + margem de 0.08 sobre o segundo
     var margem = segundo ? (segundo.dist - melhor.dist) : 1;
-    var DIST_OK = 0.65;  // Relaxado de 0.55 para 0.65 (menos rigoroso)
+    var DIST_OK = 0.60;  // 0.60 = ~80% similaridade (padrão da indústria)
     var MARGEM_OK = 0.05;  // Relaxado de 0.08 para 0.05
     var ambiguo = segundo && melhor.dist < DIST_OK && margem < MARGEM_OK;
     // LIMPA TIMEOUT
@@ -5088,9 +5262,13 @@ async function carregarFaceModels(){
   FACE_MODELS_LOADING = true;
   try{
     var MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+    // MODELOS DE ALTA QUALIDADE
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);  // Detector MUITO melhor que TinyFaceDetector
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);  // Landmarks FULL (não tiny)
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    // Backup: TinyFaceDetector para casos de fallback
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    console.log('✅ Modelos de ALTA QUALIDADE carregados (SSD + FaceLandmark68 full)');
     FACE_MODELS_LOADED = true;
     FACE_MODELS_LOADING = false;
     return true;
@@ -5118,14 +5296,18 @@ async function verificarQualidadeFoto(b64) {
     // Tenta detectar rosto para verificar qualidade
     if(!FACE_MODELS_LOADED) return {ok: true}; // Se modelos não carregados, aceita
     
-    var det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.3}));
+    var det = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options({minConfidence: 0.3}));
     if(!det) {
-      return {ok: false, motivo: 'Rosto não detectado claramente'};
+      // Fallback para TinyFaceDetector
+      det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:608,scoreThreshold:0.2}));
+      if(!det) {
+        return {ok: false, motivo: 'Rosto não detectado. Centralize o rosto e melhore a iluminação.'};
+      }
     }
     
     // Verifica se o rosto está muito pequeno
-    if(det.box.width < 80 || det.box.height < 80) {
-      return {ok: false, motivo: 'Rosto muito pequeno na foto'};
+    if(det.box.width < 60 || det.box.height < 60) {
+      return {ok: false, motivo: 'Rosto muito pequeno. Aproxime-se da câmera.'};
     }
     
     return {ok: true, qualidade: 'boa'};
@@ -5141,12 +5323,34 @@ async function extrairDescritorFacial(b64){
   try{
     var img=new Image();
     await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src='data:image/jpeg;base64,'+b64;});
-    var det=await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.4}))
-      .withFaceLandmarks(true)
+    
+    // TENTATIVA 1: SSD Mobilenet (melhor precisão)
+    var det = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options({minConfidence: 0.4}))
+      .withFaceLandmarks()  // Full landmarks, não tiny
       .withFaceDescriptor();
-    if(!det) return null;
-    return det.descriptor;
-  }catch(e){console.error('Erro extraindo descritor:',e);return null;}
+    
+    if(det) {
+      console.log('✅ Rosto detectado com SSD');
+      return det.descriptor;
+    }
+    
+    // TENTATIVA 2: Fallback para TinyFaceDetector com score baixo
+    console.log('⚠️ SSD falhou, tentando TinyFaceDetector...');
+    det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:608, scoreThreshold:0.3}))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    
+    if(det) {
+      console.log('✅ Rosto detectado com TinyFaceDetector (fallback)');
+      return det.descriptor;
+    }
+    
+    console.warn('❌ Nenhum detector conseguiu encontrar rosto');
+    return null;
+  }catch(e){
+    console.error('❌ Erro extraindo descritor:',e);
+    return null;
+  }
 }
 
 // Compara dois descritores — retorna distância euclidiana (menor = mais parecido)
@@ -5237,6 +5441,64 @@ async function loginComoFuncionario(funcId) {
     console.error('Erro no login manual:', e);
     alert('Erro no login. Tente novamente.');
   }
+}
+
+
+// Pré-carrega cache de descritores em background
+async function preCarregarCacheFaces(){
+  try {
+    console.log('🚀 Iniciando pré-carregamento de cache facial...');
+    if(!FACE_MODELS_LOADED) {
+      await carregarFaceModels();
+    }
+    
+    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
+    console.log('📋 Funcionários com foto:', funcionarios.length);
+    
+    var carregados = 0;
+    var falhas = 0;
+    
+    for(var func of funcionarios) {
+      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
+        try {
+          var desc = await extrairDescritorFacial(func.fotoCadastro);
+          if(desc) {
+            FACE_DESCRIPTORS_CACHE[func.id] = desc;
+            carregados++;
+          } else {
+            falhas++;
+            console.warn('⚠️ Não detectou rosto em:', func.nome);
+          }
+        } catch(e) {
+          falhas++;
+          console.error('❌ Erro pré-carregando:', func.nome, e);
+        }
+      }
+    }
+    
+    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
+  } catch(e) {
+    console.error('Erro no pré-carregamento:', e);
+  }
+}
+
+
+// Valida se a foto cadastrada tem rosto detectável
+async function validarFotoCadastro(b64) {
+  if(!FACE_MODELS_LOADED) {
+    await carregarFaceModels();
+  }
+  
+  if(!FACE_MODELS_LOADED) {
+    return {ok: true, aviso: 'Modelos ainda carregando...'};
+  }
+  
+  var desc = await extrairDescritorFacial(b64);
+  if(!desc) {
+    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
+  }
+  
+  return {ok: true, qualidade: 'boa'};
 }
 </script>
 <!-- Modal de foto expandida -->
