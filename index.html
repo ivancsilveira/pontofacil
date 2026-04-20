@@ -6,9 +6,141 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a56a0">
 <title>PontoFácil · Villa Canziani Donato</title>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
+
+// Função para confirmação manual de login
+function confirmarLoginManual(funcId, funcNome) {
+  if(confirm(`Confirma que você é ${funcNome}?`)) {
+    fecharLoginFacial();
+    // Faz login direto com o usuário confirmado
+    loginComoFuncionario(funcId);
+  }
+}
+
+async function loginComoFuncionario(funcId) {
+  try {
+    var funcionario = S.funcionarios.find(f => f.id === funcId);
+    if(!funcionario) {
+      alert('Funcionário não encontrado');
+      return;
+    }
+    
+    S.user = funcionario;
+    S.isAdmin = funcionario.isAdmin || false;
+    
+    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
+    
+    // Registra log do login manual
+    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
+      funcId: funcionario.id,
+      funcNome: funcionario.nome,
+      metodo: 'confirmacao_manual'
+    });
+    
+    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
+    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
+    
+    // Vai para a tela inicial
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('appMain').style.display = 'flex';
+    
+    await inicializar();
+  } catch(e) {
+    console.error('Erro no login manual:', e);
+    alert('Erro no login. Tente novamente.');
+  }
+}
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js">
+
+// Função para confirmação manual de login
+function confirmarLoginManual(funcId, funcNome) {
+  if(confirm(`Confirma que você é ${funcNome}?`)) {
+    fecharLoginFacial();
+    // Faz login direto com o usuário confirmado
+    loginComoFuncionario(funcId);
+  }
+}
+
+async function loginComoFuncionario(funcId) {
+  try {
+    var funcionario = S.funcionarios.find(f => f.id === funcId);
+    if(!funcionario) {
+      alert('Funcionário não encontrado');
+      return;
+    }
+    
+    S.user = funcionario;
+    S.isAdmin = funcionario.isAdmin || false;
+    
+    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
+    
+    // Registra log do login manual
+    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
+      funcId: funcionario.id,
+      funcNome: funcionario.nome,
+      metodo: 'confirmacao_manual'
+    });
+    
+    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
+    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
+    
+    // Vai para a tela inicial
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('appMain').style.display = 'flex';
+    
+    await inicializar();
+  } catch(e) {
+    console.error('Erro no login manual:', e);
+    alert('Erro no login. Tente novamente.');
+  }
+}
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js">
+
+// Função para confirmação manual de login
+function confirmarLoginManual(funcId, funcNome) {
+  if(confirm(`Confirma que você é ${funcNome}?`)) {
+    fecharLoginFacial();
+    // Faz login direto com o usuário confirmado
+    loginComoFuncionario(funcId);
+  }
+}
+
+async function loginComoFuncionario(funcId) {
+  try {
+    var funcionario = S.funcionarios.find(f => f.id === funcId);
+    if(!funcionario) {
+      alert('Funcionário não encontrado');
+      return;
+    }
+    
+    S.user = funcionario;
+    S.isAdmin = funcionario.isAdmin || false;
+    
+    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
+    
+    // Registra log do login manual
+    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
+      funcId: funcionario.id,
+      funcNome: funcionario.nome,
+      metodo: 'confirmacao_manual'
+    });
+    
+    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
+    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
+    
+    // Vai para a tela inicial
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('appMain').style.display = 'flex';
+    
+    await inicializar();
+  } catch(e) {
+    console.error('Erro no login manual:', e);
+    alert('Erro no login. Tente novamente.');
+  }
+}
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;background:#f0f4fa;color:#1a1a2e}
@@ -1176,7 +1308,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.97 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.98 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1314,10 +1446,23 @@ async function capturarLoginFacial(){
   }
 
   statusEl.textContent = '🔍 Detectando seu rosto...';
+  // Verificar qualidade da foto capturada
+  console.log('🔍 Verificando qualidade da foto...');
+  var qualidade = await verificarQualidadeFoto(fotoCapturada);
+  if(!qualidade.ok) {
+    statusEl.textContent = '⚠️ ' + qualidade.motivo;
+    btn.disabled = false; 
+    btn.textContent = '📸 Tentar novamente';
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">📸 ' + qualidade.motivo + '<br><small>Dica: Rosto de frente, boa iluminação, câmera próxima</small></div>';
+    return;
+  }
+  
+  console.log('✅ Qualidade da foto: OK');
   var descCapturada = await extrairDescritorFacial(fotoCapturada);
   if(!descCapturada){
-    statusEl.textContent = '❌ Rosto não detectado. Melhor iluminação e posicione centralizado.';
+    statusEl.textContent = '❌ Rosto não detectado pela IA. Tente novamente.';
     btn.disabled=false; btn.textContent='📸 Tentar novamente';
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">❌ IA não conseguiu processar o rosto<br><small>Tente: melhor iluminação, rosto centralizado, sem óculos escuros</small></div>';
     return;
   }
 
@@ -1359,8 +1504,8 @@ async function capturarLoginFacial(){
     var segundo = resultados[1];
     // Threshold: dist < 0.55 (= ~85% conf) + margem de 0.08 sobre o segundo
     var margem = segundo ? (segundo.dist - melhor.dist) : 1;
-    var DIST_OK = 0.55;
-    var MARGEM_OK = 0.08;
+    var DIST_OK = 0.65;  // Relaxado de 0.55 para 0.65 (menos rigoroso)
+    var MARGEM_OK = 0.05;  // Relaxado de 0.08 para 0.05
     var ambiguo = segundo && melhor.dist < DIST_OK && margem < MARGEM_OK;
     // LIMPA TIMEOUT
     clearTimeout(timeoutId);
@@ -2070,7 +2215,12 @@ async function tirarFotoERegistrar(){
         // LIMPA TIMEOUT
         clearTimeout(timeoutId);
         
-        console.log('❌ Não reconhecido. Melhor match:', melhor.func.nome, melhor.confianca+'%');
+        // Log dos top 3 matches para debug
+    console.log('🔍 TOP 3 MATCHES:');
+    resultados.slice(0,3).forEach((r,i) => {
+      console.log(`${i+1}º ${r.func.nome}: ${r.confianca}% (dist: ${r.dist.toFixed(3)})`);
+    });
+    console.log(`❌ Não reconhecido. Melhor: ${melhor.func.nome} ${melhor.confianca}% (threshold: ${Math.round(distParaConfianca(DIST_OK))}%)`);
         
         // Salva foto para revisão do admin mesmo sem reconhecer
         var _fotoParaRevisao=fotoB64;
@@ -2079,9 +2229,18 @@ async function tirarFotoERegistrar(){
         window._fotoRevisao=fotoB64;
         window._tipoRevisao=_tipoPendente;
         window._confiancaRevisao=confianca;
-        resultBox.innerHTML='<div class="facial-result facial-fail">❌ Rosto não reconhecido ('+confianca+'%)</div>'+
+        // Mostra o melhor match para confirmação manual se estiver próximo
+        var melhorMatch = resultados[0];
+        var botaoConfirmacao = '';
+        if(melhorMatch && melhorMatch.confianca >= 70) {
+          botaoConfirmacao = `<button onclick="confirmarLoginManual('${melhorMatch.func.id}','${melhorMatch.func.nome}')" style="background:var(--amber);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-right:8px">✅ Sou ${melhorMatch.func.nome.split(' ')[0]} (${melhorMatch.confianca}%)</button>`;
+        }
+        
+        resultBox.innerHTML='<div class="facial-result facial-fail">❌ Reconhecimento automático falhou</div>'+
+          '<div style="font-size:11px;color:var(--gray);margin:6px 0">Melhor match: '+melhorMatch.func.nome+' ('+melhorMatch.confianca+'%)</div>'+
           '<div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap">'+
-          '<button id="btnRegistrarMesmoAssim" style="background:#b91c1c;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">📸 Registrar mesmo assim</button>'+
+          botaoConfirmacao +
+          '<button id="btnRegistrarMesmoAssim" style="background:#b91c1c;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">📸 Registrar sem reconhecer</button>'+
           '</div>';
         document.getElementById('btnRegistrarMesmoAssim').onclick=function(){
           fecharFacial();
@@ -4943,6 +5102,37 @@ async function carregarFaceModels(){
 }
 
 // Extrai embedding (descriptor) de uma foto base64
+
+
+// Função para verificar qualidade da foto capturada
+async function verificarQualidadeFoto(b64) {
+  try {
+    var img = new Image();
+    await new Promise((res,rej) => {img.onload=res;img.onerror=rej;img.src='data:image/jpeg;base64,'+b64;});
+    
+    // Verifica resolução mínima
+    if(img.width < 200 || img.height < 200) {
+      return {ok: false, motivo: 'Resolução muito baixa (min: 200x200)'};
+    }
+    
+    // Tenta detectar rosto para verificar qualidade
+    if(!FACE_MODELS_LOADED) return {ok: true}; // Se modelos não carregados, aceita
+    
+    var det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.3}));
+    if(!det) {
+      return {ok: false, motivo: 'Rosto não detectado claramente'};
+    }
+    
+    // Verifica se o rosto está muito pequeno
+    if(det.box.width < 80 || det.box.height < 80) {
+      return {ok: false, motivo: 'Rosto muito pequeno na foto'};
+    }
+    
+    return {ok: true, qualidade: 'boa'};
+  } catch(e) {
+    return {ok: false, motivo: 'Erro ao analisar: ' + e.message};
+  }
+}
 async function extrairDescritorFacial(b64){
   if(!FACE_MODELS_LOADED){
     var ok=await carregarFaceModels();
@@ -4951,7 +5141,7 @@ async function extrairDescritorFacial(b64){
   try{
     var img=new Image();
     await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src='data:image/jpeg;base64,'+b64;});
-    var det=await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5}))
+    var det=await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.4}))
       .withFaceLandmarks(true)
       .withFaceDescriptor();
     if(!det) return null;
@@ -4969,7 +5159,14 @@ function distanciaDescritor(d1, d2){
 
 // Converte distância para % de confiança (0.4 = ~97%, 0.6 = ~85%, 0.9 = ~50%)
 function distParaConfianca(dist){
-  var conf=Math.max(0,Math.min(100, (1-dist/1.2)*100));
+  // Função melhorada que dá mais confiança para distâncias menores
+  var conf;
+  if(dist <= 0.4) conf = 95;       // Muito similar
+  else if(dist <= 0.5) conf = 90;  // Similar
+  else if(dist <= 0.6) conf = 85;  // Razoável
+  else if(dist <= 0.7) conf = 75;  // Aceitável
+  else if(dist <= 0.8) conf = 65;  // Baixo
+  else conf = Math.max(30, 100 - (dist * 80));  // Muito baixo
   return Math.round(conf);
 }
 
@@ -4997,6 +5194,50 @@ document.querySelectorAll('.modal-bg').forEach(bg=>{
     if(e.target===bg && !naoFechar.includes(bg.id)) bg.classList.remove('open');
   });
 });
+
+
+// Função para confirmação manual de login
+function confirmarLoginManual(funcId, funcNome) {
+  if(confirm(`Confirma que você é ${funcNome}?`)) {
+    fecharLoginFacial();
+    // Faz login direto com o usuário confirmado
+    loginComoFuncionario(funcId);
+  }
+}
+
+async function loginComoFuncionario(funcId) {
+  try {
+    var funcionario = S.funcionarios.find(f => f.id === funcId);
+    if(!funcionario) {
+      alert('Funcionário não encontrado');
+      return;
+    }
+    
+    S.user = funcionario;
+    S.isAdmin = funcionario.isAdmin || false;
+    
+    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
+    
+    // Registra log do login manual
+    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
+      funcId: funcionario.id,
+      funcNome: funcionario.nome,
+      metodo: 'confirmacao_manual'
+    });
+    
+    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
+    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
+    
+    // Vai para a tela inicial
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('appMain').style.display = 'flex';
+    
+    await inicializar();
+  } catch(e) {
+    console.error('Erro no login manual:', e);
+    alert('Erro no login. Tente novamente.');
+  }
+}
 </script>
 <!-- Modal de foto expandida -->
 <div id="fotoModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);display:none;z-index:9999;justify-content:center;align-items:center;padding:20px;box-sizing:border-box" onclick="fecharFotoModal()">
