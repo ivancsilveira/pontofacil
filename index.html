@@ -6,315 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a56a0">
 <title>PontoFácil · Villa Canziani Donato</title>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
-
-// Função para confirmação manual de login
-function confirmarLoginManual(funcId, funcNome) {
-  if(confirm(`Confirma que você é ${funcNome}?`)) {
-    fecharLoginFacial();
-    // Faz login direto com o usuário confirmado
-    loginComoFuncionario(funcId);
-  }
-}
-
-async function loginComoFuncionario(funcId) {
-  try {
-    var funcionario = S.funcionarios.find(f => f.id === funcId);
-    if(!funcionario) {
-      alert('Funcionário não encontrado');
-      return;
-    }
-    
-    S.user = funcionario;
-    S.isAdmin = funcionario.isAdmin || false;
-    
-    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
-    
-    // Registra log do login manual
-    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
-      funcId: funcionario.id,
-      funcNome: funcionario.nome,
-      metodo: 'confirmacao_manual'
-    });
-    
-    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
-    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
-    
-    // Vai para a tela inicial
-    document.getElementById('loginWrap').style.display = 'none';
-    document.getElementById('appMain').style.display = 'flex';
-    
-    await inicializar();
-  } catch(e) {
-    console.error('Erro no login manual:', e);
-    alert('Erro no login. Tente novamente.');
-  }
-}
-
-
-// Pré-carrega cache de descritores em background
-async function preCarregarCacheFaces(){
-  try {
-    console.log('🚀 Iniciando pré-carregamento de cache facial...');
-    if(!FACE_MODELS_LOADED) {
-      await carregarFaceModels();
-    }
-    
-    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
-    console.log('📋 Funcionários com foto:', funcionarios.length);
-    
-    var carregados = 0;
-    var falhas = 0;
-    
-    for(var func of funcionarios) {
-      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
-        try {
-          var desc = await extrairDescritorFacial(func.fotoCadastro);
-          if(desc) {
-            FACE_DESCRIPTORS_CACHE[func.id] = desc;
-            carregados++;
-          } else {
-            falhas++;
-            console.warn('⚠️ Não detectou rosto em:', func.nome);
-          }
-        } catch(e) {
-          falhas++;
-          console.error('❌ Erro pré-carregando:', func.nome, e);
-        }
-      }
-    }
-    
-    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
-  } catch(e) {
-    console.error('Erro no pré-carregamento:', e);
-  }
-}
-
-
-// Valida se a foto cadastrada tem rosto detectável
-async function validarFotoCadastro(b64) {
-  if(!FACE_MODELS_LOADED) {
-    await carregarFaceModels();
-  }
-  
-  if(!FACE_MODELS_LOADED) {
-    return {ok: true, aviso: 'Modelos ainda carregando...'};
-  }
-  
-  var desc = await extrairDescritorFacial(b64);
-  if(!desc) {
-    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
-  }
-  
-  return {ok: true, qualidade: 'boa'};
-}
-</script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js">
-
-// Função para confirmação manual de login
-function confirmarLoginManual(funcId, funcNome) {
-  if(confirm(`Confirma que você é ${funcNome}?`)) {
-    fecharLoginFacial();
-    // Faz login direto com o usuário confirmado
-    loginComoFuncionario(funcId);
-  }
-}
-
-async function loginComoFuncionario(funcId) {
-  try {
-    var funcionario = S.funcionarios.find(f => f.id === funcId);
-    if(!funcionario) {
-      alert('Funcionário não encontrado');
-      return;
-    }
-    
-    S.user = funcionario;
-    S.isAdmin = funcionario.isAdmin || false;
-    
-    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
-    
-    // Registra log do login manual
-    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
-      funcId: funcionario.id,
-      funcNome: funcionario.nome,
-      metodo: 'confirmacao_manual'
-    });
-    
-    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
-    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
-    
-    // Vai para a tela inicial
-    document.getElementById('loginWrap').style.display = 'none';
-    document.getElementById('appMain').style.display = 'flex';
-    
-    await inicializar();
-  } catch(e) {
-    console.error('Erro no login manual:', e);
-    alert('Erro no login. Tente novamente.');
-  }
-}
-
-
-// Pré-carrega cache de descritores em background
-async function preCarregarCacheFaces(){
-  try {
-    console.log('🚀 Iniciando pré-carregamento de cache facial...');
-    if(!FACE_MODELS_LOADED) {
-      await carregarFaceModels();
-    }
-    
-    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
-    console.log('📋 Funcionários com foto:', funcionarios.length);
-    
-    var carregados = 0;
-    var falhas = 0;
-    
-    for(var func of funcionarios) {
-      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
-        try {
-          var desc = await extrairDescritorFacial(func.fotoCadastro);
-          if(desc) {
-            FACE_DESCRIPTORS_CACHE[func.id] = desc;
-            carregados++;
-          } else {
-            falhas++;
-            console.warn('⚠️ Não detectou rosto em:', func.nome);
-          }
-        } catch(e) {
-          falhas++;
-          console.error('❌ Erro pré-carregando:', func.nome, e);
-        }
-      }
-    }
-    
-    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
-  } catch(e) {
-    console.error('Erro no pré-carregamento:', e);
-  }
-}
-
-
-// Valida se a foto cadastrada tem rosto detectável
-async function validarFotoCadastro(b64) {
-  if(!FACE_MODELS_LOADED) {
-    await carregarFaceModels();
-  }
-  
-  if(!FACE_MODELS_LOADED) {
-    return {ok: true, aviso: 'Modelos ainda carregando...'};
-  }
-  
-  var desc = await extrairDescritorFacial(b64);
-  if(!desc) {
-    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
-  }
-  
-  return {ok: true, qualidade: 'boa'};
-}
-</script>
-<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js">
-
-// Função para confirmação manual de login
-function confirmarLoginManual(funcId, funcNome) {
-  if(confirm(`Confirma que você é ${funcNome}?`)) {
-    fecharLoginFacial();
-    // Faz login direto com o usuário confirmado
-    loginComoFuncionario(funcId);
-  }
-}
-
-async function loginComoFuncionario(funcId) {
-  try {
-    var funcionario = S.funcionarios.find(f => f.id === funcId);
-    if(!funcionario) {
-      alert('Funcionário não encontrado');
-      return;
-    }
-    
-    S.user = funcionario;
-    S.isAdmin = funcionario.isAdmin || false;
-    
-    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
-    
-    // Registra log do login manual
-    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
-      funcId: funcionario.id,
-      funcNome: funcionario.nome,
-      metodo: 'confirmacao_manual'
-    });
-    
-    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
-    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
-    
-    // Vai para a tela inicial
-    document.getElementById('loginWrap').style.display = 'none';
-    document.getElementById('appMain').style.display = 'flex';
-    
-    await inicializar();
-  } catch(e) {
-    console.error('Erro no login manual:', e);
-    alert('Erro no login. Tente novamente.');
-  }
-}
-
-
-// Pré-carrega cache de descritores em background
-async function preCarregarCacheFaces(){
-  try {
-    console.log('🚀 Iniciando pré-carregamento de cache facial...');
-    if(!FACE_MODELS_LOADED) {
-      await carregarFaceModels();
-    }
-    
-    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
-    console.log('📋 Funcionários com foto:', funcionarios.length);
-    
-    var carregados = 0;
-    var falhas = 0;
-    
-    for(var func of funcionarios) {
-      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
-        try {
-          var desc = await extrairDescritorFacial(func.fotoCadastro);
-          if(desc) {
-            FACE_DESCRIPTORS_CACHE[func.id] = desc;
-            carregados++;
-          } else {
-            falhas++;
-            console.warn('⚠️ Não detectou rosto em:', func.nome);
-          }
-        } catch(e) {
-          falhas++;
-          console.error('❌ Erro pré-carregando:', func.nome, e);
-        }
-      }
-    }
-    
-    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
-  } catch(e) {
-    console.error('Erro no pré-carregamento:', e);
-  }
-}
-
-
-// Valida se a foto cadastrada tem rosto detectável
-async function validarFotoCadastro(b64) {
-  if(!FACE_MODELS_LOADED) {
-    await carregarFaceModels();
-  }
-  
-  if(!FACE_MODELS_LOADED) {
-    return {ok: true, aviso: 'Modelos ainda carregando...'};
-  }
-  
-  var desc = await extrairDescritorFacial(b64);
-  if(!desc) {
-    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
-  }
-  
-  return {ok: true, qualidade: 'boa'};
-}
-</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;background:#f0f4fa;color:#1a1a2e}
@@ -617,7 +310,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 /* FACIAL */
 .facial-overlay{position:fixed;inset:0;background:#000;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .facial-video-wrap{position:relative;width:100%;max-width:380px;margin-bottom:14px}
-#facialVideo{width:100%;border-radius:12px;display:block}
+#facialVideo,#enrollVideo{width:100%;border-radius:12px;display:block}
 .facial-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:190px;height:190px;border:3px solid rgba(255,255,255,.8);border-radius:50%;pointer-events:none}
 .facial-title{color:#fff;font-size:16px;font-weight:700;margin-bottom:10px;text-align:center}
 .facial-status{color:rgba(255,255,255,.85);font-size:13px;margin:8px 0;text-align:center;padding:0 16px;min-height:40px}
@@ -714,17 +407,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <label class="form-label">Confirmar nova senha *</label>
       <input class="form-control" type="password" id="trocarSenha2" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')confirmarTrocarSenha()">
     </div>
-    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:#0369a1;margin-bottom:6px">📷 Foto para login facial (opcional)</div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div id="trocarFotoPreview" style="width:52px;height:52px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden">👤</div>
-        <div>
-          <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('trocar')" style="width:auto;margin-bottom:3px">📷 Tirar foto</button>
-          <div style="font-size:10px;color:var(--gray)">Permite entrar pelo reconhecimento facial</div>
-        </div>
-      </div>
-      <input type="hidden" id="trocarFotoBase64">
-    </div>
+    <!-- biometria removida daqui — fluxo LGPD separado após trocar senha -->
     <div id="trocarErro" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:10px"></div>
     <button class="btn btn-solid" onclick="confirmarTrocarSenha()">✅ Salvar e entrar</button>
   </div>
@@ -784,14 +467,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <label class="form-label">Confirmar nova senha *</label>
       <input class="form-control" type="password" id="trocarSenha2b" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')confirmarTrocarSenhaB()">
     </div>
-    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:#0369a1;margin-bottom:6px">📷 Foto para login facial (opcional)</div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div id="trocarFotoPreview2" style="width:52px;height:52px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden">👤</div>
-        <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('trocarB')" style="width:auto">📷 Tirar foto</button>
-      </div>
-      <input type="hidden" id="trocarBFotoBase64">
-    </div>
+    <!-- biometria removida daqui — agora só pelo fluxo LGPD após trocar senha -->
     <div id="trocarErro2" style="display:none;background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:10px"></div>
     <button class="btn btn-solid" onclick="confirmarTrocarSenhaB()">✅ Salvar e entrar</button>
   </div>
@@ -1344,6 +1020,45 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   <button class="facial-cancel-btn" onclick="fecharFacial()">Cancelar</button>
 </div>
 
+<!-- LGPD CONSENT MODAL -->
+<div id="consentimentoLGPDOverlay" class="modal-bg" style="z-index:3000">
+  <div class="modal" style="max-width:540px">
+    <h2 style="color:var(--blue-dark);font-size:18px;margin-bottom:10px">Uso de reconhecimento facial — consentimento</h2>
+    <div style="font-size:13px;line-height:1.55;color:#333;margin-bottom:14px">
+      Este sistema pode usar reconhecimento facial para identificação no ponto. Para isso, uma foto do seu rosto será enviada à AWS (servidores em São Paulo) e transformada em um vetor matemático (biometria facial), armazenado em nossa conta AWS sob o identificador do seu cadastro. <b>Ninguém pode reconstruir sua face a partir desse vetor.</b>
+      <ul style="margin:10px 0 10px 20px">
+        <li><b>Finalidade:</b> apenas identificação no sistema de ponto da Villa Canziani Donato.</li>
+        <li><b>Retenção:</b> enquanto você for funcionário. Ao desligar, a biometria é apagada automaticamente (direito ao esquecimento — LGPD art. 18).</li>
+        <li><b>Reversibilidade:</b> você pode cancelar a qualquer momento pelo admin e continuar usando CPF+senha.</li>
+        <li><b>Não obrigatório:</b> se não concordar, você usa CPF+senha e nada muda.</li>
+      </ul>
+    </div>
+    <label style="display:flex;gap:8px;font-size:13px;align-items:flex-start;margin:10px 0;cursor:pointer">
+      <input type="checkbox" id="consentChk" style="margin-top:3px;transform:scale(1.2)">
+      <span>Li e concordo com o uso da minha biometria facial para este fim específico.</span>
+    </label>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-saida btn-sm" style="flex:1" onclick="recusarConsentimentoLGPD()">✕ Recusar</button>
+      <button class="btn btn-solid btn-sm" style="flex:1" onclick="aceitarConsentimentoLGPD()">✓ Aceitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ENROLL BIOMETRIA (cadastro facial) -->
+<div id="enrollBiometriaOverlay" style="display:none" class="facial-overlay">
+  <div class="facial-title">📷 Cadastrar biometria facial</div>
+  <div id="enrollNome" style="color:rgba(255,255,255,0.85);font-size:13px;margin-bottom:10px;text-align:center">—</div>
+  <div class="facial-video-wrap">
+    <video id="enrollVideo" autoplay playsinline muted></video>
+    <div class="facial-guide"></div>
+  </div>
+  <div class="facial-status" id="enrollStatus">Posicione seu rosto dentro do círculo</div>
+  <div id="enrollResult"></div>
+  <button class="facial-snap-btn" id="enrollBtn" onclick="enviarBiometriaAWS()">📸 Cadastrar biometria</button>
+  <button class="facial-cancel-btn" onclick="fecharEnrollBiometria()">Cancelar</button>
+</div>
+
+
 <!-- MODAL ESCALA -->
 <div class="modal-bg" id="modalEscala">
   <div class="modal">
@@ -1380,7 +1095,14 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <h2>Cadastrar funcionário</h2>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="form-group"><label class="form-label">Nome *</label><input class="form-control" id="fNome"></div>
-      <div class="form-group"><label class="form-label">CPF *</label><input class="form-control" id="fCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);"></div>
+      <div class="form-group">
+        <label class="form-label">CPF *</label>
+        <input class="form-control" id="fCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00" oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);">
+        <label style="display:inline-flex;gap:6px;font-size:12px;color:var(--gray);margin-top:6px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="fValidarCpf" checked>
+          <span>Validar CPF (desmarque para estrangeiros ou casos especiais)</span>
+        </label>
+      </div>
       <div class="form-group"><label class="form-label">Cargo</label><input class="form-control" id="fCargo" placeholder="Garçom, Camareira, Recepcionista..."></div>
       <div class="form-group"><label class="form-label">Empresa *</label><select class="form-control" id="fEmpresa"><option value="1">Villa Canziani Donato</option><option value="2">Villa Bistro Patacho</option><option value="ambas">Ambas</option></select></div>
       <div class="form-group"><label class="form-label">Escala *</label><select class="form-control" id="fEscala"><option value="">— Selecione —</option></select></div>
@@ -1393,18 +1115,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="form-group"><label class="form-label">Email</label><input class="form-control" type="email" id="fEmail" placeholder="email@exemplo.com"></div>
         <div class="form-group"><label class="form-label">Celular (WhatsApp)</label><input class="form-control" type="tel" id="fTelefone" placeholder="(44) 99999-9999" inputmode="numeric"></div>
       </div>
-      <div class="form-group"><label class="form-label">Senha *</label><input class="form-control" type="password" id="fSenha" placeholder="Mínimo 6 caracteres"></div>
-      <div class="form-group">
-        <label class="form-label">Foto de referência (reconhecimento facial)</label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
-          <div id="fFotoPreview" style="width:60px;height:60px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden">👤</div>
-          <div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('f')" style="width:auto;margin-bottom:5px">📷 Tirar foto</button>
-            <div style="font-size:11px;color:var(--gray)">Rosto de frente, boa iluminação</div>
-          </div>
-        </div>
-        <input type="hidden" id="fFotoBase64">
-      </div>
+      <div class="form-group"><label class="form-label">Senha *</label><input class="form-control" type="password" id="fSenha" placeholder="Mínimo 6 caracteres" value="123456"><div style="font-size:11px;color:var(--gray);margin-top:3px">Sugestão: 123456 (funcionário troca no primeiro login)</div></div>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;font-size:12px;color:#0369a1">ℹ️ A biometria facial é cadastrada depois — no primeiro login do funcionário ou pelo admin na tela de Edição.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-saida btn-sm" style="flex:1" onclick="fecharModalFunc()">Cancelar</button>
@@ -1438,12 +1150,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       </div>
       <div class="form-group"><label class="form-label">Nova senha (em branco = manter)</label><input class="form-control" type="password" id="editSenha"></div>
       <div class="form-group">
-        <label class="form-label">Atualizar foto (facial)</label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
-          <div id="editFotoPreview" style="width:52px;height:52px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden">👤</div>
-          <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('edit')" style="width:auto">📷 Nova foto</button>
-          <button type="button" class="btn btn-saida btn-sm" onclick="apagarFotoFunc()" style="width:auto;margin-left:6px">🗑 Apagar foto</button>
-        </div>
+        <label class="form-label">Biometria facial (AWS Rekognition)</label>
+        <div id="editBiometriaSection" style="margin-top:4px">— carregando —</div>
         <input type="hidden" id="editFotoBase64">
       </div>
     </div>
@@ -1482,7 +1190,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.99 · 19/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.109 · 22/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1525,37 +1233,36 @@ function fmtCpf(v){v=v.replace(/\D/g,'').slice(0,11);return v.replace(/(\d{3})(\
 
 /* LOGIN */
 // ===== LOGIN POR RECONHECIMENTO FACIAL =====
+// ===== LOGIN FACIAL via AWS Rekognition =====
 var _loginFacialStream = null;
 
 async function loginFacial(){
-  // Cria overlay de câmera
   var overlay = document.getElementById('loginFacialOverlay');
   if(!overlay){
     overlay = document.createElement('div');
     overlay.id = 'loginFacialOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
-    overlay.innerHTML = `
-      <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:12px">📷 Reconhecimento facial</div>
-      <div style="position:relative;width:100%;max-width:320px;margin-bottom:12px">
-        <video id="loginFacialVideo" autoplay playsinline style="width:100%;border-radius:12px;display:block"></video>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:180px;height:180px;border:3px solid rgba(255,255,255,.8);border-radius:50%;pointer-events:none"></div>
-      </div>
-      <div id="loginFacialStatus" style="color:rgba(255,255,255,.85);font-size:13px;margin-bottom:16px;text-align:center;padding:0 16px">Posicione seu rosto no círculo</div>
-      <div id="loginFacialResult" style="margin-bottom:12px;width:100%;max-width:320px"></div>
-      <button id="loginFacialBtn" onclick="capturarLoginFacial()" style="background:#fff;color:#1a1a2e;border:none;padding:13px 32px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer">📸 Identificar</button>
-      <button onclick="fecharLoginFacial()" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);padding:10px 24px;border-radius:50px;font-size:13px;cursor:pointer;margin-top:10px">✕ Cancelar</button>
-    `;
+    overlay.innerHTML =
+      '<div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:12px">📷 Reconhecimento facial (AWS)</div>' +
+      '<div style="position:relative;width:100%;max-width:320px;margin-bottom:12px">' +
+        '<video id="loginFacialVideo" autoplay playsinline style="width:100%;border-radius:12px;display:block"></video>' +
+        '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:180px;height:180px;border:3px solid rgba(255,255,255,.8);border-radius:50%;pointer-events:none"></div>' +
+      '</div>' +
+      '<div id="loginFacialStatus" style="color:rgba(255,255,255,.85);font-size:13px;margin-bottom:16px;text-align:center;padding:0 16px">Posicione seu rosto no círculo</div>' +
+      '<div id="loginFacialResult" style="margin-bottom:12px;width:100%;max-width:320px"></div>' +
+      '<button id="loginFacialBtn" onclick="capturarLoginFacial()" style="background:#fff;color:#1a1a2e;border:none;padding:13px 32px;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer">📸 Identificar</button>' +
+      '<button onclick="fecharLoginFacial()" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.4);padding:10px 24px;border-radius:50px;font-size:13px;cursor:pointer;margin-top:10px">✕ Cancelar</button>';
     document.body.appendChild(overlay);
   }
   overlay.style.display = 'flex';
   document.getElementById('loginFacialStatus').textContent = 'Iniciando câmera...';
   document.getElementById('loginFacialResult').innerHTML = '';
-  document.getElementById('loginFacialBtn').disabled = false;
-  document.getElementById('loginFacialBtn').textContent = '📸 Identificar';
+  var btn = document.getElementById('loginFacialBtn');
+  btn.disabled = false; btn.textContent = '📸 Identificar';
   try{
     _loginFacialStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
     document.getElementById('loginFacialVideo').srcObject = _loginFacialStream;
-    document.getElementById('loginFacialStatus').textContent = 'Posicione seu rosto no círculo e clique em Identificar';
+    document.getElementById('loginFacialStatus').textContent = 'Centralize o rosto e clique em Identificar';
   }catch(e){
     document.getElementById('loginFacialStatus').textContent = '⚠️ Câmera não disponível: '+e.message;
   }
@@ -1572,156 +1279,83 @@ async function capturarLoginFacial(){
   var statusEl = document.getElementById('loginFacialStatus');
   var resultEl = document.getElementById('loginFacialResult');
   var btn = document.getElementById('loginFacialBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Analisando...';
-  statusEl.textContent = 'Capturando foto...';
-
-  // Captura frame
-  var canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth || 320;
-  canvas.height = video.videoHeight || 240;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  var fotoCapturada = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
-
-  // Busca todos funcionários com foto cadastrada
-  statusEl.textContent = 'Buscando funcionários...';
-  var funcionarios = [];
+  btn.disabled = true; btn.textContent = '⏳ Analisando...';
+  statusEl.textContent = 'Capturando e consultando AWS Rekognition...';
+  var b64 = await capturarFotoB64(video, 0.80);
+  console.log('[loginFacial] foto capturada, bytes base64:', b64.length);
+  var r = await rekSearchFace(b64);
+  console.log('[loginFacial] resposta bruta do AWS:', r);
+  if(!r.ok){
+    var reason = (r.data && r.data.error) || r.error || 'erro';
+    console.error('[loginFacial] API error:', reason, r);
+    statusEl.textContent = '❌ Erro: '+reason;
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">❌ '+reason+'<br><small>Entre com CPF + senha</small></div>';
+    btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+    await logBiometria('_unknown_', 'login_erro_api', {erro:reason});
+    return;
+  }
+  var d = r.data;
+  console.log('[loginFacial] matches:', (d.matches||[]).length,
+              '| searchedFaceConfidence:', d.searchedFaceConfidence,
+              '| reason:', d.reason);
+  (d.matches||[]).forEach(function(m,i){
+    console.log('  #'+i+':', m.externalImageId, '· similarity:', m.similarity.toFixed(2)+'%', '· faceId:', m.faceId);
+  });
+  if(d.reason === 'no_face_in_input'){
+    statusEl.textContent = '❌ Nenhum rosto detectado';
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">❌ Não encontrei rosto<br><small>Melhor luz, centralizar, sem óculos escuros</small></div>';
+    btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+    return;
+  }
+  var matches = d.matches || [];
+  if(matches.length === 0){
+    console.warn('[loginFacial] AWS retornou 0 matches. searchedFaceConfidence=', d.searchedFaceConfidence, '· threshold aplicado pela AWS=80 (default). Coleção pode estar vazia OU rosto não bate com ninguém.');
+    statusEl.textContent = '❌ Não reconhecido';
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">❌ Não reconheci esse rosto<br><small>Entre com CPF + senha</small></div>';
+    btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+    return;
+  }
+  var top = matches[0];
+  var confidenceOk = (d.searchedFaceConfidence == null) || (d.searchedFaceConfidence >= REK_FACE_CONFIDENCE_MIN);
+  if(top.similarity < REK_SIMILARITY_MIN || !confidenceOk){
+    statusEl.textContent = 'Similaridade baixa';
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">⚠ Similaridade '+top.similarity.toFixed(1)+'% (mín '+REK_SIMILARITY_MIN+'%)<br><small>Entre com CPF + senha</small></div>';
+    btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+    await logBiometria(top.externalImageId, 'login_falha_similaridade', {similarity:top.similarity, confidence:d.searchedFaceConfidence});
+    return;
+  }
+  var funcId = top.externalImageId;
+  statusEl.textContent = 'Reconhecido — entrando...';
+  resultEl.innerHTML = '<div style="background:rgba(45,122,58,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">✅ Identificado · '+top.similarity.toFixed(1)+'%</div>';
   try{
-    var snap = await db.collection('funcionarios').get();
-    // Inclui TODOS com foto (funcionários E admins)
-    funcionarios = snap.docs.map(d=>({id:d.id,...d.data()})).filter(f=>f.fotoCadastro&&!f.inativo);
-    // Adiciona master se tiver foto em config/master
-    try{
-      var masterCfg=await db.collection('config').doc('master').get();
-      if(masterCfg.exists&&masterCfg.data().fotoCadastro){
-        funcionarios.push({id:'master',nome:'Administrador Master (Ivan)',cpf:'495.256.629-34',fotoCadastro:masterCfg.data().fotoCadastro,isAdmin:true,aparecerNaLista:masterCfg.data().aparecerNaLista||false,empresa:'ambas'});
-      }
-    }catch(e){}
-  }catch(e){
-    statusEl.textContent = '❌ Erro ao conectar: '+e.message;
-    btn.disabled=false; btn.textContent='📸 Tentar novamente';
-    return;
-  }
-
-  if(!funcionarios.length){
-    statusEl.textContent = '⚠️ Nenhum funcionário com foto cadastrada';
-    btn.disabled=false; btn.textContent='📸 Tentar novamente';
-    return;
-  }
-
-  // Compara com cada funcionário usando face-api (embeddings)
-  statusEl.textContent = '🤖 Carregando IA facial...';
-
-  var modelosOk = await carregarFaceModels();
-  if(!modelosOk){
-    statusEl.textContent = '⚠️ IA facial indisponível. Use CPF + senha.';
-    btn.disabled=false; btn.textContent='📸 Tentar novamente';
-    return;
-  }
-
-  statusEl.textContent = '🔍 Detectando seu rosto...';
-  // Verificar qualidade da foto capturada
-  console.log('🔍 Verificando qualidade da foto...');
-  var qualidade = await verificarQualidadeFoto(fotoCapturada);
-  if(!qualidade.ok) {
-    statusEl.textContent = '⚠️ ' + qualidade.motivo;
-    btn.disabled = false; 
-    btn.textContent = '📸 Tentar novamente';
-    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">📸 ' + qualidade.motivo + '<br><small>Dica: Rosto de frente, boa iluminação, câmera próxima</small></div>';
-    return;
-  }
-  
-  console.log('✅ Qualidade da foto: OK');
-  var descCapturada = await extrairDescritorFacial(fotoCapturada);
-  if(!descCapturada){
-    statusEl.textContent = '❌ Rosto não detectado pela IA. Tente novamente.';
-    btn.disabled=false; btn.textContent='📸 Tentar novamente';
-    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-size:12px">❌ IA não conseguiu processar o rosto<br><small>Tente: melhor iluminação, rosto centralizado, sem óculos escuros</small></div>';
-    return;
-  }
-
-  statusEl.textContent = 'Comparando com '+funcionarios.length+' foto(s)...';
-  
-  // TIMEOUT DE SEGURANÇA (10 segundos)
-  var timeoutId = setTimeout(() => {
-    console.error('⏰ Timeout na comparação facial');
-    statusEl.textContent = '⏰ Timeout na análise. Tente novamente.';
-    btn.disabled = false;
-    btn.textContent = '📸 Tentar novamente';
-    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center;font-weight:600">⏰ Análise demorou muito. Tente login com CPF + senha</div>';
-  }, 10000);
-
-  var resultados = [];
-  for(var i=0;i<funcionarios.length;i++){
-    var f=funcionarios[i];
-    var descFunc=await getDescritorFunc(f);
-    if(!descFunc){
-      // Foto antiga ou ruim — pula
-      continue;
+    var userData;
+    var doc = await db.collection('funcionarios').doc(funcId).get();
+    if(!doc.exists){
+      resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center">⚠ Funcionário não encontrado<br><small>Pode ter sido excluído — use CPF + senha</small></div>';
+      btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+      return;
     }
-    var dist=distanciaDescritor(descCapturada, descFunc);
-    var conf=distParaConfianca(dist);
-    resultados.push({func:f, dist:dist, confianca:conf});
-  }
-
-  if(resultados.length===0){
-    statusEl.textContent = '⚠️ Nenhuma foto de funcionário pôde ser analisada.';
-    btn.disabled=false; btn.textContent='📸 Tentar novamente';
-    return;
-  }
-
-  // Processa resultados
-  {
-    // Ordena pela menor distância (= mais parecido)
-    resultados.sort((a,b)=>a.dist-b.dist);
-    var melhor = resultados[0];
-    var segundo = resultados[1];
-    // Threshold: dist < 0.55 (= ~85% conf) + margem de 0.08 sobre o segundo
-    var margem = segundo ? (segundo.dist - melhor.dist) : 1;
-    var DIST_OK = 0.60;  // 0.60 = ~80% similaridade (padrão da indústria)
-    var MARGEM_OK = 0.05;  // Relaxado de 0.08 para 0.05
-    var ambiguo = segundo && melhor.dist < DIST_OK && margem < MARGEM_OK;
-    // LIMPA TIMEOUT
-    clearTimeout(timeoutId);
-    
-    if(melhor.dist < DIST_OK && margem >= MARGEM_OK){
-          // Reconheceu!
-          console.log('✅ Reconhecimento bem-sucedido:', melhor.func.nome, melhor.confianca+'%');
-          resultEl.innerHTML = '<div style="background:rgba(45,122,58,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">✅ Olá, '+melhor.func.nome.split(' ')[0]+'!<br><span style="font-size:11px;opacity:.8">'+melhor.confianca+'% de similaridade</span></div>';
-          statusEl.textContent = 'Entrando...';
-          setTimeout(async function(){
-            fecharLoginFacial();
-            // Busca dados atualizados
-            try{
-              var userData;
-              if(melhor.func.id==='master'){
-                // Admin master: usa dados fixos
-                userData={id:'master',nome:'Administrador Master (Ivan)',cpf:'495.256.629-34',empresa:'ambas',isAdmin:true};
-                S.user=userData; S.isAdmin=true;
-              } else {
-                var doc = await db.collection('funcionarios').doc(melhor.func.id).get();
-                S.user = Object.assign({id:doc.id}, doc.data());
-                // Se CPF é do master, força admin
-                if(S.user.cpf==='495.256.629-34'){
-                  S.isAdmin=true; S.user.isAdmin=true;
-                } else {
-                  S.isAdmin = S.user.isAdmin||false;
-                }
-              }
-              try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
-              document.getElementById('loginWrap').style.display='none';
-              document.getElementById('appWrap').style.display='flex';
-              iniciarApp();
-            }catch(e){
-              var erroEl=document.getElementById('loginErro');
-              erroEl.textContent='Erro ao carregar dados: '+e.message;erroEl.style.display='block';
-            }
-          }, 1200);
-        } else {
-          resultEl.innerHTML = '<div style="background:rgba(185,28,28,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">❌ Não reconhecido ('+melhor.confianca+'%)<br><span style="font-size:11px;opacity:.8">Use CPF e senha</span></div>';
-          statusEl.textContent = 'Tente novamente com melhor iluminação';
-          btn.disabled=false; btn.textContent='🔄 Tentar novamente';
-        }
+    userData = Object.assign({id:doc.id}, doc.data());
+    if(userData.inativo){
+      resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center">⚠ Usuário inativo</div>';
+      btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+      return;
+    }
+    S.user = userData;
+    S.isAdmin = !!userData.isAdmin;
+    if(userData.cpf === '495.256.629-34'){ S.isAdmin = true; S.user.isAdmin = true; }
+    try{ sessionStorage.setItem('pontofacil_user', JSON.stringify(S.user)); }catch(e){}
+    registrarLog('login','Login facial (AWS Rekognition): '+S.user.nome,{funcId:S.user.id, funcNome:S.user.nome, detalhes:'Similaridade '+top.similarity.toFixed(1)+'%'});
+    await logBiometria(funcId, 'login_sucesso', {similarity:top.similarity, confidence:d.searchedFaceConfidence});
+    setTimeout(function(){
+      fecharLoginFacial();
+      document.getElementById('loginWrap').style.display='none';
+      document.getElementById('appWrap').style.display='flex';
+      iniciarApp();
+    }, 1200);
+  }catch(e){
+    resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center">Erro: '+e.message+'</div>';
+    btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
   }
 }
 
@@ -1736,21 +1370,19 @@ async function confirmarTrocarSenha(){
   if(s1!==s2){showErr('As senhas não coincidem.');return;}
   var doc=window._trocarSenhaDoc;
   if(!doc){showErr('Erro: dados não encontrados.');return;}
-  var foto=document.getElementById('trocarFotoBase64').value||'';
   var upd={senha:s1,senhaAlteradaEm:new Date().toISOString()};
-  if(foto) upd.fotoCadastro=foto;
   try{
     await db.collection('funcionarios').doc(doc.id).update(upd);
     doc.data.senha=s1;
-    if(foto) doc.data.fotoCadastro=foto;
     S.user=Object.assign({id:doc.id},doc.data);
     S.isAdmin=S.user.isAdmin||false;
     try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
     window._trocarSenhaDoc=null;
-    registrarLog('login','Senha alterada no primeiro acesso: '+S.user.nome,{funcId:S.user.id,funcNome:S.user.nome,detalhes:foto?'Senha + foto cadastrados':'Senha definida'});
+    registrarLog('login','Senha alterada no primeiro acesso: '+S.user.nome,{funcId:S.user.id,funcNome:S.user.nome,detalhes:'Senha definida (biometria é separada)'});
     document.getElementById('trocarSenhaWrap').style.display='none';
     document.getElementById('appWrap').style.display='flex';
     iniciarApp();
+    _perguntarBiometriaAposLogin();
   }catch(e){showErr('Erro ao salvar: '+e.message);}
 }
 
@@ -1773,6 +1405,7 @@ async function salvarPrimeiraSenhaB(){
     document.getElementById('primeiroAcessoWrap2').style.display='none';
     document.getElementById('appWrap').style.display='flex';
     iniciarApp();
+    _perguntarBiometriaAposLogin();
   }catch(e){showErr('Erro ao salvar: '+e.message);}
 }
 
@@ -1786,7 +1419,7 @@ async function confirmarTrocarSenhaB(){
   if(s1!==s2){showErr('As senhas não coincidem.');return;}
   var doc=window._trocarSenhaDoc;
   if(!doc){showErr('Erro: dados não encontrados.');return;}
-  var foto=document.getElementById('trocarBFotoBase64').value||'';
+  var foto='';  // biometria agora é por fluxo separado
   var upd={senha:s1,senhaAlteradaEm:new Date().toISOString()};
   if(foto) upd.fotoCadastro=foto;
   try{
@@ -1800,7 +1433,25 @@ async function confirmarTrocarSenhaB(){
     document.getElementById('trocarSenhaWrap2').style.display='none';
     document.getElementById('appWrap').style.display='flex';
     iniciarApp();
+    _perguntarBiometriaAposLogin();
   }catch(e){showErr('Erro ao salvar: '+e.message);}
+}
+
+async function _perguntarBiometriaAposLogin(){
+  // Pergunta se quer ativar biometria. Admin não participa.
+  if(S.isAdmin) return;
+  // Refresh do doc antes de decidir — evita prompt duplicado se acabou de ser cadastrado em outro caminho
+  try{
+    var fresh = await db.collection('funcionarios').doc(S.user.id).get();
+    if(fresh.exists){
+      var fd = fresh.data();
+      if(fd.biometriaAtiva){ S.user.biometriaAtiva = true; S.user.rekognitionFaceId = fd.rekognitionFaceId; return; }
+    }
+  }catch(e){}
+  await new Promise(r => setTimeout(r, 900));
+  if(confirm('Ativar reconhecimento facial agora?\n\nFica mais rápido para bater ponto.\nOpcional — aceite os termos LGPD na próxima tela.')){
+    abrirCadastroBiometria(S.user.id, S.user.nome);
+  }
 }
 
 async function salvarPrimeiraSenha(){
@@ -1826,6 +1477,7 @@ async function salvarPrimeiraSenha(){
     document.getElementById('primeiroAcessoWrap').style.display='none';
     document.getElementById('appWrap').style.display='flex';
     iniciarApp();
+    _perguntarBiometriaAposLogin();
   }catch(e){
     showErr('Erro ao salvar senha: '+e.message);
   }
@@ -1892,8 +1544,6 @@ async function doLogin(){
       document.getElementById('trocarSenhaWrap2').style.display='flex';
       document.getElementById('trocarNome2').textContent='Olá, '+data.nome.split(' ')[0]+'! Você está usando a senha temporária. Crie sua senha pessoal para continuar.';
       document.getElementById('trocarSenha1b').value='';document.getElementById('trocarSenha2b').value='';
-      document.getElementById('trocarBFotoBase64').value='';
-      document.getElementById('trocarFotoPreview2').innerHTML='👤';
       document.getElementById('trocarErro2').style.display='none';
       return;
     }
@@ -1905,6 +1555,8 @@ async function doLogin(){
     document.getElementById('loginWrap').style.display='none';
     document.getElementById('appWrap').style.display='flex';
     iniciarApp();
+    // ETAPA 3 Rekognition: se não tem biometria, oferece ativar
+    if(!data.biometriaAtiva && !S.isAdmin){ setTimeout(function(){bannerAtivarBiometria(S.user);}, 1500); }
   }catch(e){showErro('Erro de conexão: '+e.message);}
 }
 async function enviarSenhaEmail(){
@@ -2176,21 +1828,23 @@ function verificarGPS(){
 function hp2m(h){if(!h)return 0;const[hh,mm]=h.split(':').map(Number);return hh*60+mm;}
 function m2h(m){const abs=Math.abs(m);return(m<0?'-':'')+Math.floor(abs/60)+'h '+String(abs%60).padStart(2,'0')+'min';}
 function calcDia(regs){
+  // Usa hora (HH:MM) como fonte de verdade — é o que o user vê na tela.
+  // Timestamps podem estar deslocados por ajuste manual, virada de turno
+  // ou registros órfãos de outra data, e quebram o cálculo silenciosamente.
   const e=regs.find(r=>r.tipo==='Entrada'),s=regs.find(r=>r.tipo==='Saída');
   const ii=regs.find(r=>r.tipo==='Início intervalo'),fi=regs.find(r=>r.tipo==='Retorno intervalo');
-  if(!e||!s)return 0;
-  // Usar timestamp se disponível, senão calcular pela hora
-  let tE=e.timestamp,tS=s.timestamp;
-  if(!tE||!tS){
-    // Calcular pela hora string (HH:MM)
-    tE=hp2m(e.hora);tS=hp2m(s.hora);
-    let intervalo=0;
-    if(ii&&fi)intervalo=hp2m(fi.hora)-hp2m(ii.hora);
-    return Math.max(0,tS-tE-intervalo);
+  if(!e||!s||!e.hora||!s.hora) return 0;
+  const tE=hp2m(e.hora), tS=hp2m(s.hora);
+  let diff = tS - tE;
+  if (diff < 0) diff += 24*60;  // turno que cruza meia-noite (ex: 22:00 → 06:00)
+  let intervalo = 0;
+  if(ii && fi && ii.hora && fi.hora){
+    const iiM=hp2m(ii.hora), fiM=hp2m(fi.hora);
+    let intDiff = fiM - iiM;
+    if (intDiff < 0) intDiff += 24*60;
+    intervalo = intDiff;
   }
-  let t=tS-tE;
-  if(ii&&fi&&fi.timestamp&&ii.timestamp)t-=(fi.timestamp-ii.timestamp);
-  return Math.round(t/60000);
+  return Math.max(0, diff - intervalo);
 }
 function calcBH(func,regsArr,mesRef){
   // mesRef: 'yyyy-mm' opcional — se não passado usa o mês dos registros
@@ -2300,8 +1954,9 @@ function calcBH(func,regsArr,mesRef){
   return trabTotal - prevAjustado;
 }
 
+
 /* BATER PONTO */
-/* ===== FACIAL RECOGNITION ===== */
+/* ===== PONTO com Rekognition verification (Ponto-Y) ===== */
 var _tipoPendente=null,_streamFacial=null,_streamCamera=null,_fotoTarget='';
 
 async function baterPonto(tipo){
@@ -2339,93 +1994,52 @@ async function tirarFotoERegistrar(){
   var fotoB64='';
   try{
     var video=document.getElementById('facialVideo');
-    var canvas=document.getElementById('facialCanvas');
-    canvas.width=video.videoWidth || 320;
-    canvas.height=video.videoHeight || 240;
-    canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-    fotoB64=canvas.toDataURL('image/jpeg',0.75).split(',')[1];
+    fotoB64=await capturarFotoB64(video, 0.75);
   }catch(e){}
-  var fotoRef=S.user.fotoCadastro||'';
-  if(!fotoRef){
-    resultBox.innerHTML='<div class="facial-result facial-warn">📸 Foto salva · Sem referência cadastrada</div>';
+
+  // Se o funcionário não tem biometria ativa → só salva foto como evidência (não faz Rekognition)
+  if(!S.user.biometriaAtiva || !S.user.rekognitionFaceId){
+    resultBox.innerHTML='<div class="facial-result facial-warn">📸 Foto salva como evidência (biometria não cadastrada)</div>';
     statusEl.textContent='Registrando...';
-    setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'sem_referencia',true);},1200);
+    setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'sem_biometria',true);},900);
     return;
   }
-  statusEl.textContent='🤖 Carregando IA facial...';
+
+  // Ponto-Y: verifica no AWS Rekognition se a foto bate com o funcionário logado
+  statusEl.textContent='🔍 Verificando identidade no AWS...';
   resultBox.innerHTML='<div class="facial-result facial-warn">⏳ Verificando...</div>';
-  try{
-    var modelosOk2=await carregarFaceModels();
-    if(!modelosOk2){
-      resultBox.innerHTML='<div class="facial-result facial-warn">⚠️ IA indisponível · Foto salva para revisão</div>';
-      setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'revisao_manual',true);},1500);
-      return;
-    }
-    statusEl.textContent='🔍 Detectando rosto...';
-    var descCap=await extrairDescritorFacial(fotoB64);
-    if(!descCap){
-      resultBox.innerHTML='<div class="facial-result facial-fail">❌ Rosto não detectado · Posicione melhor e tente de novo</div>';
-      statusEl.textContent='Melhore a iluminação e centralize o rosto';
-      btn.disabled=false; btn.textContent='🔄 Tentar novamente';
-      return;
-    }
-    statusEl.textContent='Comparando...';
-    // Busca funcionário atual e compara
-    var funcAtual=S.funcionarios.find(function(f){return f.id===S.user.id;})||S.user;
-    var descRef=await getDescritorFunc(funcAtual);
-    if(!descRef){
-      resultBox.innerHTML='<div class="facial-result facial-warn">⚠️ Foto de cadastro não reconhecida · Salva para revisão</div>';
-      setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'sem_descritor',false);},1500);
-      return;
-    }
-    var dist=distanciaDescritor(descCap, descRef);
-    var confianca=distParaConfianca(dist);
-    // face-api: distância < 0.55 = match bom (~85% conf)
-    if(dist < 0.55){
-        resultBox.innerHTML='<div class="facial-result facial-ok">✅ Identidade confirmada · '+confianca+'% similaridade</div>';
-        statusEl.textContent='Registrando...';
-        setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'confirmado',true,confianca);},1300);
-      } else {
-        // LIMPA TIMEOUT
-        clearTimeout(timeoutId);
-        
-        // Log dos top 3 matches para debug
-    console.log('🔍 TOP 3 MATCHES:');
-    resultados.slice(0,3).forEach((r,i) => {
-      console.log(`${i+1}º ${r.func.nome}: ${r.confianca}% (dist: ${r.dist.toFixed(3)})`);
-    });
-    console.log(`❌ Não reconhecido. Melhor: ${melhor.func.nome} ${melhor.confianca}% (threshold: ${Math.round(distParaConfianca(DIST_OK))}%)`);
-        
-        // Salva foto para revisão do admin mesmo sem reconhecer
-        var _fotoParaRevisao=fotoB64;
-        var _tipoParaRevisao=_tipoPendente;
-        // Guarda foto e tipo para uso nos botões
-        window._fotoRevisao=fotoB64;
-        window._tipoRevisao=_tipoPendente;
-        window._confiancaRevisao=confianca;
-        // Mostra o melhor match para confirmação manual se estiver próximo
-        var melhorMatch = resultados[0];
-        var botaoConfirmacao = '';
-        if(melhorMatch && melhorMatch.confianca >= 70) {
-          botaoConfirmacao = `<button onclick="confirmarLoginManual('${melhorMatch.func.id}','${melhorMatch.func.nome}')" style="background:var(--amber);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-right:8px">✅ Sou ${melhorMatch.func.nome.split(' ')[0]} (${melhorMatch.confianca}%)</button>`;
-        }
-        
-        resultBox.innerHTML='<div class="facial-result facial-fail">❌ Reconhecimento automático falhou</div>'+
-          '<div style="font-size:11px;color:var(--gray);margin:6px 0">Melhor match: '+melhorMatch.func.nome+' ('+melhorMatch.confianca+'%)</div>'+
-          '<div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap">'+
-          botaoConfirmacao +
-          '<button id="btnRegistrarMesmoAssim" style="background:#b91c1c;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">📸 Registrar sem reconhecer</button>'+
-          '</div>';
-        document.getElementById('btnRegistrarMesmoAssim').onclick=function(){
-          fecharFacial();
-          _registrarPonto(window._tipoRevisao,window._fotoRevisao,'nao_reconhecido',false,window._confiancaRevisao);
-        };
-        statusEl.textContent='Foto salva para revisão do administrador.';
-        btn.disabled=false; btn.textContent='🔄 Tentar novamente';
-      }
-  }catch(e){
-    resultBox.innerHTML='<div class="facial-result facial-warn">⚠️ Erro na comparação · Foto salva para revisão</div>';
-    setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'revisao_manual',true);},1200);
+  var r = await rekSearchFace(fotoB64);
+  if(!r.ok){
+    var reason = (r.data && r.data.error) || r.error || 'erro';
+    resultBox.innerHTML='<div class="facial-result facial-warn">⚠ API indisponível ('+reason+') · Foto salva para revisão</div>';
+    setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'revisao_manual',true);},1500);
+    await logBiometria(S.user.id, 'ponto_erro_api', {erro:reason, tipo:_tipoPendente});
+    return;
+  }
+  var d = r.data;
+  if(d.reason === 'no_face_in_input'){
+    resultBox.innerHTML='<div class="facial-result facial-fail">❌ Nenhum rosto detectado · melhore iluminação</div>';
+    statusEl.textContent='Centralize o rosto';
+    btn.disabled=false; btn.textContent='🔄 Tentar novamente';
+    return;
+  }
+  var matches = d.matches || [];
+  var top = matches[0];
+  var confidenceOk = (d.searchedFaceConfidence == null) || (d.searchedFaceConfidence >= REK_FACE_CONFIDENCE_MIN);
+  var confirmado = top && top.externalImageId === S.user.id && top.similarity >= REK_SIMILARITY_MIN && confidenceOk;
+  if(confirmado){
+    resultBox.innerHTML='<div class="facial-result facial-ok">✅ Identidade confirmada · '+top.similarity.toFixed(1)+'% similaridade</div>';
+    statusEl.textContent='Registrando...';
+    await logBiometria(S.user.id, 'ponto_confirmado', {similarity:top.similarity, tipo:_tipoPendente});
+    setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'confirmado',true,Math.round(top.similarity));},1200);
+  } else {
+    // Não bate → grava como 'nao_confirmado' pra admin revisar
+    var whoami = top ? top.externalImageId : '(nenhum match)';
+    var sim = top ? top.similarity.toFixed(1) : '—';
+    resultBox.innerHTML='<div class="facial-result facial-fail">⚠ Rosto não confere · top '+whoami+' ('+sim+'%). Salvo para revisão.</div>';
+    statusEl.textContent='Admin vai revisar.';
+    await logBiometria(S.user.id, 'ponto_nao_confirmado', {expected:S.user.id, got:whoami, similarity:(top?top.similarity:null), tipo:_tipoPendente});
+    setTimeout(function(){fecharFacial();_registrarPonto(_tipoPendente,fotoB64,'nao_confirmado',false,(top?Math.round(top.similarity):null));},1800);
   }
 }
 
@@ -3645,15 +3259,44 @@ async function toggleInativar(id,nome,jaInativo){
 }
 function abrirModalFunc(){popularSelectEscalas();document.getElementById('modalFunc').classList.add('open');}
 function fecharModalFunc(){document.getElementById('modalFunc').classList.remove('open');}
+
+// Validação oficial de CPF brasileiro (módulo 11, 2 dígitos verificadores).
+// Rejeita sequências de dígitos iguais (111..., 000...).
+function validarCPF(cpf){
+  const c = String(cpf||'').replace(/\D/g,'');
+  if(c.length !== 11) return false;
+  if(/^(\d)\1+$/.test(c)) return false;
+  // Dígito 1
+  let soma=0;
+  for(let i=0;i<9;i++) soma += parseInt(c[i],10) * (10-i);
+  let d1 = 11 - (soma % 11);
+  if(d1 >= 10) d1 = 0;
+  if(d1 !== parseInt(c[9],10)) return false;
+  // Dígito 2
+  soma=0;
+  for(let i=0;i<10;i++) soma += parseInt(c[i],10) * (11-i);
+  let d2 = 11 - (soma % 11);
+  if(d2 >= 10) d2 = 0;
+  if(d2 !== parseInt(c[10],10)) return false;
+  return true;
+}
+
 async function cadastrarFunc(){
+  console.log('[cadastrarFunc] iniciado');
   const nome=document.getElementById('fNome').value.trim(),cpf=document.getElementById('fCpf').value.trim(),senha=document.getElementById('fSenha').value;
-  if(!nome||!cpf||!senha){toast('Preencha nome, CPF e senha');return;}
+  const escala=document.getElementById('fEscala').value;
+  const validarCpfFlag=document.getElementById('fValidarCpf')?document.getElementById('fValidarCpf').checked:true;
+  console.log('[cadastrarFunc] campos:', {nome:!!nome, cpf:!!cpf, senhaLen:senha.length, escala:!!escala, validarCpfFlag});
+  if(!nome||!cpf||!senha){toast('❌ Preencha nome, CPF e senha');alert('Campos obrigatórios:\n• Nome: '+(nome?'OK':'FALTANDO')+'\n• CPF: '+(cpf?'OK':'FALTANDO')+'\n• Senha: '+(senha?'OK':'FALTANDO'));return;}
   if(senha.length<6){toast('Senha mínimo 6 caracteres');return;}
+  if(!escala){toast('⚠️ Selecione uma escala para o funcionário');return;}
+  // Validação CPF (opcional — desmarcável para estrangeiros)
+  if(validarCpfFlag && !validarCPF(cpf)){toast('⚠️ CPF inválido');return;}
   // Verifica CPF duplicado
   const cpfLimpo=cpf.replace(/\D/g,'');
   const cpfDup=S.funcionarios.find(f=>(f.cpf||'').replace(/\D/g,'')===cpfLimpo);
   if(cpfDup){toast('❌ CPF '+cpf+' já está cadastrado para: '+cpfDup.nome);return;}
-  const fotoCadastro=document.getElementById('fFotoBase64').value||'';
+  const fotoCadastro='';  // foto é só cadastrada via fluxo de biometria (AWS Rekognition)
   const func={nome,cpf,cargo:document.getElementById('fCargo').value,empresa:document.getElementById('fEmpresa').value,escalaId:document.getElementById('fEscala').value,admissao:document.getElementById('fAdmissao').value||'',inicioSistema:document.getElementById('fInicioSistema').value||'',horasMes:parseInt(document.getElementById('fHorasMes').value)||220,email:document.getElementById('fEmail').value.trim()||'',telefone:document.getElementById('fTelefone').value.trim()||'',senha,fotoCadastro,isAdmin:false,criadoEm:new Date().toISOString()};
   try{
     const ref=await db.collection('funcionarios').add(func);
@@ -3661,9 +3304,14 @@ async function cadastrarFunc(){
     fecharModalFunc();renderEquipe();carregarDashboard();
     registrarLog('func_cadastrado','Funcionário cadastrado: '+nome,{funcId:ref.id,funcNome:nome,detalhes:'CPF: '+cpf});
     toast('✅ '+nome+' cadastrado!');
-    ['fNome','fCpf','fCargo','fSenha','fFotoBase64','fAdmissao','fInicioSistema','fHorasMes','fEmail','fTelefone'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('fFotoPreview').innerHTML='👤';
-  }catch(e){toast('Erro ao cadastrar');}
+    ['fNome','fCpf','fCargo','fSenha','fAdmissao','fInicioSistema','fHorasMes','fEmail','fTelefone'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('fSenha').value='123456';  // re-popula default
+    // Biometria é cadastrada separadamente (primeiro login do funcionário OU via Editar)
+  }catch(e){
+    console.error('[cadastrarFunc] erro:', e);
+    toast('❌ Erro ao cadastrar: '+(e&&e.message?e.message:e));
+    alert('Erro ao cadastrar funcionário:\n\n'+(e&&e.message?e.message:JSON.stringify(e))+'\n\nVeja o console do navegador (F12) para mais detalhes.');
+  }
 }
 function abrirModalEdit(id){
   const f=S.funcionarios.find(x=>x.id===id);if(!f)return;
@@ -3681,9 +3329,89 @@ function abrirModalEdit(id){
   document.getElementById('editSenha').value='';
   document.getElementById('editFotoBase64').value='';
   document.getElementById('editCpfDisplay').textContent=f.cpf||'—';
-  const prev=document.getElementById('editFotoPreview');
-  if(prev)prev.innerHTML=f.fotoCadastro?`<img src="data:image/jpeg;base64,${f.fotoCadastro}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" ondblclick="expandirFoto('data:image/jpeg;base64,${f.fotoCadastro}', '${f.nome}')">`:'👤';
+  _renderEditBiometria(f);
   document.getElementById('modalEditFunc').classList.add('open');
+}
+
+function _renderEditBiometria(f){
+  var bioEl = document.getElementById('editBiometriaSection');
+  if(!bioEl) return;
+  if(f.biometriaAtiva && f.rekognitionFaceId){
+    var faceId = f.rekognitionFaceId;
+    var data   = f.biometriaCadastradaEm ? new Date(f.biometriaCadastradaEm).toLocaleDateString('pt-BR') : '—';
+    bioEl.innerHTML =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">' +
+        '<span style="background:#d1fae5;color:#065f46;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">✓ Cadastrada · ' + data + '</span>' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="atualizarBiometriaEdit(\''+f.id+'\')" style="width:auto">📷 Atualizar</button>' +
+        '<button type="button" class="btn btn-saida btn-sm" onclick="removerBiometriaEdit(\''+f.id+'\')" style="width:auto">🗑 Remover</button>' +
+      '</div>' +
+      '<div style="font-size:10px;color:var(--gray)">AWS FaceId: <code style="font-size:10px">' + faceId + '</code></div>';
+  } else {
+    bioEl.innerHTML =
+      '<button type="button" class="btn btn-primary btn-sm" onclick="cadastrarBiometriaEdit(\''+f.id+'\')" style="width:auto">📷 Cadastrar biometria facial</button>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:4px">Funcionário ainda não ativou biometria. Admin pode cadastrar aqui OU o funcionário pode ativar no primeiro login.</div>';
+  }
+}
+
+function cadastrarBiometriaEdit(id){
+  var f = S.funcionarios.find(function(x){return x.id===id;});
+  if(!f){toast('Funcionário não encontrado');return;}
+  fecharModalEdit();
+  abrirCadastroBiometria(id, f.nome, function(ok){
+    if(ok) setTimeout(function(){abrirModalEdit(id);}, 400);
+  });
+}
+
+async function atualizarBiometriaEdit(id){
+  var f = S.funcionarios.find(function(x){return x.id===id;});
+  if(!f) return;
+  if(!f.rekognitionFaceId){ cadastrarBiometriaEdit(id); return; }
+  if(!confirm('Atualizar biometria facial de '+f.nome+'?\n\nA biometria atual será apagada no AWS e substituída por uma nova.'))return;
+  toast('🗑 Apagando biometria antiga...');
+  var r = await rekDeleteFace(f.rekognitionFaceId);
+  if(!r.ok){
+    var reason = (r.data && r.data.error) || r.error || 'erro';
+    toast('❌ Falha ao apagar: '+reason);
+    return;
+  }
+  await logBiometria(id, 'deletada_para_atualizar', {faceId:f.rekognitionFaceId});
+  try{
+    await db.collection('funcionarios').doc(id).update({biometriaAtiva:false, rekognitionFaceId:null, fotoCadastro:''});
+  }catch(e){}
+  f.biometriaAtiva=false; f.rekognitionFaceId=null; f.fotoCadastro='';
+  if(S.user && S.user.id===id){ S.user.fotoCadastro=''; S.user.biometriaAtiva=false; S.user.rekognitionFaceId=null; }
+  cadastrarBiometriaEdit(id);
+}
+
+async function removerBiometriaEdit(id){
+  var f = S.funcionarios.find(function(x){return x.id===id;});
+  if(!f || !f.rekognitionFaceId){toast('Funcionário não tem biometria');return;}
+  if(!confirm('Remover permanentemente a biometria facial de '+f.nome+'?\n\nA biometria será apagada do AWS (LGPD art. 18 — direito ao esquecimento).\n\nO funcionário continuará entrando com CPF + senha.'))return;
+  toast('🗑 Apagando biometria do AWS...');
+  var r = await rekDeleteFace(f.rekognitionFaceId);
+  if(!r.ok){
+    var reason = (r.data && r.data.error) || r.error || 'erro';
+    toast('❌ Falha: '+reason);
+    return;
+  }
+  try{
+    await db.collection('funcionarios').doc(id).update({
+      biometriaAtiva:false,
+      rekognitionFaceId:null,
+      fotoCadastro:'',  // LGPD: apaga avatar também
+      biometriaRemovidaEm:new Date().toISOString()
+    });
+    f.biometriaAtiva=false;
+    f.rekognitionFaceId=null;
+    f.fotoCadastro='';
+    if(S.user && S.user.id===id){ S.user.fotoCadastro=''; S.user.biometriaAtiva=false; S.user.rekognitionFaceId=null; }
+    await logBiometria(id, 'removida_lgpd', {origem:'edit_manual'});
+    toast('✅ Biometria removida');
+    _renderEditBiometria(f);  // atualiza UI
+    try{ if(typeof renderEquipe === 'function') renderEquipe(); }catch(e){}
+  }catch(e){
+    toast('⚠ AWS apagou mas Firestore falhou: '+e.message);
+  }
 }
 function fecharModalEdit(){document.getElementById('modalEditFunc').classList.remove('open');}
 function apagarFotoFunc(){
@@ -3693,16 +3421,31 @@ function apagarFotoFunc(){
   if(prev)prev.innerHTML='👤';
   toast('Foto marcada para apagar. Clique em Salvar.');
 }
-async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:document.getElementById('editEscala').value,admissao:document.getElementById('editAdmissao').value||'',inicioSistema:document.getElementById('editInicioSistema').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);const fn=S.funcionarios.find(f=>f.id===id);registrarLog('func_editado','Funcionário editado: '+(fn?fn.nome:''),{funcId:id,funcNome:fn?fn.nome:'',detalhes:'Dados atualizados'});fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
+async function salvarEdicaoFunc(){const id=document.getElementById('editFuncId').value;const escalaEdit=document.getElementById('editEscala').value;if(!escalaEdit){toast('⚠️ Selecione uma escala para o funcionário');return;}const upd={nome:document.getElementById('editNome').value,cargo:document.getElementById('editCargo').value,empresa:document.getElementById('editEmpresa').value,escalaId:escalaEdit,admissao:document.getElementById('editAdmissao').value||'',inicioSistema:document.getElementById('editInicioSistema').value||'',horasMes:parseInt(document.getElementById('editHorasMes').value)||220,email:document.getElementById('editEmail').value.trim()||'',telefone:document.getElementById('editTelefone').value.trim()||''};const ns=document.getElementById('editSenha').value;if(ns)upd.senha=ns;const fb=document.getElementById('editFotoBase64').value;if(fb==='__APAGAR__')upd.fotoCadastro='';else if(fb)upd.fotoCadastro=fb;const i=S.funcionarios.findIndex(f=>f.id===id);if(i>=0)S.funcionarios[i]={...S.funcionarios[i],...upd};try{await db.collection('funcionarios').doc(id).update(upd);const fn=S.funcionarios.find(f=>f.id===id);registrarLog('func_editado','Funcionário editado: '+(fn?fn.nome:''),{funcId:id,funcNome:fn?fn.nome:'',detalhes:'Dados atualizados'});fecharModalEdit();renderEquipe();toast('✅ Atualizado!');}catch(e){toast('Erro');}}
 async function excluirFunc(id,nome){
-  if(!confirm('⚠️ EXCLUIR permanentemente '+nome+'?\n\nEsta ação não pode ser desfeita. Todos os registros de ponto serão mantidos, mas o funcionário não poderá mais fazer login.'))return;
+  const f = S.funcionarios.find(x => x.id === id);
+  const hasBio = !!(f && f.biometriaAtiva && f.rekognitionFaceId);
+  const msg = hasBio
+    ? '⚠️ EXCLUIR permanentemente '+nome+'?\n\n• Funcionário não conseguirá mais fazer login\n• Registros de ponto serão MANTIDOS (histórico)\n• A BIOMETRIA FACIAL será APAGADA do AWS (LGPD — direito ao esquecimento)\n\nConfirma?'
+    : '⚠️ EXCLUIR permanentemente '+nome+'?\n\nEsta ação não pode ser desfeita. Todos os registros de ponto serão mantidos, mas o funcionário não poderá mais fazer login.';
+  if(!confirm(msg)) return;
   try{
+    if(hasBio){
+      toast('🗑 Apagando biometria no AWS...');
+      const r = await rekDeleteFace(f.rekognitionFaceId);
+      if(r.ok){
+        await logBiometria(id, 'deletado_lgpd', {faceId:f.rekognitionFaceId, origem:'excluir_funcionario'});
+      } else {
+        console.warn('AWS DeleteFaces falhou, prosseguindo:', r);
+        await logBiometria(id, 'delete_aws_falhou', {faceId:f.rekognitionFaceId, erro:(r.data&&r.data.error)||r.error});
+      }
+    }
     await db.collection('funcionarios').doc(id).delete();
     S.funcionarios=S.funcionarios.filter(f=>f.id!==id);
-    registrarLog('func_excluido','Funcionário excluído: '+nome,{funcId:id,funcNome:nome,detalhes:'Excluído permanentemente'});
+    registrarLog('func_excluido','Funcionário excluído: '+nome,{funcId:id,funcNome:nome,detalhes:hasBio?'Com biometria LGPD apagada':'Sem biometria'});
     renderEquipe();
     carregarDashboard();
-    toast('🗑 '+nome+' excluído do sistema');
+    toast('🗑 '+nome+' excluído'+(hasBio?' (+biometria LGPD)':''));
   }catch(e){toast('Erro ao excluir: '+e.message);}
 }
 
@@ -4339,7 +4082,6 @@ async function carregarFeriadosBR(){
 
 /* FÉRIAS */
 var S_ferias=[];
-async 
 // SISTEMA DE EMPRESAS
 
 
@@ -5243,262 +4985,226 @@ function isViradaTurno(timestamp) {
   return hora >= 0 && hora < 6;
 }
 
-/* ===== FACE-API.JS (reconhecimento facial aprimorado) ===== */
-var FACE_MODELS_LOADED = false;
-var FACE_MODELS_LOADING = false;
-var FACE_DESCRIPTORS_CACHE = {}; // { funcId: Float32Array }
-
-async function carregarFaceModels(){
-  if(FACE_MODELS_LOADED) return true;
-  if(FACE_MODELS_LOADING){
-    // Aguarda carregamento em andamento
-    while(FACE_MODELS_LOADING) await new Promise(r=>setTimeout(r,200));
-    return FACE_MODELS_LOADED;
-  }
-  if(typeof faceapi==='undefined'){
-    console.warn('face-api ainda não carregado');
-    return false;
-  }
-  FACE_MODELS_LOADING = true;
-  try{
-    var MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
-    // MODELOS DE ALTA QUALIDADE
-    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);  // Detector MUITO melhor que TinyFaceDetector
-    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);  // Landmarks FULL (não tiny)
-    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    // Backup: TinyFaceDetector para casos de fallback
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-    console.log('✅ Modelos de ALTA QUALIDADE carregados (SSD + FaceLandmark68 full)');
-    FACE_MODELS_LOADED = true;
-    FACE_MODELS_LOADING = false;
-    return true;
-  }catch(e){
-    console.error('Erro ao carregar modelos:',e);
-    FACE_MODELS_LOADING = false;
-    return false;
-  }
-}
-
-// Extrai embedding (descriptor) de uma foto base64
-
-
-// Função para verificar qualidade da foto capturada
-async function verificarQualidadeFoto(b64) {
-  try {
-    var img = new Image();
-    await new Promise((res,rej) => {img.onload=res;img.onerror=rej;img.src='data:image/jpeg;base64,'+b64;});
-    
-    // Verifica resolução mínima
-    if(img.width < 200 || img.height < 200) {
-      return {ok: false, motivo: 'Resolução muito baixa (min: 200x200)'};
-    }
-    
-    // Tenta detectar rosto para verificar qualidade
-    if(!FACE_MODELS_LOADED) return {ok: true}; // Se modelos não carregados, aceita
-    
-    var det = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options({minConfidence: 0.3}));
-    if(!det) {
-      // Fallback para TinyFaceDetector
-      det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:608,scoreThreshold:0.2}));
-      if(!det) {
-        return {ok: false, motivo: 'Rosto não detectado. Centralize o rosto e melhore a iluminação.'};
-      }
-    }
-    
-    // Verifica se o rosto está muito pequeno
-    if(det.box.width < 60 || det.box.height < 60) {
-      return {ok: false, motivo: 'Rosto muito pequeno. Aproxime-se da câmera.'};
-    }
-    
-    return {ok: true, qualidade: 'boa'};
-  } catch(e) {
-    return {ok: false, motivo: 'Erro ao analisar: ' + e.message};
-  }
-}
-async function extrairDescritorFacial(b64){
-  if(!FACE_MODELS_LOADED){
-    var ok=await carregarFaceModels();
-    if(!ok) return null;
-  }
-  try{
-    var img=new Image();
-    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src='data:image/jpeg;base64,'+b64;});
-    
-    // TENTATIVA 1: SSD Mobilenet (melhor precisão)
-    var det = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options({minConfidence: 0.4}))
-      .withFaceLandmarks()  // Full landmarks, não tiny
-      .withFaceDescriptor();
-    
-    if(det) {
-      console.log('✅ Rosto detectado com SSD');
-      return det.descriptor;
-    }
-    
-    // TENTATIVA 2: Fallback para TinyFaceDetector com score baixo
-    console.log('⚠️ SSD falhou, tentando TinyFaceDetector...');
-    det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({inputSize:608, scoreThreshold:0.3}))
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-    
-    if(det) {
-      console.log('✅ Rosto detectado com TinyFaceDetector (fallback)');
-      return det.descriptor;
-    }
-    
-    console.warn('❌ Nenhum detector conseguiu encontrar rosto');
-    return null;
-  }catch(e){
-    console.error('❌ Erro extraindo descritor:',e);
-    return null;
-  }
-}
-
-// Compara dois descritores — retorna distância euclidiana (menor = mais parecido)
-function distanciaDescritor(d1, d2){
-  if(!d1||!d2) return 999;
-  var s=0;
-  for(var i=0;i<d1.length;i++){var x=d1[i]-d2[i];s+=x*x;}
-  return Math.sqrt(s);
-}
-
-// Converte distância para % de confiança (0.4 = ~97%, 0.6 = ~85%, 0.9 = ~50%)
-function distParaConfianca(dist){
-  // Função melhorada que dá mais confiança para distâncias menores
-  var conf;
-  if(dist <= 0.4) conf = 95;       // Muito similar
-  else if(dist <= 0.5) conf = 90;  // Similar
-  else if(dist <= 0.6) conf = 85;  // Razoável
-  else if(dist <= 0.7) conf = 75;  // Aceitável
-  else if(dist <= 0.8) conf = 65;  // Baixo
-  else conf = Math.max(30, 100 - (dist * 80));  // Muito baixo
-  return Math.round(conf);
-}
-
-// Retorna descriptor de um funcionário (com cache)
-async function getDescritorFunc(func){
-  if(!func||!func.fotoCadastro) return null;
-  if(FACE_DESCRIPTORS_CACHE[func.id]) return FACE_DESCRIPTORS_CACHE[func.id];
-  var d=await extrairDescritorFacial(func.fotoCadastro);
-  if(d) FACE_DESCRIPTORS_CACHE[func.id]=d;
-  return d;
-}
-
-// Pré-carrega modelos quando o sistema iniciar
-if(typeof window!=='undefined'){
-  setTimeout(function(){carregarFaceModels();},2000);
-}
-
-/* TOAST */
+/* TOAST — utilitário usado em todo o sistema */
 function toast(msg){const o=document.getElementById('_t');if(o)o.remove();const el=document.createElement('div');el.id='_t';el.className='toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3500);}
 
+/* Modal click-outside handler (não fecha modais de cadastro pra evitar perda de dados) */
 document.querySelectorAll('.modal-bg').forEach(bg=>{
-  // Não fechar ao clicar fora nos modais de cadastro (evita perda de dados)
   var naoFechar=['modalFunc','modalAdmin','modalEscala','modalEdit'];
   bg.addEventListener('click',function(e){
     if(e.target===bg && !naoFechar.includes(bg.id)) bg.classList.remove('open');
   });
 });
 
+/* ===== AWS REKOGNITION — SEGURANÇA EM CAMADAS =====
+   Essas constantes são INTENCIONALMENTE visíveis no source (GitHub Pages público).
+   A proteção NÃO vem do segredo da key, vem de 4 camadas:
+     1. AWS WAF bloqueia Origin ≠ ivancsilveira.github.io no edge
+     2. Usage Plan: 10k req/dia → atacante enche a quota, acabou
+     3. Lambda valida Origin em runtime (defense-in-depth)
+     4. IAM role do Lambda: só 4 actions escopadas à collection pontofacil-rostos
+   Se alguém usar a key fora do GitHub Pages, WAF rejeita antes de chegar no Lambda.
+*/
+const REK_API_URL = 'https://5pf0mvfc22.execute-api.sa-east-1.amazonaws.com/prod';
+const REK_API_KEY = 'JNxcAxJq0N26d33wbRcja7Sls5uNLeB25hSHL7ps';
+const REK_SIMILARITY_MIN = 80;         // % mínimo (TEMP debug: era 90, baixado pra diagnosticar)
+const REK_FACE_CONFIDENCE_MIN = 80;    // % mínimo de confiança na detecção do rosto na foto de busca
+const LGPD_CONSENT_VERSION = 'v1.0';
 
-// Função para confirmação manual de login
-function confirmarLoginManual(funcId, funcNome) {
-  if(confirm(`Confirma que você é ${funcNome}?`)) {
-    fecharLoginFacial();
-    // Faz login direto com o usuário confirmado
-    loginComoFuncionario(funcId);
+async function rekApiCall(path, method, body){
+  if(REK_API_URL.startsWith('__') || REK_API_KEY.startsWith('__')){
+    return {ok:false, status:0, error:'api_not_configured', message:'REK_API_URL/REK_API_KEY não foram injetados. Rode: bash lambda/scripts/07-inject-frontend-config.sh'};
+  }
+  const init = {method, mode:'cors', headers:{'Content-Type':'application/json','X-Api-Key':REK_API_KEY}};
+  if(body && method !== 'GET' && method !== 'DELETE') init.body = JSON.stringify(body);
+  try{
+    const resp = await fetch(REK_API_URL + path, init);
+    const txt  = await resp.text();
+    let data = null;
+    try{ data = txt ? JSON.parse(txt) : null; }catch{ data = {raw:txt}; }
+    if(!resp.ok) return {ok:false, status:resp.status, error:(data && data.error) || 'http_error', data};
+    return {ok:true, status:resp.status, data};
+  }catch(err){
+    return {ok:false, status:0, error:'network_error', message:err.message};
   }
 }
+async function rekIndexFace(imageB64, externalImageId){
+  return rekApiCall('/face/index', 'POST', {imageBase64:imageB64, externalImageId});
+}
+async function rekSearchFace(imageB64){
+  return rekApiCall('/face/search', 'POST', {imageBase64:imageB64});
+}
+async function rekDeleteFace(faceId){
+  return rekApiCall('/face/' + encodeURIComponent(faceId), 'DELETE', null);
+}
 
-async function loginComoFuncionario(funcId) {
-  try {
-    var funcionario = S.funcionarios.find(f => f.id === funcId);
-    if(!funcionario) {
-      alert('Funcionário não encontrado');
+// ===== Helper de captura de foto via <video> =====
+async function capturarFotoB64(videoEl, quality){
+  if(quality == null) quality = 0.80;
+  const canvas = document.createElement('canvas');
+  canvas.width  = videoEl.videoWidth  || 640;
+  canvas.height = videoEl.videoHeight || 480;
+  canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', quality).split(',')[1];
+}
+
+// ===== Log de auditoria biométrica (LGPD) =====
+async function logBiometria(funcionarioId, acao, payload){
+  try{
+    const fn = (S.funcionarios.find(f => f.id === funcionarioId) || {nome:'—'}).nome;
+    await db.collection('logs_biometria').add({
+      funcionarioId, funcionarioNome: fn, acao,
+      payload: payload || {},
+      timestamp: new Date().toISOString(),
+      origem: window.location.origin
+    });
+  }catch(e){ console.warn('logBiometria:', e); }
+}
+
+// ===== Consentimento LGPD =====
+let _consentCallback = null;
+function abrirConsentimentoLGPD(callback){
+  _consentCallback = callback;
+  const chk = document.getElementById('consentChk');
+  if(chk) chk.checked = false;
+  document.getElementById('consentimentoLGPDOverlay').classList.add('open');
+}
+function aceitarConsentimentoLGPD(){
+  const chk = document.getElementById('consentChk');
+  if(!chk || !chk.checked){ toast('⚠️ Marque a caixa para aceitar'); return; }
+  document.getElementById('consentimentoLGPDOverlay').classList.remove('open');
+  if(_consentCallback) _consentCallback(true);
+  _consentCallback = null;
+}
+function recusarConsentimentoLGPD(){
+  document.getElementById('consentimentoLGPDOverlay').classList.remove('open');
+  if(_consentCallback) _consentCallback(false);
+  _consentCallback = null;
+}
+async function registrarConsentimento(funcionarioId){
+  const c = {aceito:true, aceitoEm:new Date().toISOString(), versaoTexto:LGPD_CONSENT_VERSION};
+  try{
+    await db.collection('funcionarios').doc(funcionarioId).update({biometriaConsentimento:c});
+    const f = S.funcionarios.find(x=>x.id===funcionarioId);
+    if(f) f.biometriaConsentimento = c;
+  }catch(e){ console.error('registrarConsentimento:', e); }
+  await logBiometria(funcionarioId, 'consentimento_aceito', {versao:LGPD_CONSENT_VERSION});
+}
+
+// ===== Cadastro de biometria (enrollment) =====
+let _enrollStream = null;
+let _enrollFuncId = null;
+let _enrollFuncNome = null;
+let _enrollOnSuccess = null;
+
+async function abrirCadastroBiometria(funcionarioId, funcionarioNome, onSuccess){
+  _enrollFuncId = funcionarioId;
+  _enrollFuncNome = funcionarioNome;
+  _enrollOnSuccess = onSuccess || null;
+  abrirConsentimentoLGPD(async function(aceito){
+    if(!aceito){
+      toast('Cadastro de biometria cancelado.');
+      if(_enrollOnSuccess) _enrollOnSuccess(false);
       return;
     }
-    
-    S.user = funcionario;
-    S.isAdmin = funcionario.isAdmin || false;
-    
-    toast('✅ Login confirmado: ' + funcionario.nome.split(' ')[0]);
-    
-    // Registra log do login manual
-    registrarLog('login_facial_manual','Login por confirmação manual: '+funcionario.nome,{
-      funcId: funcionario.id,
-      funcNome: funcionario.nome,
-      metodo: 'confirmacao_manual'
+    await registrarConsentimento(funcionarioId);
+    await iniciarEnrollCamera();
+  });
+}
+async function iniciarEnrollCamera(){
+  document.getElementById('enrollNome').textContent = _enrollFuncNome || '—';
+  document.getElementById('enrollStatus').textContent = 'Iniciando câmera...';
+  document.getElementById('enrollResult').innerHTML = '';
+  const btn = document.getElementById('enrollBtn');
+  btn.disabled = false; btn.textContent = '📸 Cadastrar biometria';
+  document.getElementById('enrollBiometriaOverlay').style.display = 'flex';
+  try{
+    _enrollStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+    document.getElementById('enrollVideo').srcObject = _enrollStream;
+    document.getElementById('enrollStatus').textContent = 'Centralize o rosto, boa iluminação, sem óculos escuros';
+  }catch(e){
+    document.getElementById('enrollStatus').textContent = '⚠️ Câmera indisponível: '+e.message;
+  }
+}
+function fecharEnrollBiometria(){
+  if(_enrollStream){ _enrollStream.getTracks().forEach(t=>t.stop()); _enrollStream=null; }
+  document.getElementById('enrollBiometriaOverlay').style.display = 'none';
+}
+async function enviarBiometriaAWS(){
+  const btn = document.getElementById('enrollBtn');
+  const statusEl = document.getElementById('enrollStatus');
+  const resultEl = document.getElementById('enrollResult');
+  const video = document.getElementById('enrollVideo');
+  btn.disabled = true; btn.textContent = '⏳ Enviando ao AWS...';
+  statusEl.textContent = 'Capturando e indexando no AWS Rekognition...';
+  const b64 = await capturarFotoB64(video, 0.85);
+  const r = await rekIndexFace(b64, _enrollFuncId);
+  if(!r.ok){
+    const reason = (r.data && r.data.error) || r.error || 'erro';
+    const detail = (r.data && r.data.message) || r.message || '';
+    resultEl.innerHTML = '<div class="facial-result facial-fail">❌ '+reason+(detail?' · '+detail:'')+'</div>';
+    statusEl.textContent = 'Tente de novo com melhor iluminação';
+    btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+    await logBiometria(_enrollFuncId, 'index_falha', {erro:reason, detail});
+    return;
+  }
+  const faceId = r.data.faceId;
+  const confidence = r.data.confidence;
+  try{
+    await db.collection('funcionarios').doc(_enrollFuncId).update({
+      biometriaAtiva: true,
+      rekognitionFaceId: faceId,
+      biometriaCadastradaEm: new Date().toISOString(),
+      fotoCadastro: b64  // usada só pra avatar/display no sistema, biometria de verdade fica no AWS
     });
-    
-    localStorage.setItem('pontofacil_user', JSON.stringify(S.user));
-    localStorage.setItem('pontofacil_isAdmin', S.isAdmin);
-    
-    // Vai para a tela inicial
-    document.getElementById('loginWrap').style.display = 'none';
-    document.getElementById('appMain').style.display = 'flex';
-    
-    await inicializar();
-  } catch(e) {
-    console.error('Erro no login manual:', e);
-    alert('Erro no login. Tente novamente.');
+    const f = S.funcionarios.find(x=>x.id===_enrollFuncId);
+    if(f){
+      f.biometriaAtiva = true;
+      f.rekognitionFaceId = faceId;
+      f.biometriaCadastradaEm = new Date().toISOString();
+      f.fotoCadastro = b64;  // sincroniza local → renderEquipe mostra avatar
+    }
+    if(S.user && S.user.id === _enrollFuncId){
+      S.user.biometriaAtiva = true;
+      S.user.rekognitionFaceId = faceId;
+      S.user.fotoCadastro = b64;
+      try{ sessionStorage.setItem('pontofacil_user', JSON.stringify(S.user)); }catch(e){}
+    }
+    // Re-renderiza equipe se a função existir (admin pode estar olhando a lista)
+    try{ if(typeof renderEquipe === 'function') renderEquipe(); }catch(e){}
+    await logBiometria(_enrollFuncId, 'indexado', {faceId, confidence});
+    resultEl.innerHTML = '<div class="facial-result facial-ok">✅ Biometria cadastrada · confiança '+Math.round(confidence)+'%</div>';
+    statusEl.textContent = 'Pronto!';
+    setTimeout(function(){
+      fecharEnrollBiometria();
+      if(_enrollOnSuccess) _enrollOnSuccess(true, {faceId, confidence});
+      _enrollOnSuccess = null;
+    }, 1500);
+  }catch(e){
+    resultEl.innerHTML = '<div class="facial-result facial-warn">⚠ Salvo no AWS mas Firestore falhou: '+e.message+'</div>';
+    btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
   }
 }
 
-
-// Pré-carrega cache de descritores em background
-async function preCarregarCacheFaces(){
-  try {
-    console.log('🚀 Iniciando pré-carregamento de cache facial...');
-    if(!FACE_MODELS_LOADED) {
-      await carregarFaceModels();
-    }
-    
-    var funcionarios = S.funcionarios.filter(f => f.fotoCadastro && !f.inativo);
-    console.log('📋 Funcionários com foto:', funcionarios.length);
-    
-    var carregados = 0;
-    var falhas = 0;
-    
-    for(var func of funcionarios) {
-      if(!FACE_DESCRIPTORS_CACHE[func.id]) {
-        try {
-          var desc = await extrairDescritorFacial(func.fotoCadastro);
-          if(desc) {
-            FACE_DESCRIPTORS_CACHE[func.id] = desc;
-            carregados++;
-          } else {
-            falhas++;
-            console.warn('⚠️ Não detectou rosto em:', func.nome);
-          }
-        } catch(e) {
-          falhas++;
-          console.error('❌ Erro pré-carregando:', func.nome, e);
-        }
-      }
-    }
-    
-    console.log(`✅ Cache pré-carregado: ${carregados} ok, ${falhas} falhas, ${Object.keys(FACE_DESCRIPTORS_CACHE).length} total`);
-  } catch(e) {
-    console.error('Erro no pré-carregamento:', e);
-  }
-}
-
-
-// Valida se a foto cadastrada tem rosto detectável
-async function validarFotoCadastro(b64) {
-  if(!FACE_MODELS_LOADED) {
-    await carregarFaceModels();
-  }
-  
-  if(!FACE_MODELS_LOADED) {
-    return {ok: true, aviso: 'Modelos ainda carregando...'};
-  }
-  
-  var desc = await extrairDescritorFacial(b64);
-  if(!desc) {
-    return {ok: false, motivo: 'Rosto não detectado nesta foto. Tire outra com melhor iluminação.'};
-  }
-  
-  return {ok: true, qualidade: 'boa'};
+// ===== Banner pós-login convidando a ativar biometria =====
+function bannerAtivarBiometria(funcionario){
+  if(!funcionario) return;
+  if(funcionario.biometriaAtiva) return;
+  if(funcionario.id === 'master' || funcionario.isAdmin) return;  // admins não usam biometria por padrão
+  if(document.getElementById('_bioBanner')) return;                // já está na tela
+  const nomeEsc = (funcionario.nome||'').replace(/'/g,"\\'");
+  const banner = document.createElement('div');
+  banner.id = '_bioBanner';
+  banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:200;background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;padding:12px 14px;border-radius:14px;box-shadow:0 8px 24px rgba(3,105,161,.35);max-width:94%;display:flex;align-items:center;gap:10px;font-size:13px';
+  banner.innerHTML =
+    '<span style="font-size:26px">📷</span>' +
+    '<div style="flex:1;min-width:0">' +
+      '<div style="font-weight:700;margin-bottom:2px">Ativar reconhecimento facial?</div>' +
+      '<div style="font-size:11px;opacity:.9">Bate ponto mais rápido. Opcional · LGPD</div>' +
+    '</div>' +
+    '<button onclick="abrirCadastroBiometria(\''+funcionario.id+'\',\''+nomeEsc+'\',function(){var b=document.getElementById(\'_bioBanner\');if(b)b.remove();})" style="background:#fff;color:#0369a1;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Ativar</button>' +
+    '<button onclick="document.getElementById(\'_bioBanner\').remove()" style="background:transparent;color:#fff;border:none;cursor:pointer;font-size:18px;padding:4px 8px">×</button>';
+  document.body.appendChild(banner);
 }
 </script>
 <!-- Modal de foto expandida -->

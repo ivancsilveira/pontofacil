@@ -1,0 +1,17 @@
+{
+  "name": "pontofacil-face-api",
+  "version": "1.0.0",
+  "description": "Lambda handler para Rekognition (collection pontofacil-rostos)",
+  "main": "index.js",
+  "scripts": {
+    "check": "node --check index.js && node --check rekognition.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-rekognition": "^3.700.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "private": true,
+  "license": "UNLICENSED"
+}

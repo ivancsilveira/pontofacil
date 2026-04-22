@@ -1,0 +1,32 @@
+# ===== Credenciais — JAMAIS commitar =====
+aws-pontofacil-keys*
+*-keys.txt
+*.pem
+.aws/
+.env
+.env.local
+.env.*.local
+credentials*.json
+
+# ===== Lambda build artifacts =====
+lambda/node_modules/
+lambda/dist/
+lambda/*.zip
+lambda/deploy-info.json
+
+# ===== AWS deploy state (IDs sensíveis gerados pelos scripts) =====
+lambda/scripts/.state.json
+lambda/scripts/*.local
+
+# ===== OS / editor =====
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.log
+
+# ===== Backup temporário =====
+*.bak
+*.orig
