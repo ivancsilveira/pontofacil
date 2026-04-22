@@ -821,20 +821,17 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <div class="card"><div class="card-title">Email da contadora</div><div class="form-group"><label class="form-label">Email para o fechamento mensal</label><input class="form-control" type="email" id="cfgEmail" placeholder="contadora@email.com"></div></div>
       <button class="btn btn-solid" onclick="salvarConfig()" style="margin-bottom:4px">Salvar configurações</button>
 
-      <!-- FOTO DO ADMIN MASTER -->
+      <!-- BIOMETRIA DO ADMIN MASTER (AWS Rekognition) -->
       <div class="card" style="border:1.5px solid #a7d7b0;background:var(--green-light)">
-        <div style="font-weight:700;font-size:14px;color:var(--green);margin-bottom:4px">🔐 Minha foto para login facial</div>
-        <div style="font-size:12px;color:var(--green);margin-bottom:12px">Cadastre sua foto para entrar no sistema pelo reconhecimento facial</div>
+        <div style="font-weight:700;font-size:14px;color:var(--green);margin-bottom:4px">🔐 Minha biometria facial (AWS Rekognition)</div>
+        <div style="font-size:12px;color:var(--green);margin-bottom:12px">Cadastre sua foto para entrar pelo reconhecimento facial. Mesmo fluxo LGPD que os demais funcionários.</div>
         <div style="display:flex;align-items:center;gap:14px">
           <div id="masterFotoPreview" style="width:72px;height:72px;border-radius:50%;background:#fff;border:3px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;overflow:hidden">👤</div>
-          <div>
-            <button type="button" class="btn btn-solid btn-sm" onclick="abrirCameraFoto('master')" style="width:auto;margin-bottom:6px;background:var(--green);border-color:var(--green)">📷 Tirar foto agora</button>
-            <div style="font-size:11px;color:var(--green)">Rosto de frente, boa iluminação</div>
-            <div id="masterFotoStatus" style="font-size:11px;color:var(--green);margin-top:4px;font-weight:600"></div>
+          <div style="flex:1;min-width:0">
+            <div id="masterBiometriaActions" style="display:flex;gap:6px;flex-wrap:wrap">— carregando —</div>
+            <div id="masterFotoStatus" style="font-size:11px;color:var(--green);margin-top:6px;font-weight:600"></div>
           </div>
         </div>
-        <input type="hidden" id="masterFotoBase64">
-        <button class="btn btn-sm" onclick="salvarFotoMaster()" style="margin-top:12px;background:var(--green);color:#fff;border-color:var(--green);width:100%">💾 Salvar minha foto</button>
       </div>
 
       <!-- ADMINISTRADORES -->
@@ -932,21 +929,21 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <h2>Cadastrar administrador</h2>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="form-group"><label class="form-label">Nome completo *</label><input class="form-control" id="admNome" placeholder="Nome do administrador"></div>
-      <div class="form-group"><label class="form-label">CPF *</label><input class="form-control" id="admCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00"
-        oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);">
-      </div>
-      <div class="form-group"><label class="form-label">Senha *</label><input class="form-control" type="password" id="admSenha" placeholder="Mínimo 6 caracteres"></div>
       <div class="form-group">
-        <label class="form-label">Foto facial (para login por reconhecimento)</label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
-          <div id="admFotoPreview" style="width:60px;height:60px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden">👤</div>
-          <div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('adm')" style="width:auto;margin-bottom:5px">📷 Tirar foto</button>
-            <div style="font-size:11px;color:var(--gray)">Necessária para login facial</div>
-          </div>
-        </div>
-        <input type="hidden" id="admFotoBase64">
+        <label class="form-label">CPF *</label>
+        <input class="form-control" id="admCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00"
+          oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);">
+        <label style="display:inline-flex;gap:6px;font-size:12px;color:var(--gray);margin-top:6px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="admValidarCpf" checked>
+          <span>Validar CPF (desmarque para estrangeiros ou casos especiais)</span>
+        </label>
       </div>
+      <div class="form-group">
+        <label class="form-label">Senha *</label>
+        <input class="form-control" type="password" id="admSenha" placeholder="Mínimo 6 caracteres" value="123456">
+        <div style="font-size:11px;color:var(--gray);margin-top:3px">Sugestão: 123456 (admin troca no primeiro login)</div>
+      </div>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;font-size:12px;color:#0369a1">ℹ️ A biometria facial é cadastrada depois — no primeiro login do admin (ao trocar a senha padrão) ou pelo Editar administrador.</div>
       <div style="background:var(--gray-light);border-radius:8px;padding:10px 12px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
           <input type="checkbox" id="admAparecerLista" style="width:18px;height:18px;cursor:pointer">
@@ -974,19 +971,19 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     <input type="hidden" id="editAdminId">
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="form-group"><label class="form-label">Nome completo *</label><input class="form-control" id="editAdminNome"></div>
-      <div class="form-group"><label class="form-label">CPF *</label><input class="form-control" id="editAdminCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00"
-        oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);">
+      <div class="form-group">
+        <label class="form-label">CPF *</label>
+        <input class="form-control" id="editAdminCpf" maxlength="14" inputmode="numeric" placeholder="000.000.000-00"
+          oninput="var v=this.value.replace(/\D/g,'').slice(0,11);if(v.length<=3)this.value=v;else if(v.length<=6)this.value=v.slice(0,3)+'.'+v.slice(3);else if(v.length<=9)this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);else this.value=v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9,11);">
+        <label style="display:inline-flex;gap:6px;font-size:12px;color:var(--gray);margin-top:6px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="editAdminValidarCpf" checked>
+          <span>Validar CPF (desmarque para estrangeiros ou casos especiais)</span>
+        </label>
       </div>
       <div class="form-group"><label class="form-label">Nova senha (em branco = manter)</label><input class="form-control" type="password" id="editAdminSenha" placeholder="Deixe em branco para não alterar"></div>
       <div class="form-group">
-        <label class="form-label">Foto facial</label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
-          <div id="editAdminFotoPreview" style="width:60px;height:60px;border-radius:50%;background:var(--gray-light);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;overflow:hidden">👤</div>
-          <div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="abrirCameraFoto('editAdmin')" style="width:auto;margin-bottom:5px">📷 Nova foto</button>
-            <button type="button" class="btn btn-sm" onclick="document.getElementById('editAdminFotoBase64').value='__APAGAR__';document.getElementById('editAdminFotoPreview').innerHTML='👤'" style="width:auto;font-size:11px">🗑 Remover</button>
-          </div>
-        </div>
+        <label class="form-label">Biometria facial (AWS Rekognition)</label>
+        <div id="editAdminBiometriaSection" style="margin-top:4px">— carregando —</div>
         <input type="hidden" id="editAdminFotoBase64">
       </div>
       <div style="background:var(--gray-light);border-radius:8px;padding:10px 12px">
@@ -1023,23 +1020,15 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 <!-- LGPD CONSENT MODAL -->
 <div id="consentimentoLGPDOverlay" class="modal-bg" style="z-index:3000">
   <div class="modal" style="max-width:540px">
-    <h2 style="color:var(--blue-dark);font-size:18px;margin-bottom:10px">Uso de reconhecimento facial — consentimento</h2>
-    <div style="font-size:13px;line-height:1.55;color:#333;margin-bottom:14px">
-      Este sistema pode usar reconhecimento facial para identificação no ponto. Para isso, uma foto do seu rosto será enviada à AWS (servidores em São Paulo) e transformada em um vetor matemático (biometria facial), armazenado em nossa conta AWS sob o identificador do seu cadastro. <b>Ninguém pode reconstruir sua face a partir desse vetor.</b>
-      <ul style="margin:10px 0 10px 20px">
-        <li><b>Finalidade:</b> apenas identificação no sistema de ponto da Villa Canziani Donato.</li>
-        <li><b>Retenção:</b> enquanto você for funcionário. Ao desligar, a biometria é apagada automaticamente (direito ao esquecimento — LGPD art. 18).</li>
-        <li><b>Reversibilidade:</b> você pode cancelar a qualquer momento pelo admin e continuar usando CPF+senha.</li>
-        <li><b>Não obrigatório:</b> se não concordar, você usa CPF+senha e nada muda.</li>
-      </ul>
-    </div>
+    <h2 id="consentTitle" style="color:var(--blue-dark);font-size:18px;margin-bottom:10px">Uso de reconhecimento facial — consentimento</h2>
+    <div id="consentBody" style="font-size:13px;line-height:1.55;color:#333;margin-bottom:14px"></div>
     <label style="display:flex;gap:8px;font-size:13px;align-items:flex-start;margin:10px 0;cursor:pointer">
       <input type="checkbox" id="consentChk" style="margin-top:3px;transform:scale(1.2)">
-      <span>Li e concordo com o uso da minha biometria facial para este fim específico.</span>
+      <span id="consentChkLabel">Li e concordo com o uso da minha biometria facial para este fim específico.</span>
     </label>
     <div class="modal-actions" style="margin-top:14px">
-      <button class="btn btn-saida btn-sm" style="flex:1" onclick="recusarConsentimentoLGPD()">✕ Recusar</button>
-      <button class="btn btn-solid btn-sm" style="flex:1" onclick="aceitarConsentimentoLGPD()">✓ Aceitar</button>
+      <button class="btn btn-saida btn-sm" style="flex:1" onclick="recusarConsentimentoLGPD()">✕ Cancelar</button>
+      <button class="btn btn-solid btn-sm" style="flex:1" onclick="aceitarConsentimentoLGPD()">✓ Continuar</button>
     </div>
   </div>
 </div>
@@ -1190,7 +1179,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.109 · 22/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.113 · 22/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1237,6 +1226,20 @@ function fmtCpf(v){v=v.replace(/\D/g,'').slice(0,11);return v.replace(/(\d{3})(\
 var _loginFacialStream = null;
 
 async function loginFacial(){
+  // Bug v112: LGPD antes de abrir câmera de login (envia dado biométrico pra AWS)
+  const proceed = await new Promise(resolve => {
+    abrirConsentimentoLGPD(function(aceito){ resolve(aceito); }, 'login');
+  });
+  if(!proceed){
+    toast('Login facial cancelado');
+    return;
+  }
+  // Registra consentimento de auditoria (LGPD art. 37)
+  await logBiometria('_pre_login_', 'consentimento_login_facial', {
+    versao: LGPD_CONSENT_VERSION,
+    aceitoEm: new Date().toISOString()
+  });
+
   var overlay = document.getElementById('loginFacialOverlay');
   if(!overlay){
     overlay = document.createElement('div');
@@ -1329,17 +1332,31 @@ async function capturarLoginFacial(){
   resultEl.innerHTML = '<div style="background:rgba(45,122,58,.9);color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600">✅ Identificado · '+top.similarity.toFixed(1)+'%</div>';
   try{
     var userData;
-    var doc = await db.collection('funcionarios').doc(funcId).get();
-    if(!doc.exists){
-      resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center">⚠ Funcionário não encontrado<br><small>Pode ter sido excluído — use CPF + senha</small></div>';
-      btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
-      return;
-    }
-    userData = Object.assign({id:doc.id}, doc.data());
-    if(userData.inativo){
-      resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center">⚠ Usuário inativo</div>';
-      btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
-      return;
+    if(funcId === 'admin' || funcId === 'master'){
+      // Admin master não está em funcionarios/ — usa config/master
+      userData = {id:'admin', nome:'Administrador Master (Ivan)', cpf:'495.256.629-34', empresa:'ambas', isAdmin:true};
+      try{
+        var cfg = await db.collection('config').doc('master').get();
+        if(cfg.exists){
+          var cd = cfg.data();
+          userData.biometriaAtiva = !!cd.biometriaAtiva;
+          userData.rekognitionFaceId = cd.rekognitionFaceId || null;
+          userData.fotoCadastro = cd.fotoCadastro || '';
+        }
+      }catch(e){}
+    } else {
+      var doc = await db.collection('funcionarios').doc(funcId).get();
+      if(!doc.exists){
+        resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center">⚠ Funcionário não encontrado<br><small>Pode ter sido excluído — use CPF + senha</small></div>';
+        btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+        return;
+      }
+      userData = Object.assign({id:doc.id}, doc.data());
+      if(userData.inativo){
+        resultEl.innerHTML = '<div style="background:#fef2f2;color:#b91c1c;border-radius:8px;padding:10px;text-align:center">⚠ Usuário inativo</div>';
+        btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
+        return;
+      }
     }
     S.user = userData;
     S.isAdmin = !!userData.isAdmin;
@@ -1439,7 +1456,9 @@ async function confirmarTrocarSenhaB(){
 
 async function _perguntarBiometriaAposLogin(){
   // Pergunta se quer ativar biometria. Admin não participa.
-  if(S.isAdmin) return;
+  // Admin master tem UI dedicada em Config > Minha biometria — pula o prompt aqui.
+  // Outros admins (isAdmin em funcionarios/) recebem o prompt normal.
+  if(S.user.id === 'admin') return;
   // Refresh do doc antes de decidir — evita prompt duplicado se acabou de ser cadastrado em outro caminho
   try{
     var fresh = await db.collection('funcionarios').doc(S.user.id).get();
@@ -1495,6 +1514,16 @@ async function doLogin(){
     if(senha==='Ivan252005'){
       S.user={id:'admin',nome:'Administrador',cpf:cpf,empresa:'ambas',isAdmin:true};
       S.isAdmin=true;
+      // Enriquece com biometria do config/master
+      try{
+        var _mc = await db.collection('config').doc('master').get();
+        if(_mc.exists){
+          var _md = _mc.data();
+          S.user.biometriaAtiva = !!_md.biometriaAtiva;
+          S.user.rekognitionFaceId = _md.rekognitionFaceId || null;
+          S.user.fotoCadastro = _md.fotoCadastro || '';
+        }
+      }catch(e){}
       try{sessionStorage.setItem('pontofacil_user',JSON.stringify(S.user));}catch(e){}
       registrarLog('login','Login: '+S.user.nome,{funcId:S.user.id,funcNome:S.user.nome,detalhes:'Acesso ao sistema'});
       document.getElementById('loginWrap').style.display='none';
@@ -1555,8 +1584,8 @@ async function doLogin(){
     document.getElementById('loginWrap').style.display='none';
     document.getElementById('appWrap').style.display='flex';
     iniciarApp();
-    // ETAPA 3 Rekognition: se não tem biometria, oferece ativar
-    if(!data.biometriaAtiva && !S.isAdmin){ setTimeout(function(){bannerAtivarBiometria(S.user);}, 1500); }
+    // ETAPA 3 Rekognition: se não tem biometria, oferece ativar (admin master já tem UI própria)
+    if(!data.biometriaAtiva && S.user.id !== 'admin'){ setTimeout(function(){bannerAtivarBiometria(S.user);}, 1500); }
   }catch(e){showErro('Erro de conexão: '+e.message);}
 }
 async function enviarSenhaEmail(){
@@ -1827,23 +1856,55 @@ function verificarGPS(){
 /* HORAS */
 function hp2m(h){if(!h)return 0;const[hh,mm]=h.split(':').map(Number);return hh*60+mm;}
 function m2h(m){const abs=Math.abs(m);return(m<0?'-':'')+Math.floor(abs/60)+'h '+String(abs%60).padStart(2,'0')+'min';}
+// Normaliza tipo: remove acentos, lowercase, colapsa espaços.
+// Aceita variações tipo 'Início intervalo' / 'Inicio de intervalo' / 'INICIO INTERVALO'.
+function _normTipoPonto(tipo){
+  return String(tipo||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+function _isTipoEntrada(r){ return _normTipoPonto(r.tipo) === 'entrada'; }
+function _isTipoSaida(r){ return _normTipoPonto(r.tipo) === 'saida'; }
+function _isTipoInicioInt(r){
+  const t = _normTipoPonto(r.tipo);
+  return t === 'inicio intervalo' || t === 'inicio de intervalo';
+}
+function _isTipoRetornoInt(r){
+  const t = _normTipoPonto(r.tipo);
+  return t === 'retorno intervalo' || t === 'retorno de intervalo';
+}
+
 function calcDia(regs){
-  // Usa hora (HH:MM) como fonte de verdade — é o que o user vê na tela.
-  // Timestamps podem estar deslocados por ajuste manual, virada de turno
-  // ou registros órfãos de outra data, e quebram o cálculo silenciosamente.
-  const e=regs.find(r=>r.tipo==='Entrada'),s=regs.find(r=>r.tipo==='Saída');
-  const ii=regs.find(r=>r.tipo==='Início intervalo'),fi=regs.find(r=>r.tipo==='Retorno intervalo');
-  if(!e||!s||!e.hora||!s.hora) return 0;
-  const tE=hp2m(e.hora), tS=hp2m(s.hora);
+  // Usa hora (HH:MM) como fonte de verdade — timestamps podem estar deslocados.
+  // Suporta: virada de turno (22→06), múltiplos intervalos, tipos com acento variável.
+  if(!regs || !regs.length) return 0;
+
+  // Ordena por hora pra garantir que os intervalos pareiam corretamente
+  const sorted = regs.slice().sort(function(a,b){
+    return hp2m(a.hora||'00:00') - hp2m(b.hora||'00:00');
+  });
+
+  const e = sorted.find(_isTipoEntrada);
+  const s = sorted.find(_isTipoSaida);
+  if(!e || !s || !e.hora || !s.hora) return 0;
+
+  const tE = hp2m(e.hora), tS = hp2m(s.hora);
   let diff = tS - tE;
-  if (diff < 0) diff += 24*60;  // turno que cruza meia-noite (ex: 22:00 → 06:00)
+  if(diff < 0) diff += 24*60;  // turno que cruza meia-noite
+
+  // Soma TODOS intervalos (pares início/retorno ordenados)
+  const inis = sorted.filter(_isTipoInicioInt);
+  const fims = sorted.filter(_isTipoRetornoInt);
   let intervalo = 0;
-  if(ii && fi && ii.hora && fi.hora){
-    const iiM=hp2m(ii.hora), fiM=hp2m(fi.hora);
-    let intDiff = fiM - iiM;
-    if (intDiff < 0) intDiff += 24*60;
-    intervalo = intDiff;
+  const pairs = Math.min(inis.length, fims.length);
+  for(let i = 0; i < pairs; i++){
+    const iiM = hp2m(inis[i].hora||'00:00');
+    const fiM = hp2m(fims[i].hora||'00:00');
+    let d = fiM - iiM;
+    if(d < 0) d += 24*60;
+    intervalo += d;
   }
+
   return Math.max(0, diff - intervalo);
 }
 function calcBH(func,regsArr,mesRef){
@@ -3196,8 +3257,15 @@ async function carregarFuncionarios(){
     try{
       const masterDoc=await db.collection('config').doc('master').get();
       if(masterDoc.exists && masterDoc.data().aparecerNaLista){
-        const masterFoto=masterDoc.data().fotoCadastro||'';
-        S.funcionarios.push({id:'master',nome:'Administrador Master (Ivan)',cpf:'495.256.629-34',isAdmin:true,aparecerNaLista:true,empresa:'ambas',cargo:'Administrador',fotoCadastro:masterFoto});
+        const md = masterDoc.data();
+        S.funcionarios.push({
+          id:'master', nome:'Administrador Master (Ivan)', cpf:'495.256.629-34',
+          isAdmin:true, aparecerNaLista:true, empresa:'ambas', cargo:'Administrador',
+          fotoCadastro: md.fotoCadastro || '',
+          biometriaAtiva: !!md.biometriaAtiva,
+          rekognitionFaceId: md.rekognitionFaceId || null,
+          biometriaCadastradaEm: md.biometriaCadastradaEm || null
+        });
       }
     }catch(e){}
   }catch(e){}
@@ -3334,38 +3402,51 @@ function abrirModalEdit(id){
 }
 
 function _renderEditBiometria(f){
-  var bioEl = document.getElementById('editBiometriaSection');
+  _renderBiometriaSection(f, 'editBiometriaSection', 'func');
+}
+
+// Renderiza seção biometria dentro de qualquer container.
+// target: 'func' ou 'editAdmin' — usado pra saber qual modal re-abrir após o fluxo
+function _renderBiometriaSection(f, containerId, target){
+  var bioEl = document.getElementById(containerId);
   if(!bioEl) return;
+  var tgt = target || 'func';
   if(f.biometriaAtiva && f.rekognitionFaceId){
     var faceId = f.rekognitionFaceId;
     var data   = f.biometriaCadastradaEm ? new Date(f.biometriaCadastradaEm).toLocaleDateString('pt-BR') : '—';
     bioEl.innerHTML =
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">' +
         '<span style="background:#d1fae5;color:#065f46;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">✓ Cadastrada · ' + data + '</span>' +
-        '<button type="button" class="btn btn-primary btn-sm" onclick="atualizarBiometriaEdit(\''+f.id+'\')" style="width:auto">📷 Atualizar</button>' +
-        '<button type="button" class="btn btn-saida btn-sm" onclick="removerBiometriaEdit(\''+f.id+'\')" style="width:auto">🗑 Remover</button>' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="atualizarBiometriaEdit(\''+f.id+'\', \''+tgt+'\')" style="width:auto">📷 Atualizar</button>' +
+        '<button type="button" class="btn btn-saida btn-sm" onclick="removerBiometriaEdit(\''+f.id+'\', \''+tgt+'\')" style="width:auto">🗑 Remover</button>' +
       '</div>' +
       '<div style="font-size:10px;color:var(--gray)">AWS FaceId: <code style="font-size:10px">' + faceId + '</code></div>';
   } else {
     bioEl.innerHTML =
-      '<button type="button" class="btn btn-primary btn-sm" onclick="cadastrarBiometriaEdit(\''+f.id+'\')" style="width:auto">📷 Cadastrar biometria facial</button>' +
-      '<div style="font-size:11px;color:var(--gray);margin-top:4px">Funcionário ainda não ativou biometria. Admin pode cadastrar aqui OU o funcionário pode ativar no primeiro login.</div>';
+      '<button type="button" class="btn btn-primary btn-sm" onclick="cadastrarBiometriaEdit(\''+f.id+'\', \''+tgt+'\')" style="width:auto">📷 Cadastrar biometria facial</button>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:4px">Ainda não ativou biometria. Pode ser cadastrada aqui pelo admin OU no primeiro login (ao trocar senha padrão).</div>';
   }
 }
 
-function cadastrarBiometriaEdit(id){
+function cadastrarBiometriaEdit(id, target){
   var f = S.funcionarios.find(function(x){return x.id===id;});
   if(!f){toast('Funcionário não encontrado');return;}
-  fecharModalEdit();
+  var tgt = target || 'func';
+  // Fecha o modal apropriado antes do enrollment
+  if(tgt === 'editAdmin'){ document.getElementById('modalEditAdmin').classList.remove('open'); }
+  else { fecharModalEdit(); }
   abrirCadastroBiometria(id, f.nome, function(ok){
-    if(ok) setTimeout(function(){abrirModalEdit(id);}, 400);
+    if(ok) setTimeout(function(){
+      if(tgt === 'editAdmin') abrirModalEditAdmin(id);
+      else abrirModalEdit(id);
+    }, 400);
   });
 }
 
-async function atualizarBiometriaEdit(id){
+async function atualizarBiometriaEdit(id, target){
   var f = S.funcionarios.find(function(x){return x.id===id;});
   if(!f) return;
-  if(!f.rekognitionFaceId){ cadastrarBiometriaEdit(id); return; }
+  if(!f.rekognitionFaceId){ cadastrarBiometriaEdit(id, target); return; }
   if(!confirm('Atualizar biometria facial de '+f.nome+'?\n\nA biometria atual será apagada no AWS e substituída por uma nova.'))return;
   toast('🗑 Apagando biometria antiga...');
   var r = await rekDeleteFace(f.rekognitionFaceId);
@@ -3376,14 +3457,21 @@ async function atualizarBiometriaEdit(id){
   }
   await logBiometria(id, 'deletada_para_atualizar', {faceId:f.rekognitionFaceId});
   try{
-    await db.collection('funcionarios').doc(id).update({biometriaAtiva:false, rekognitionFaceId:null, fotoCadastro:''});
+    const refA = _biometriaDocRef(id);
+    const updA = {biometriaAtiva:false, rekognitionFaceId:null, fotoCadastro:''};
+    if(id === 'admin' || id === 'master'){ await refA.set(updA, {merge:true}); }
+    else { await refA.update(updA); }
   }catch(e){}
   f.biometriaAtiva=false; f.rekognitionFaceId=null; f.fotoCadastro='';
+  if(typeof S_admins !== 'undefined'){
+    const ai = S_admins.findIndex(a=>a.id===id);
+    if(ai>=0){ S_admins[ai].biometriaAtiva=false; S_admins[ai].rekognitionFaceId=null; S_admins[ai].fotoCadastro=''; }
+  }
   if(S.user && S.user.id===id){ S.user.fotoCadastro=''; S.user.biometriaAtiva=false; S.user.rekognitionFaceId=null; }
-  cadastrarBiometriaEdit(id);
+  cadastrarBiometriaEdit(id, target);
 }
 
-async function removerBiometriaEdit(id){
+async function removerBiometriaEdit(id, target){
   var f = S.funcionarios.find(function(x){return x.id===id;});
   if(!f || !f.rekognitionFaceId){toast('Funcionário não tem biometria');return;}
   if(!confirm('Remover permanentemente a biometria facial de '+f.nome+'?\n\nA biometria será apagada do AWS (LGPD art. 18 — direito ao esquecimento).\n\nO funcionário continuará entrando com CPF + senha.'))return;
@@ -3395,20 +3483,30 @@ async function removerBiometriaEdit(id){
     return;
   }
   try{
-    await db.collection('funcionarios').doc(id).update({
-      biometriaAtiva:false,
-      rekognitionFaceId:null,
-      fotoCadastro:'',  // LGPD: apaga avatar também
-      biometriaRemovidaEm:new Date().toISOString()
-    });
+    const refRem = _biometriaDocRef(id);
+    const updRem = {biometriaAtiva:false, rekognitionFaceId:null, fotoCadastro:'', biometriaRemovidaEm:new Date().toISOString()};
+    if(id === 'admin' || id === 'master'){
+      await refRem.set(updRem, {merge:true});
+    } else {
+      await refRem.update(updRem);
+    }
     f.biometriaAtiva=false;
     f.rekognitionFaceId=null;
     f.fotoCadastro='';
+    if(typeof S_admins !== 'undefined'){
+      const ai = S_admins.findIndex(a=>a.id===id);
+      if(ai>=0){ S_admins[ai].biometriaAtiva=false; S_admins[ai].rekognitionFaceId=null; S_admins[ai].fotoCadastro=''; }
+    }
     if(S.user && S.user.id===id){ S.user.fotoCadastro=''; S.user.biometriaAtiva=false; S.user.rekognitionFaceId=null; }
-    await logBiometria(id, 'removida_lgpd', {origem:'edit_manual'});
+    await logBiometria(id, 'removida_lgpd', {origem: (target === 'editAdmin' ? 'edit_admin' : 'edit_manual')});
     toast('✅ Biometria removida');
-    _renderEditBiometria(f);  // atualiza UI
-    try{ if(typeof renderEquipe === 'function') renderEquipe(); }catch(e){}
+    if(target === 'editAdmin'){
+      _renderBiometriaSection(f, 'editAdminBiometriaSection', 'editAdmin');
+      if(typeof renderAdmins === 'function') renderAdmins();
+    } else {
+      _renderEditBiometria(f);
+      try{ if(typeof renderEquipe === 'function') renderEquipe(); }catch(e){}
+    }
   }catch(e){
     toast('⚠ AWS apagou mas Firestore falhou: '+e.message);
   }
@@ -4612,29 +4710,72 @@ function carregarConfigUI(){
 async function carregarFotoMaster(){
   try{
     const doc=await db.collection('config').doc('master').get();
-    if(doc.exists&&doc.data().fotoCadastro){
-      const foto=doc.data().fotoCadastro;
-      document.getElementById('masterFotoPreview').innerHTML=`<img src="data:image/jpeg;base64,${foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" ondblclick="expandirFoto('data:image/jpeg;base64,${foto}', 'Administrador Master (Ivan)')">`;
-      document.getElementById('masterFotoBase64').value=foto;
-      document.getElementById('masterFotoStatus').textContent='✅ Foto cadastrada — login facial ativo';
-      // Atualizar fotoCadastro do user se for o master logado
-      if(S.user&&S.user.id==='admin') S.user.fotoCadastro=foto;
+    const data = doc.exists ? doc.data() : {};
+    const foto = data.fotoCadastro || '';
+    const biometriaAtiva = !!data.biometriaAtiva;
+    const faceId = data.rekognitionFaceId || null;
+    const previewEl = document.getElementById('masterFotoPreview');
+    const statusEl = document.getElementById('masterFotoStatus');
+    const actionsEl = document.getElementById('masterBiometriaActions');
+    if(foto){
+      previewEl.innerHTML = '<img src="data:image/jpeg;base64,'+foto+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer" ondblclick="expandirFoto(\'data:image/jpeg;base64,'+foto+'\', \'Administrador Master (Ivan)\')">';
     } else {
-      document.getElementById('masterFotoStatus').textContent='⚠️ Sem foto — login facial indisponível';
+      previewEl.innerHTML = '👤';
     }
-  }catch(e){}
+    if(biometriaAtiva && faceId){
+      const d = data.biometriaCadastradaEm ? new Date(data.biometriaCadastradaEm).toLocaleDateString('pt-BR') : '—';
+      statusEl.textContent = '✅ Biometria ativa · cadastrada em '+d;
+      actionsEl.innerHTML =
+        '<button type="button" class="btn btn-solid btn-sm" onclick="cadastrarBiometriaMaster()" style="background:var(--green);border-color:var(--green);width:auto">📷 Atualizar</button>' +
+        '<button type="button" class="btn btn-saida btn-sm" onclick="removerBiometriaMaster()" style="width:auto">🗑 Remover</button>';
+    } else {
+      statusEl.textContent = '⚠️ Sem biometria — login facial indisponível';
+      actionsEl.innerHTML = '<button type="button" class="btn btn-solid btn-sm" onclick="cadastrarBiometriaMaster()" style="background:var(--green);border-color:var(--green);width:auto">📷 Cadastrar biometria facial</button>';
+    }
+    if(S.user && S.user.id === 'admin'){
+      S.user.fotoCadastro = foto;
+      S.user.biometriaAtiva = biometriaAtiva;
+      S.user.rekognitionFaceId = faceId;
+    }
+  }catch(e){ console.error('carregarFotoMaster:', e); }
 }
 
-async function salvarFotoMaster(){
-  const foto=document.getElementById('masterFotoBase64').value;
-  if(!foto){toast('Tire uma foto primeiro');return;}
-  try{
-    await db.collection('config').doc('master').set({fotoCadastro:foto,atualizadoEm:new Date().toISOString()});
-    if(S.user&&S.user.id==='admin') S.user.fotoCadastro=foto;
-    document.getElementById('masterFotoStatus').textContent='✅ Foto salva com sucesso!';
-    toast('✅ Foto do administrador master salva!');
-  }catch(e){toast('Erro ao salvar foto: '+e.message);}
+function cadastrarBiometriaMaster(){
+  abrirCadastroBiometria('admin', 'Administrador Master (Ivan)', function(ok){
+    if(ok) carregarFotoMaster();
+  });
 }
+
+async function removerBiometriaMaster(){
+  if(!confirm('Remover permanentemente a biometria do admin master?\n\nA biometria será apagada do AWS (LGPD art. 18). Você continuará logando com CPF + senha.')) return;
+  try{
+    var doc = await db.collection('config').doc('master').get();
+    var oldFaceId = doc.exists ? (doc.data().rekognitionFaceId || null) : null;
+    if(oldFaceId){
+      toast('🗑 Apagando biometria do AWS...');
+      var r = await rekDeleteFace(oldFaceId);
+      if(!r.ok){
+        var reason = (r.data && r.data.error) || r.error || 'erro';
+        toast('❌ Falha ao apagar do AWS: '+reason);
+        return;
+      }
+    }
+    await db.collection('config').doc('master').set({
+      biometriaAtiva:false, rekognitionFaceId:null, fotoCadastro:'',
+      biometriaRemovidaEm:new Date().toISOString()
+    }, {merge:true});
+    await logBiometria('admin', 'removida_lgpd', {origem:'config_minha_biometria'});
+    if(S.user && S.user.id === 'admin'){
+      S.user.biometriaAtiva = false;
+      S.user.rekognitionFaceId = null;
+      S.user.fotoCadastro = '';
+    }
+    toast('✅ Biometria removida');
+    carregarFotoMaster();
+  }catch(e){ toast('Erro: '+e.message); }
+}
+
+// salvarFotoMaster removida — fluxo unificado via cadastrarBiometriaMaster/abrirCadastroBiometria
 async function salvarConfig(){S.config={empresaA:{nome:document.getElementById('cfgA_nome').value,cnpj:document.getElementById('cfgA_cnpj').value,end:document.getElementById('cfgA_end').value,lat:parseFloat(document.getElementById('cfgA_lat').value)||0,lng:parseFloat(document.getElementById('cfgA_lng').value)||0,raio:parseInt(document.getElementById('cfgA_raio').value)||150},empresaB:{nome:document.getElementById('cfgB_nome').value,cnpj:document.getElementById('cfgB_cnpj').value,end:document.getElementById('cfgB_end').value,lat:parseFloat(document.getElementById('cfgB_lat').value)||0,lng:parseFloat(document.getElementById('cfgB_lng').value)||0,raio:parseInt(document.getElementById('cfgB_raio').value)||200},emailContadora:document.getElementById('cfgEmail').value};try{await db.collection('config').doc('geral').set(S.config);toast('✅ Configurações salvas! Atualizando GPS...');setTimeout(verificarGPS,500);}catch(e){toast('Erro ao salvar');}}
 function usarLoc(emp){navigator.geolocation.getCurrentPosition(pos=>{document.getElementById('cfg'+emp+'_lat').value=pos.coords.latitude.toFixed(6);document.getElementById('cfg'+emp+'_lng').value=pos.coords.longitude.toFixed(6);toast('📍 Localização '+(emp==='A'?'Villa Canziani Donato':'Villa Bistro Patacho')+' capturada!');},()=>toast('GPS negado'));}
 
@@ -4690,9 +4831,8 @@ async function renderAdmins(){
 function abrirModalAdmin(){
   document.getElementById('admNome').value='';
   document.getElementById('admCpf').value='';
-  document.getElementById('admSenha').value='';
-  document.getElementById('admFotoBase64').value='';
-  document.getElementById('admFotoPreview').innerHTML='👤';
+  document.getElementById('admSenha').value='123456';  // sugestão
+  document.getElementById('admValidarCpf').checked=true;
   document.getElementById('admAparecerLista').checked=false;
   document.getElementById('modalAdmin').classList.add('open');
 }
@@ -4702,39 +4842,38 @@ async function cadastrarAdmin(){
   const nome=document.getElementById('admNome').value.trim();
   const cpf=document.getElementById('admCpf').value.trim();
   const senha=document.getElementById('admSenha').value;
-  const foto=document.getElementById('admFotoBase64').value||'';
+  const validarCpfFlag=document.getElementById('admValidarCpf')?document.getElementById('admValidarCpf').checked:true;
   if(!nome||!cpf||!senha){toast('Preencha nome, CPF e senha');return;}
   if(senha.length<6){toast('Senha mínimo 6 caracteres');return;}
+  if(validarCpfFlag && !validarCPF(cpf)){toast('⚠️ CPF inválido');return;}
   // Verifica CPF duplicado
   const cpfLimpoAdm=cpf.replace(/\D/g,'');
   const cpfDupAdm=S.funcionarios.find(f=>(f.cpf||'').replace(/\D/g,'')===cpfLimpoAdm);
   if(cpfDupAdm){toast('❌ CPF '+cpf+' já está cadastrado para: '+cpfDupAdm.nome);return;}
-  if(!foto) toast('⚠️ Sem foto — login facial não estará disponível');
   const aparecerNaLista=document.getElementById('admAparecerLista').checked;
-  const admin={nome,cpf,senha,fotoCadastro:foto,isAdmin:true,aparecerNaLista,cargo:'Administrador',empresa:'ambas',criadoEm:new Date().toISOString()};
+  // Admin sem foto — biometria é cadastrada no primeiro login (ao trocar 123456) ou pelo Editar
+  const admin={nome,cpf,senha,fotoCadastro:'',isAdmin:true,aparecerNaLista,cargo:'Administrador',empresa:'ambas',criadoEm:new Date().toISOString()};
   try{
     const ref=await db.collection('funcionarios').add(admin);
     S_admins.push({id:ref.id,...admin});
+    // Sincroniza S.funcionarios também (admins são funcionários com isAdmin=true)
+    if(!S.funcionarios.find(f=>f.id===ref.id)) S.funcionarios.push({id:ref.id,...admin});
     fecharModalAdmin();
     renderAdmins();
-    toast('✅ Administrador '+nome+' cadastrado!');
+    toast('✅ Administrador '+nome+' cadastrado! (Biometria no primeiro login)');
   }catch(e){toast('Erro ao cadastrar: '+e.message);}
 }
 
 function abrirModalEditAdmin(id){
-  const a=S_admins.find(x=>x.id===id);
+  const a=S_admins.find(x=>x.id===id) || S.funcionarios.find(x=>x.id===id);
   if(!a){toast('Admin não encontrado');return;}
   document.getElementById('editAdminId').value=id;
   document.getElementById('editAdminNome').value=a.nome||'';
   document.getElementById('editAdminCpf').value=a.cpf||'';
   document.getElementById('editAdminSenha').value='';
+  document.getElementById('editAdminValidarCpf').checked=true;
   document.getElementById('editAdminAparecerLista').checked=a.aparecerNaLista||false;
-  document.getElementById('editAdminFotoBase64').value='';
-  if(a.fotoCadastro){
-    document.getElementById('editAdminFotoPreview').innerHTML=`<img src="data:image/jpeg;base64,${a.fotoCadastro}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-  } else {
-    document.getElementById('editAdminFotoPreview').innerHTML='👤';
-  }
+  _renderBiometriaSection(a, 'editAdminBiometriaSection', 'editAdmin');
   document.getElementById('modalEditAdmin').classList.add('open');
 }
 
@@ -4743,10 +4882,11 @@ async function salvarEdicaoAdmin(){
   const nome=document.getElementById('editAdminNome').value.trim();
   const cpf=document.getElementById('editAdminCpf').value.trim();
   const novaSenha=document.getElementById('editAdminSenha').value;
+  const validarCpfFlag=document.getElementById('editAdminValidarCpf')?document.getElementById('editAdminValidarCpf').checked:true;
   const aparecerNaLista=document.getElementById('editAdminAparecerLista').checked;
-  const fotoVal=document.getElementById('editAdminFotoBase64').value;
 
   if(!nome||!cpf){toast('Preencha nome e CPF');return;}
+  if(validarCpfFlag && !validarCPF(cpf)){toast('⚠️ CPF inválido');return;}
 
   // Verifica CPF duplicado (exceto o próprio)
   const cpfLimpo=cpf.replace(/\D/g,'');
@@ -4758,8 +4898,6 @@ async function salvarEdicaoAdmin(){
     if(novaSenha.length<6){toast('Senha mínimo 6 caracteres');return;}
     upd.senha=novaSenha;
   }
-  if(fotoVal==='__APAGAR__') upd.fotoCadastro='';
-  else if(fotoVal) upd.fotoCadastro=fotoVal;
 
   try{
     await db.collection('funcionarios').doc(id).update(upd);
@@ -5061,13 +5199,53 @@ async function logBiometria(funcionarioId, acao, payload){
   }catch(e){ console.warn('logBiometria:', e); }
 }
 
+// Helper: Firestore ref pra biometria (admin master usa config/master; resto usa funcionarios/{id})
+function _biometriaDocRef(funcionarioId){
+  if(funcionarioId === 'admin' || funcionarioId === 'master'){
+    return db.collection('config').doc('master');
+  }
+  return db.collection('funcionarios').doc(funcionarioId);
+}
+
 // ===== Consentimento LGPD =====
 let _consentCallback = null;
-function abrirConsentimentoLGPD(callback){
+function abrirConsentimentoLGPD(callback, mode){
   _consentCallback = callback;
   const chk = document.getElementById('consentChk');
   if(chk) chk.checked = false;
+  _setConsentMode(mode || 'enroll');
   document.getElementById('consentimentoLGPDOverlay').classList.add('open');
+}
+
+function _setConsentMode(mode){
+  const titleEl = document.getElementById('consentTitle');
+  const bodyEl  = document.getElementById('consentBody');
+  const labelEl = document.getElementById('consentChkLabel');
+  if(!titleEl || !bodyEl || !labelEl) return;  // backward compat se algo faltar
+  if(mode === 'login'){
+    titleEl.textContent = 'Uso de reconhecimento facial — consentimento';
+    bodyEl.innerHTML =
+      'Para te identificar, sua foto será enviada ao <b>AWS Rekognition</b> (servidores em São Paulo, Brasil) apenas para <b>COMPARAÇÃO</b> com biometrias já cadastradas no sistema.' +
+      '<ul style="margin:10px 0 10px 20px">' +
+        '<li>Sua foto <b>NÃO é armazenada</b> nesta operação — é usada apenas para identificação momentânea e descartada em seguida.</li>' +
+        '<li>Se você não está cadastrado na biometria, o sistema simplesmente não te reconhecerá.</li>' +
+        '<li>Você pode continuar usando <b>CPF + senha</b> sem consentir aqui.</li>' +
+        '<li>Essa operação é registrada em log para auditoria (LGPD art. 37).</li>' +
+      '</ul>';
+    labelEl.textContent = 'Li e concordo com o uso da minha face para identificação';
+  } else {
+    // enroll (default)
+    titleEl.textContent = 'Uso de reconhecimento facial — consentimento';
+    bodyEl.innerHTML =
+      'Este sistema pode usar reconhecimento facial para identificação no ponto. Para isso, uma foto do seu rosto será enviada à AWS (servidores em São Paulo) e transformada em um vetor matemático (biometria facial), armazenado em nossa conta AWS sob o identificador do seu cadastro. <b>Ninguém pode reconstruir sua face a partir desse vetor.</b>' +
+      '<ul style="margin:10px 0 10px 20px">' +
+        '<li><b>Finalidade:</b> apenas identificação no sistema de ponto da Villa Canziani Donato.</li>' +
+        '<li><b>Retenção:</b> enquanto você for funcionário. Ao desligar, a biometria é apagada automaticamente (direito ao esquecimento — LGPD art. 18).</li>' +
+        '<li><b>Reversibilidade:</b> você pode cancelar a qualquer momento pelo admin e continuar usando CPF+senha.</li>' +
+        '<li><b>Não obrigatório:</b> se não concordar, você usa CPF+senha e nada muda.</li>' +
+      '</ul>';
+    labelEl.textContent = 'Li e concordo com o uso da minha biometria facial para este fim específico.';
+  }
 }
 function aceitarConsentimentoLGPD(){
   const chk = document.getElementById('consentChk');
@@ -5084,7 +5262,12 @@ function recusarConsentimentoLGPD(){
 async function registrarConsentimento(funcionarioId){
   const c = {aceito:true, aceitoEm:new Date().toISOString(), versaoTexto:LGPD_CONSENT_VERSION};
   try{
-    await db.collection('funcionarios').doc(funcionarioId).update({biometriaConsentimento:c});
+    const ref = _biometriaDocRef(funcionarioId);
+    if(funcionarioId === 'admin' || funcionarioId === 'master'){
+      await ref.set({biometriaConsentimento:c}, {merge:true});
+    } else {
+      await ref.update({biometriaConsentimento:c});
+    }
     const f = S.funcionarios.find(x=>x.id===funcionarioId);
     if(f) f.biometriaConsentimento = c;
   }catch(e){ console.error('registrarConsentimento:', e); }
@@ -5098,10 +5281,12 @@ let _enrollFuncNome = null;
 let _enrollOnSuccess = null;
 
 async function abrirCadastroBiometria(funcionarioId, funcionarioNome, onSuccess){
+  console.log('[enroll] abrirCadastroBiometria →', {funcionarioId, funcionarioNome, temCallback:!!onSuccess});
   _enrollFuncId = funcionarioId;
   _enrollFuncNome = funcionarioNome;
   _enrollOnSuccess = onSuccess || null;
   abrirConsentimentoLGPD(async function(aceito){
+    console.log('[enroll] consent callback — aceito:', aceito);
     if(!aceito){
       toast('Cadastro de biometria cancelado.');
       if(_enrollOnSuccess) _enrollOnSuccess(false);
@@ -5131,6 +5316,7 @@ function fecharEnrollBiometria(){
   document.getElementById('enrollBiometriaOverlay').style.display = 'none';
 }
 async function enviarBiometriaAWS(){
+  console.log('[enroll] enviarBiometriaAWS iniciado, _enrollFuncId:', _enrollFuncId);
   const btn = document.getElementById('enrollBtn');
   const statusEl = document.getElementById('enrollStatus');
   const resultEl = document.getElementById('enrollResult');
@@ -5138,40 +5324,65 @@ async function enviarBiometriaAWS(){
   btn.disabled = true; btn.textContent = '⏳ Enviando ao AWS...';
   statusEl.textContent = 'Capturando e indexando no AWS Rekognition...';
   const b64 = await capturarFotoB64(video, 0.85);
+  console.log('[enroll] foto capturada, bytes:', b64.length);
   const r = await rekIndexFace(b64, _enrollFuncId);
+  console.log('[enroll] resposta rekIndexFace:', r);
   if(!r.ok){
     const reason = (r.data && r.data.error) || r.error || 'erro';
     const detail = (r.data && r.data.message) || r.message || '';
-    resultEl.innerHTML = '<div class="facial-result facial-fail">❌ '+reason+(detail?' · '+detail:'')+'</div>';
-    statusEl.textContent = 'Tente de novo com melhor iluminação';
+    const reasons = r.data && r.data.reasons;
+    console.error('[enroll] falha:', {status:r.status, reason, detail, reasons, fullResponse:r});
+    let hint = 'Tente de novo com melhor iluminação, rosto centralizado, sem óculos escuros.';
+    if(reason === 'no_face_detected') hint = 'Nenhum rosto detectado pelo AWS. Centralize o rosto, aproxime, melhore a luz.';
+    if(reason === 'api_not_configured') hint = 'Config AWS não injetada — rode lambda/scripts/07-inject-frontend-config.sh';
+    if(reason === 'network_error') hint = 'Sem rede ou CORS bloqueou (rodou 08-cors-options-to-lambda.sh?)';
+    resultEl.innerHTML = '<div class="facial-result facial-fail">❌ '+reason+(detail?' · '+detail:'')+'<br><small style="opacity:.85">'+hint+'</small></div>';
+    statusEl.textContent = reason;
     btn.disabled = false; btn.textContent = '🔄 Tentar novamente';
-    await logBiometria(_enrollFuncId, 'index_falha', {erro:reason, detail});
+    await logBiometria(_enrollFuncId, 'index_falha', {erro:reason, detail, reasons});
     return;
   }
   const faceId = r.data.faceId;
   const confidence = r.data.confidence;
   try{
-    await db.collection('funcionarios').doc(_enrollFuncId).update({
+    const updObj = {
       biometriaAtiva: true,
       rekognitionFaceId: faceId,
       biometriaCadastradaEm: new Date().toISOString(),
-      fotoCadastro: b64  // usada só pra avatar/display no sistema, biometria de verdade fica no AWS
-    });
+      fotoCadastro: b64
+    };
+    const ref = _biometriaDocRef(_enrollFuncId);
+    if(_enrollFuncId === 'admin' || _enrollFuncId === 'master'){
+      await ref.set(updObj, {merge:true});
+    } else {
+      await ref.update(updObj);
+    }
     const f = S.funcionarios.find(x=>x.id===_enrollFuncId);
     if(f){
       f.biometriaAtiva = true;
       f.rekognitionFaceId = faceId;
       f.biometriaCadastradaEm = new Date().toISOString();
-      f.fotoCadastro = b64;  // sincroniza local → renderEquipe mostra avatar
+      f.fotoCadastro = b64;
     }
-    if(S.user && S.user.id === _enrollFuncId){
+    // Bug v112: admins também estão em S_admins — precisa sincronizar
+    if(typeof S_admins !== 'undefined'){
+      const ai = S_admins.findIndex(a=>a.id===_enrollFuncId);
+      if(ai >= 0){
+        S_admins[ai].biometriaAtiva = true;
+        S_admins[ai].rekognitionFaceId = faceId;
+        S_admins[ai].biometriaCadastradaEm = new Date().toISOString();
+        S_admins[ai].fotoCadastro = b64;
+      }
+    }
+    if(S.user && (S.user.id === _enrollFuncId || (S.user.id === 'admin' && _enrollFuncId === 'admin'))){
       S.user.biometriaAtiva = true;
       S.user.rekognitionFaceId = faceId;
       S.user.fotoCadastro = b64;
       try{ sessionStorage.setItem('pontofacil_user', JSON.stringify(S.user)); }catch(e){}
     }
-    // Re-renderiza equipe se a função existir (admin pode estar olhando a lista)
     try{ if(typeof renderEquipe === 'function') renderEquipe(); }catch(e){}
+    try{ if(typeof renderAdmins === 'function') renderAdmins(); }catch(e){}
+    try{ if(_enrollFuncId === 'admin' && typeof carregarFotoMaster === 'function') carregarFotoMaster(); }catch(e){}
     await logBiometria(_enrollFuncId, 'indexado', {faceId, confidence});
     resultEl.innerHTML = '<div class="facial-result facial-ok">✅ Biometria cadastrada · confiança '+Math.round(confidence)+'%</div>';
     statusEl.textContent = 'Pronto!';
@@ -5190,7 +5401,8 @@ async function enviarBiometriaAWS(){
 function bannerAtivarBiometria(funcionario){
   if(!funcionario) return;
   if(funcionario.biometriaAtiva) return;
-  if(funcionario.id === 'master' || funcionario.isAdmin) return;  // admins não usam biometria por padrão
+  // Admin master tem UI dedicada; outros admins (isAdmin em funcionarios/) veem o banner.
+  if(funcionario.id === 'admin' || funcionario.id === 'master') return;
   if(document.getElementById('_bioBanner')) return;                // já está na tela
   const nomeEsc = (funcionario.nome||'').replace(/'/g,"\\'");
   const banner = document.createElement('div');
