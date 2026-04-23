@@ -601,6 +601,11 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 
     <!-- AJUSTES (ADMIN) -->
     <div class="screen" id="sc-ajustes">
+      <!-- Banner mostrado só quando veio da validação de inconsistências (info apenas; Cancelar é unificado no form) -->
+      <div id="ajusteFromValBanner" class="card" style="display:none;background:#fef3c7;border:1.5px solid #fcd34d">
+        <div style="font-weight:700;font-size:13px;color:#78350f">🔍 Corrigindo inconsistência</div>
+        <div id="ajusteFromValInfo" style="font-size:11px;color:#92400e;margin-top:2px">—</div>
+      </div>
       <div class="card" style="background:var(--orange-light);border:1px solid #fed7aa">
         <div style="font-weight:600;font-size:14px;color:var(--orange);margin-bottom:3px">✏️ Ajuste de ponto</div>
         <div style="font-size:12px;color:var(--orange)">Modificações ficam marcadas com ✏️ em todas as telas para auditoria.</div>
@@ -613,11 +618,16 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         </div>
         <div id="ajPontosHoje"><div class="empty">Selecione funcionário e data</div></div>
       </div>
+      <!-- v128: card mostrado quando dia já tem folga/não-descontado -->
+      <div class="card" id="ajFolgaExistente" style="display:none;background:#fef3c7;border:1.5px solid #fcd34d">
+        <div id="ajFolgaInfo" style="font-size:13px;color:#78350f;margin-bottom:8px">—</div>
+        <button type="button" class="btn btn-saida btn-sm" onclick="removerFolgaAjuste()" style="width:auto">🗑 Remover esta marcação</button>
+      </div>
       <div class="card" id="ajFormCard" style="display:none">
         <div class="card-title">Adicionar registro</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div class="form-group"><label class="form-label">Tipo</label>
-            <select class="form-control" id="ajTipo" onchange="verificarTipoAjuste()"><option>Entrada</option><option>Início intervalo</option><option>Retorno intervalo</option><option>Saída</option></select>
+            <select class="form-control" id="ajTipo" onchange="verificarTipoAjuste()"><option>Entrada</option><option>Início intervalo</option><option>Retorno intervalo</option><option>Saída</option><option value="folga">🌴 Marcar como folga</option><option value="nao_descontado">✅ Marcar como não descontado</option></select>
           </div>
           <div class="form-group"><label class="form-label">Horário</label><input class="form-control" type="time" id="ajHora"></div>
           <div class="form-group"><label class="form-label">Motivo *</label>
@@ -634,7 +644,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
           <div class="form-group" id="ajOutroWrap" style="display:none"><label class="form-label">Descreva o motivo</label><input class="form-control" id="ajOutro"></div>
           <div class="form-group"><label class="form-label">Observação (opcional)</label><input class="form-control" id="ajObs"></div>
         </div>
-        <button class="btn btn-orange" onclick="salvarAjuste()" style="margin-top:12px">✏️ Salvar ajuste</button>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-saida btn-sm" style="flex:1" onclick="cancelarAjusteForm()">✕ Cancelar</button>
+          <button class="btn btn-orange btn-sm" style="flex:1" onclick="salvarAjuste()">✏️ Salvar ajuste</button>
+        </div>
       </div>
     </div>
 
@@ -712,7 +725,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
               <label class="form-label">Mês de referência</label>
               <input type="month" class="form-control" id="fechMesRef">
             </div>
-            <button class="btn btn-teal btn-sm" onclick="fecharMes()" style="margin-top:16px;white-space:nowrap">🔒 Fechar mês</button>
+            <button class="btn btn-sm" onclick="abrirValidadorMes()" style="margin-top:16px;white-space:nowrap;background:#fef3c7;color:#78350f;border:1px solid #fcd34d">🔍 Validar</button>
+          <button class="btn btn-teal btn-sm" onclick="fecharMes()" style="margin-top:16px;white-space:nowrap">🔒 Fechar mês</button>
           </div>
           <div style="font-size:11px;color:var(--gray);margin-top:6px">Padrão: mês atual. Altere para fechar outro período.</div>
         </div>
@@ -1151,14 +1165,33 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   </div>
 </div>
 
+
+<!-- v116: Modal de validação de integridade do mês -->
+<div class="modal-bg" id="modalValidacao">
+  <div class="modal" style="max-width:640px">
+    <h2 id="validacaoTitulo" style="color:#b91c1c">⚠️ Problemas encontrados</h2>
+    <div id="validacaoSubtitulo" style="font-size:12px;color:var(--blue);font-weight:600;margin:2px 0 6px">—</div>
+    <div style="font-size:13px;color:#333;margin:6px 0 12px">Corrija os registros listados abaixo antes de gerar o relatório final.</div>
+    <div id="validacaoLista" style="max-height:60vh;overflow-y:auto;padding-right:4px"></div>
+    <div class="modal-actions" style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-saida btn-sm" style="flex:1" onclick="fecharModalValidacao()">✕ Cancelar</button>
+        <button class="btn btn-orange btn-sm" style="flex:1" onclick="gerarRelatorioMesmoAssim()">Gerar mesmo assim</button>
+      </div>
+      <div style="font-size:11px;color:var(--gray);text-align:center">"Gerar mesmo assim" é registrado em log de auditoria</div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL FECHAMENTO -->
 <div class="modal-bg" id="modalFechDetalhe">
   <div class="modal" style="max-width:480px">
     <h2 id="modalFechTit">Fechamento</h2>
     <div id="modalFechConteudo"></div>
     <div class="modal-actions">
-      <button class="btn btn-primary btn-sm" style="flex:1" onclick="imprimirFechamento()">🖨 Imprimir</button>
-      <button class="btn btn-solid btn-sm" style="flex:1" onclick="document.getElementById('modalFechDetalhe').classList.remove('open')">Fechar</button>
+      <button class="btn btn-primary btn-sm" style="flex:1" onclick="imprimirFechamento()">🖨 Imprimir / PDF</button>
+      <button class="btn btn-teal btn-sm" style="flex:1" onclick="enviarEmailDoModal()">📧 Enviar por email</button>
+      <button class="btn btn-saida btn-sm" style="flex:1" onclick="document.getElementById('modalFechDetalhe').classList.remove('open')">Fechar</button>
     </div>
   </div>
 </div>
@@ -1179,7 +1212,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.113 · 22/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.131 · 23/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1226,20 +1259,9 @@ function fmtCpf(v){v=v.replace(/\D/g,'').slice(0,11);return v.replace(/(\d{3})(\
 var _loginFacialStream = null;
 
 async function loginFacial(){
-  // Bug v112: LGPD antes de abrir câmera de login (envia dado biométrico pra AWS)
-  const proceed = await new Promise(resolve => {
-    abrirConsentimentoLGPD(function(aceito){ resolve(aceito); }, 'login');
-  });
-  if(!proceed){
-    toast('Login facial cancelado');
-    return;
-  }
-  // Registra consentimento de auditoria (LGPD art. 37)
-  await logBiometria('_pre_login_', 'consentimento_login_facial', {
-    versao: LGPD_CONSENT_VERSION,
-    aceitoEm: new Date().toISOString()
-  });
-
+  // v115: LGPD não é mais pedido aqui — consent foi dado UMA vez no cadastro inicial.
+  // Login facial usa SearchFacesByImage (não armazena novas faces, só compara).
+  // O uso é registrado pela função capturarLoginFacial via logBiometria('login_sucesso'/'login_falha').
   var overlay = document.getElementById('loginFacialOverlay');
   if(!overlay){
     overlay = document.createElement('div');
@@ -1807,7 +1829,7 @@ async function toggleFolga(funcId,dataISO,isDom){
 
 function verificarFolgaHoje(){
   if(!S.user||S.isAdmin)return;
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=dataLocalISO();
   const box=document.getElementById('folgaHojeBox');
   const jornadaBox=document.getElementById('jornadaBox');
   const pontoBtns=document.getElementById('pontoButtons');
@@ -1854,8 +1876,37 @@ function verificarGPS(){
 }
 
 /* HORAS */
+// Data local ISO (AAAA-MM-DD) — NÃO usa toISOString() porque ele é sempre UTC,
+// o que pega o dia errado após ~21h em São Paulo. Fonte: bug v114.
+function dataLocalISO(dt){
+  const d = dt || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+function mesLocalISO(dt){
+  const d = dt || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return y + '-' + m;
+}
 function hp2m(h){if(!h)return 0;const[hh,mm]=h.split(':').map(Number);return hh*60+mm;}
 function m2h(m){const abs=Math.abs(m);return(m<0?'-':'')+Math.floor(abs/60)+'h '+String(abs%60).padStart(2,'0')+'min';}
+// v131: máscara CNPJ (XX.XXX.XXX/XXXX-XX) — aceita string já formatada, só-números ou parcial
+function formatarCNPJ(cnpj){
+  if(!cnpj) return '—';
+  const num = String(cnpj).replace(/\D/g,'');
+  if(num.length !== 14) return cnpj;
+  return num.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+}
+// v131: máscara CPF (XXX.XXX.XXX-XX)
+function formatarCPF(cpf){
+  if(!cpf) return '—';
+  const num = String(cpf).replace(/\D/g,'');
+  if(num.length !== 11) return cpf;
+  return num.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+}
 // Normaliza tipo: remove acentos, lowercase, colapsa espaços.
 // Aceita variações tipo 'Início intervalo' / 'Inicio de intervalo' / 'INICIO INTERVALO'.
 function _normTipoPonto(tipo){
@@ -2022,7 +2073,7 @@ var _tipoPendente=null,_streamFacial=null,_streamCamera=null,_fotoTarget='';
 
 async function baterPonto(tipo){
   if(!S.geoOk){toast('❌ Fora da área — ponto bloqueado');return;}
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=dataLocalISO();
   if(isFolga(S.user.id,hoje)){toast('⚠️ Hoje é seu dia de folga.');return;}
   _tipoPendente=tipo;
   document.getElementById('facialTitle').textContent='Verificação — '+tipo;
@@ -2221,7 +2272,7 @@ function renderAgenda(){
 
   const diasNoMes=new Date(ano,mes+1,0).getDate();
   const hoje=new Date();
-  const hojeISO=hoje.toISOString().slice(0,10);
+  const hojeISO=dataLocalISO(hoje);
   const mesKey=String(ano)+'-'+String(mes+1).padStart(2,'0');
 
   let funcList;
@@ -2280,7 +2331,7 @@ function renderAgenda(){
       const celulas=sem.map((d,diaSem)=>{
         if(d===null) return '<td class="td-vazio"></td>';
         const dt=new Date(ano,mes,d);
-        const iso=dt.toISOString().slice(0,10);
+        const iso=dataLocalISO(dt);
         const isDom=diaSem===0,isSab=diaSem===6;
         const isHoje=iso===hojeISO;
         const diaNome=DIAS[diaSem];
@@ -2346,7 +2397,7 @@ async function carregarDashboard(){
   }
   const hoje=new Date();
   document.getElementById('dashDate').textContent=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  const hojeISO=hoje.toISOString().slice(0,10);
+  const hojeISO=dataLocalISO(hoje);
   const dataTrabalhoAtual=getDataTrabalho();
   const dataHoje=dataTrabalhoAtual.dataBR;
   let regsHoje=[];
@@ -2522,6 +2573,202 @@ function _renderDashLista(){
 }
 function irParaAjuste(fid,dataBR){goScreen('ajustes','nav4');document.getElementById('ajFunc').value=fid;const p=dataBR.split('/');document.getElementById('ajData').value=p[2]+'-'+p[1]+'-'+p[0];carregarPontosAjuste();}
 
+// v117: fluxo de ajuste a partir da validação de inconsistências.
+// Guarda contexto pra voltar pra lista após salvar OU cancelar.
+var _ajusteValidacaoCtx = null;  // {mesAtual, funcNome, data} quando veio da validação
+
+function irParaAjusteDeValidacao(fid, dataBR, mesAtual, funcNome, problemas){
+  _ajusteValidacaoCtx = {mesAtual:mesAtual, funcNome:funcNome||'', data:dataBR, funcId:fid, problemas: problemas||[]};
+  irParaAjuste(fid, dataBR);
+  _renderAjusteValBannerDetalhado();
+}
+
+function _renderAjusteValBannerDetalhado(){
+  const ctx = _ajusteValidacaoCtx;
+  const banner = document.getElementById('ajusteFromValBanner');
+  if(!banner || !ctx){ if(banner) banner.style.display='none'; return; }
+  banner.style.display = 'block';
+  let html =
+    '<div style="font-weight:700;font-size:13px;color:#78350f">🔍 Corrigindo inconsistência</div>' +
+    '<div style="font-size:12px;color:#92400e;margin-top:2px">' + (ctx.funcNome||'Funcionário') + ' · ' + ctx.data + ' — ajuste os registros e Salve, ou clique em Cancelar.</div>';
+  if(ctx.problemas && ctx.problemas.length){
+    html +=
+      '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #fbbf24">' +
+        '<div style="font-weight:600;font-size:12px;color:#78350f;margin-bottom:4px">⚠️ Problemas deste dia:</div>' +
+        '<ul style="margin:0 0 0 20px;font-size:12px;color:#92400e;line-height:1.5">' +
+          ctx.problemas.map(function(p){ return '<li>' + p.descricao + '</li>'; }).join('') +
+        '</ul>' +
+      '</div>';
+  }
+  banner.innerHTML = html;
+}
+
+function _ajusteTemAlteracoes(){
+  // Detecta se o formulário tem algum campo preenchido pelo usuário
+  const hora  = (document.getElementById('ajHora')  || {}).value || '';
+  const obs   = (document.getElementById('ajObs')   || {}).value || '';
+  const outro = (document.getElementById('ajOutro') || {}).value || '';
+  return !!(hora || obs || outro);
+}
+
+// v118: único botão Cancelar no form de ajuste. Comportamento varia:
+//   - Se form tem alterações → confirma descarte
+//   - Se veio da validação (ctx setado) → volta pro modal de inconsistências
+//   - Se não veio → apenas limpa os campos, fica na aba
+function cancelarAjusteForm(){
+  const temMudancas = _ajusteTemAlteracoes();
+  if(temMudancas){
+    if(!confirm('Descartar alterações não salvas?')) return;
+  }
+  // Limpa campos do form
+  ['ajHora','ajObs','ajOutro'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const motivoEl = document.getElementById('ajMotivo');
+  if(motivoEl) motivoEl.value = 'atestado';  // volta ao default
+  const outroWrap = document.getElementById('ajOutroWrap');
+  if(outroWrap) outroWrap.style.display = 'none';
+
+  // Se veio da validação → volta pro modal de inconsistências
+  if(_ajusteValidacaoCtx){
+    _voltarParaValidacao(false);
+  } else {
+    toast('Ajuste cancelado');
+  }
+}
+
+// Mantém nome antigo como alias pra compat se algum lugar externo chamar
+function cancelarAjusteVoltarValidacao(){ cancelarAjusteForm(); }
+
+async function _voltarParaValidacao(depoisDeSalvar){
+  if(!_ajusteValidacaoCtx) return;
+  const mes = _ajusteValidacaoCtx.mesAtual;
+  _ajusteValidacaoCtx = null;
+
+  // Limpa o form de ajuste
+  ['ajHora','ajObs','ajOutro'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const banner = document.getElementById('ajusteFromValBanner');
+  if(banner) banner.style.display = 'none';
+
+  toast(depoisDeSalvar ? '🔍 Revalidando mês...' : 'Voltando à validação...');
+  const problemas = await validarIntegridadeMes(mes);
+  goScreen('fechamento','nav7');
+  if(problemas.length === 0){
+    alert('✅ Nenhum problema restante em ' + mes + '.\n\nPode gerar o relatório.');
+    return;
+  }
+  // Reabre modal de validação com a lista atualizada
+  mostrarValidacao(problemas, mes, function(){ _fecharMesAposValidar(mes, '', S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho'); });
+}
+
+async function _aposSalvarValidacao(){
+  // Chamado após salvarAjuste quando veio da validação. Decide:
+  //   - 0 restantes no combo → CORRIGIDO total, volta pra lista
+  //   - >0 restantes no combo → modal "ainda faltam"
+  if(!_ajusteValidacaoCtx) return;
+  const ctx = _ajusteValidacaoCtx;
+  toast('🔍 Revalidando...');
+  const problemas = await validarIntegridadeMes(ctx.mesAtual);
+  const restantesCombo = problemas.filter(function(p){ return p.funcId===ctx.funcId && p.data===ctx.data; });
+
+  // Atualiza _validacaoCtx com a lista fresh (mantendo actions)
+  if(_validacaoCtx){
+    _validacaoCtx.problemas = problemas;
+  }
+
+  if(restantesCombo.length === 0){
+    // Totalmente corrigido — marca e volta
+    if(_validacaoCtx){
+      _validacaoCtx.actions[_chaveCombo(ctx.funcId, ctx.data)] = 'corrigido';
+    }
+    toast('✅ Todas as inconsistências deste funcionário foram corrigidas');
+    _ajusteValidacaoCtx = null;
+    // Limpa form
+    ['ajHora','ajObs','ajOutro'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
+    const banner = document.getElementById('ajusteFromValBanner');
+    if(banner) banner.style.display = 'none';
+    // Volta pro modal da validação
+    goScreen('fechamento','nav7');
+    const mes = ctx.mesAtual;
+    if(_validacaoCtx){
+      _atualizarTituloValidacao();
+      _renderListaValidacao();
+      document.getElementById('modalValidacao').classList.add('open');
+    } else {
+      // fallback: reabre do zero
+      mostrarValidacao(problemas, mes, function(){ _fecharMesAposValidar(mes, '', ''); });
+    }
+  } else {
+    // Ainda faltam — marca como parcial + modal
+    if(_validacaoCtx){
+      _validacaoCtx.actions[_chaveCombo(ctx.funcId, ctx.data)] = 'parcial';
+    }
+    // Atualiza a lista no _ajusteValidacaoCtx com os restantes e re-renderiza banner
+    ctx.problemas = restantesCombo;
+    _renderAjusteValBannerDetalhado();
+    // Limpa form (deixa pronto pra próximo ajuste)
+    ['ajHora','ajObs','ajOutro'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
+    const motivoEl = document.getElementById('ajMotivo');
+    if(motivoEl) motivoEl.value = 'atestado';
+    const outroWrap = document.getElementById('ajOutroWrap');
+    if(outroWrap) outroWrap.style.display = 'none';
+    // Abre modal "ainda faltam"
+    _mostrarModalAindaFaltam(restantesCombo, ctx);
+  }
+}
+
+function _mostrarModalAindaFaltam(restantes, ctx){
+  // Reutiliza modalValidacao em modo 'ainda faltam' — mostra apenas os desse combo
+  // Criamos um mini-modal inline simples
+  const existing = document.getElementById('modalAindaFaltam');
+  if(existing) existing.remove();
+  const m = document.createElement('div');
+  m.id = 'modalAindaFaltam';
+  m.className = 'modal-bg open';
+  m.style.zIndex = '3500';
+  m.innerHTML =
+    '<div class="modal" style="max-width:480px">' +
+      '<h2 style="color:#78350f">⚠️ Ainda faltam correções</h2>' +
+      '<div style="font-size:13px;color:#333;margin:6px 0 10px">' +
+        (ctx.funcNome||'Funcionário') + ' ainda tem ' + restantes.length + ' problema' + (restantes.length===1?'':'s') + ' em ' + ctx.data + ':' +
+      '</div>' +
+      '<ul style="margin:0 0 14px 20px;font-size:12px;color:#555;line-height:1.6">' +
+        restantes.map(function(p){return '<li>'+p.descricao+'</li>';}).join('') +
+      '</ul>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button class="btn btn-saida btn-sm" style="flex:1" onclick="_fecharAindaFaltamEVoltar()">✓ Sair e continuar</button>' +
+        '<button class="btn btn-orange btn-sm" style="flex:1" onclick="_fecharAindaFaltamECorrigirMais()">🔧 Corrigir mais</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+}
+
+function _fecharAindaFaltamEVoltar(){
+  const m = document.getElementById('modalAindaFaltam');
+  if(m) m.remove();
+  _ajusteValidacaoCtx = null;
+  const banner = document.getElementById('ajusteFromValBanner');
+  if(banner) banner.style.display = 'none';
+  goScreen('fechamento','nav7');
+  if(_validacaoCtx){
+    _atualizarTituloValidacao();
+    _renderListaValidacao();
+    document.getElementById('modalValidacao').classList.add('open');
+  }
+}
+
+function _fecharAindaFaltamECorrigirMais(){
+  const m = document.getElementById('modalAindaFaltam');
+  if(m) m.remove();
+  // Fica na tela de ajustes, funcId+data selecionados, banner atualizado
+  toast('Adicione o próximo registro');
+}
+
+
 // Editar registros de um dia direto pelo fechamento
 // Abre mini modal para escolher a data antes de editar
 function abrirEditDiaModal(funcId, funcNome){
@@ -2546,7 +2793,7 @@ function abrirEditDiaModal(funcId, funcNome){
   var m=document.createElement('div');
   m.id='pickDateModal';
   m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  var hoje=new Date().toISOString().slice(0,10);
+  var hoje=dataLocalISO();
   m.innerHTML=`<div style="background:#fff;border-radius:12px;padding:20px;width:100%;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
     <div style="font-weight:700;font-size:15px;margin-bottom:4px">✏️ Editar dia</div>
     <div style="font-size:12px;color:var(--gray);margin-bottom:14px">${funcNome}</div>
@@ -2767,15 +3014,20 @@ function goScreen(sc,navId){
     carregarHistorico();
   }
   if(sc==='agenda'){renderEmpTabsAgenda();renderAgenda();}
-  if(sc==='ajustes'){popularSelectFunc('ajFunc');document.getElementById('ajData').value=new Date().toISOString().slice(0,10);}
+  if(sc==='ajustes'){popularSelectFunc('ajFunc');document.getElementById('ajData').value=dataLocalISO();}
   if(sc==='escalas')renderEscalas();
   if(sc==='equipe')renderEquipe();
   if(sc==='fechamento'){
-    renderFechamentos();
+    // v123: pré-seleciona empresa 1 se nenhuma estava ativa
+    if(!S.empFech) S.empFech = 1;
+    if(typeof selEmp === 'function'){
+      selEmp(S.empFech, 'ftab');  // ativa botão + renderFechamentos
+    } else {
+      renderFechamentos();
+    }
     popularSelectFunc('detFunc');
-    // Inicializa seletor com mês atual
     var mRef=document.getElementById('fechMesRef');
-    if(mRef&&!mRef.value) mRef.value=new Date().toISOString().slice(0,7);
+    if(mRef&&!mRef.value) mRef.value=mesLocalISO();
   }
   if(sc==='empresas'){renderEmpresas();}
   if(sc==='config'){
@@ -2786,7 +3038,7 @@ function goScreen(sc,navId){
   if(sc==='logs'){
     popularSelectFunc('logFunc');
     var ld=document.getElementById('logData');
-    if(ld&&!ld.value) ld.value=new Date().toISOString().slice(0,10);
+    if(ld&&!ld.value) ld.value=dataLocalISO();
     carregarLogs();
   }
   if(sc==='ferias'){popularSelectFerias();renderFerias();}
@@ -2817,7 +3069,7 @@ function selEmp(n,prefix){
 }
 
 /* HISTÓRICO */
-function setDates(){const h=new Date(),y=h.getFullYear(),m=String(h.getMonth()+1).padStart(2,'0');document.getElementById('hDe').value=y+'-'+m+'-01';document.getElementById('hAte').value=h.toISOString().slice(0,10);document.getElementById('detMes').value=y+'-'+m;}
+function setDates(){const h=new Date(),y=h.getFullYear(),m=String(h.getMonth()+1).padStart(2,'0');document.getElementById('hDe').value=y+'-'+m+'-01';document.getElementById('hAte').value=dataLocalISO(h);document.getElementById('detMes').value=y+'-'+m;}
 
 async function carregarHistorico(){
   const de=document.getElementById('hDe').value,ate=document.getElementById('hAte').value;
@@ -2861,7 +3113,7 @@ async function carregarHistorico(){
 
   // Contar folgas no período (múltiplos meses)
   const meses=new Set();
-  let d=new Date(de);while(d<=new Date(ate)){meses.add(d.toISOString().slice(0,7));d.setMonth(d.getMonth()+1);}
+  let d=new Date(de);while(d<=new Date(ate)){meses.add(mesLocalISO(d));d.setMonth(d.getMonth()+1);}
   const folgasCount=Object.values(S.folgas).filter(f=>f.funcId===targetId&&meses.has(f.mes)).length;
 
   const diasCom=new Set(regs.filter(r=>r.tipo==='Entrada').map(r=>r.data));
@@ -2994,6 +3246,21 @@ async function verificarTipoAjuste(){
   var fid=document.getElementById('ajFunc').value;
   var di=document.getElementById('ajData').value;
   var tipo=document.getElementById('ajTipo').value;
+  // v128: se dia já é folga/ND, mostra card com botão remover
+  _mostrarCardFolgaExistente(fid, di);
+  // v121: folga/nao_descontado — esconde campo horário + motivo (não são necessários)
+  var ehFolgaTipo = (tipo==='folga' || tipo==='nao_descontado');
+  var horaEl = document.getElementById('ajHora');
+  var horaWrap = horaEl ? horaEl.closest('.form-group') : null;
+  var motivoEl = document.getElementById('ajMotivo');
+  var motivoWrap = motivoEl ? motivoEl.closest('.form-group') : null;
+  var outroWrap = document.getElementById('ajOutroWrap');
+  var obsEl = document.getElementById('ajObs');
+  var obsWrap = obsEl ? obsEl.closest('.form-group') : null;
+  if(horaWrap) horaWrap.style.display = ehFolgaTipo ? 'none' : '';
+  if(motivoWrap) motivoWrap.style.display = ehFolgaTipo ? 'none' : '';
+  if(outroWrap && ehFolgaTipo) outroWrap.style.display = 'none';
+  if(obsWrap) obsWrap.style.display = ehFolgaTipo ? 'none' : '';
   if(!fid||!di||!tipo) return;
   var btnSalvar=document.querySelector('#ajFormCard .btn-orange');
   // Se está em modo edição, não avisa
@@ -3096,8 +3363,75 @@ async function verificarDuplicado(funcId, dataBR, tipo, ignorarId){
   }catch(e){return null;}
 }
 
+// v128: mostra card de folga existente se houver
+function _mostrarCardFolgaExistente(fid, di){
+  const card = document.getElementById('ajFolgaExistente');
+  const info = document.getElementById('ajFolgaInfo');
+  if(!card || !info) return;
+  if(!fid || !di){ card.style.display = 'none'; return; }
+  const folgaEntry = Object.values(S.folgas||{}).find(function(fg){
+    return fg.funcId === fid && fg.data === di;
+  });
+  if(!folgaEntry){ card.style.display = 'none'; return; }
+  let texto = '';
+  if(folgaEntry.tipo === 'folga_dom'){
+    texto = '🌴 Este dia está marcado como <b>folga de domingo (DSR)</b>.';
+  } else if(folgaEntry.tipo === 'nao_descontado'){
+    texto = '✅ Este dia está marcado como <b>não descontado</b>.';
+  } else if(folgaEntry.tipo === 'ferias'){
+    texto = '🏖️ Este dia está marcado como <b>férias</b>.';
+  } else if(folgaEntry.tipo === 'atestado'){
+    texto = '🏥 Este dia está marcado como <b>atestado</b>.';
+  } else {
+    texto = '🌴 Este dia está marcado como <b>folga</b>.';
+  }
+  info.innerHTML = texto;
+  card.dataset.folgaKey = (fid + '_' + di);
+  card.dataset.folgaTipo = folgaEntry.tipo || 'folga';
+  card.style.display = 'block';
+}
+
+async function removerFolgaAjuste(){
+  const card = document.getElementById('ajFolgaExistente');
+  if(!card) return;
+  const fid = document.getElementById('ajFunc').value;
+  const di  = document.getElementById('ajData').value;
+  if(!fid || !di){ toast('Funcionário e data precisam estar selecionados'); return; }
+  const folgaEntry = Object.values(S.folgas||{}).find(function(fg){
+    return fg.funcId === fid && fg.data === di;
+  });
+  if(!folgaEntry){ toast('Não há folga a remover'); return; }
+  if(!confirm('Remover a marcação deste dia?')) return;
+  const key = fid + '_' + di;
+  try{
+    delete S.folgas[key];
+    await db.collection('folgas').doc(key).delete();
+    registrarLog('folga_removida', 'Marcação removida via Ajustes', {funcId:fid, data:di, tipo:folgaEntry.tipo});
+    toast('✅ Marcação removida');
+    card.style.display = 'none';
+    if(typeof renderAgenda === 'function') renderAgenda();
+    if(typeof carregarDashboard === 'function') carregarDashboard();
+    // se veio do fluxo de validação, revalida
+    if(_ajusteValidacaoCtx){ await _aposSalvarValidacao(); }
+  }catch(e){ toast('Erro: '+e.message); }
+}
+
 async function salvarAjuste(){
   const fid=document.getElementById('ajFunc').value,di=document.getElementById('ajData').value;if(!fid||!di){toast('Selecione funcionário e data');return;}
+  // v121: folga / não descontado — delega pros toggles existentes
+  const tipoAjVal = document.getElementById('ajTipo').value;
+  if(tipoAjVal === 'folga'){
+    const dt = new Date(di+'T12:00:00');
+    const isDom = dt.getDay() === 0;
+    await toggleFolga(fid, di, isDom);
+    if(_ajusteValidacaoCtx){ await _aposSalvarValidacao(); return; }
+    return;
+  }
+  if(tipoAjVal === 'nao_descontado'){
+    await toggleNaoDescontado(fid, di);
+    if(_ajusteValidacaoCtx){ await _aposSalvarValidacao(); return; }
+    return;
+  }
   const motivo=document.getElementById('ajMotivo').value;
   const motivoLabel=motivo==='outro'?document.getElementById('ajOutro').value:MOTIVOS[motivo];
   const hora=document.getElementById('ajHora').value;if(!hora){toast('Informe o horário');return;}
@@ -3129,10 +3463,12 @@ async function salvarAjuste(){
     await db.collection('registros').doc(dupAj.id).update({hora,timestamp:bd.getTime(),ajuste:true,motivo,motivoLabel,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj});
     registrarLog('ajuste_ponto','Ajuste substituído: '+tipoAj+' às '+hora,{funcId:fid,funcNome:func?.nome||'',detalhes:'Anterior: '+horaExist+' → Novo: '+hora});
     toast('✅ Horário atualizado: '+tipoAj+' às '+hora);
-    carregarPontosAjuste();carregarDashboard();return;
+    carregarPontosAjuste();carregarDashboard();
+    if(_ajusteValidacaoCtx){ await _aposSalvarValidacao(); return; }
+    return;
   }
   const reg={funcionarioId:fid,funcionarioNome:func?.nome||'',tipo:tipoAj,empresa:empId,empresaNome:empId==='2'?S.config.empresaB.nome:S.config.empresaA.nome,data:dataBR,hora,timestamp:bd.getTime(),mes:di.slice(0,7),ajuste:true,motivo,motivoLabel,obs:document.getElementById('ajObs').value,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj};
-  try{await db.collection('registros').add(reg);registrarLog('ajuste_ponto','Ajuste de ponto: '+reg.tipo+' às '+reg.hora,{funcId:fid,funcNome:reg.funcionarioNome,detalhes:reg.motivoLabel+' · '+reg.data+' '+reg.hora});toast('✅ Ajuste salvo com identificação');carregarPontosAjuste();carregarDashboard();}catch(e){toast('Erro ao salvar');}
+  try{await db.collection('registros').add(reg);registrarLog('ajuste_ponto','Ajuste de ponto: '+reg.tipo+' às '+reg.hora,{funcId:fid,funcNome:reg.funcionarioNome,detalhes:reg.motivoLabel+' · '+reg.data+' '+reg.hora});toast('✅ Ajuste salvo com identificação');carregarPontosAjuste();carregarDashboard();if(_ajusteValidacaoCtx){await _aposSalvarValidacao();}}catch(e){toast('Erro ao salvar');}
 }
 
 
@@ -3428,7 +3764,7 @@ function _renderBiometriaSection(f, containerId, target){
   }
 }
 
-function cadastrarBiometriaEdit(id, target){
+function cadastrarBiometriaEdit(id, target, skipConsent){
   var f = S.funcionarios.find(function(x){return x.id===id;});
   if(!f){toast('Funcionário não encontrado');return;}
   var tgt = target || 'func';
@@ -3440,14 +3776,15 @@ function cadastrarBiometriaEdit(id, target){
       if(tgt === 'editAdmin') abrirModalEditAdmin(id);
       else abrirModalEdit(id);
     }, 400);
-  });
+  }, !!skipConsent);
 }
 
 async function atualizarBiometriaEdit(id, target){
   var f = S.funcionarios.find(function(x){return x.id===id;});
   if(!f) return;
-  if(!f.rekognitionFaceId){ cadastrarBiometriaEdit(id, target); return; }
-  if(!confirm('Atualizar biometria facial de '+f.nome+'?\n\nA biometria atual será apagada no AWS e substituída por uma nova.'))return;
+  if(!f.rekognitionFaceId){ cadastrarBiometriaEdit(id, target, false); return; }
+  // v115: sem LGPD, só confirmação — consent já dado no cadastro inicial
+  if(!confirm('Atualizar biometria facial de '+f.nome+'?\n\nA biometria atual será apagada no AWS e substituída pela nova.'))return;
   toast('🗑 Apagando biometria antiga...');
   var r = await rekDeleteFace(f.rekognitionFaceId);
   if(!r.ok){
@@ -3468,13 +3805,14 @@ async function atualizarBiometriaEdit(id, target){
     if(ai>=0){ S_admins[ai].biometriaAtiva=false; S_admins[ai].rekognitionFaceId=null; S_admins[ai].fotoCadastro=''; }
   }
   if(S.user && S.user.id===id){ S.user.fotoCadastro=''; S.user.biometriaAtiva=false; S.user.rekognitionFaceId=null; }
-  cadastrarBiometriaEdit(id, target);
+  // v115: skipConsent=true na atualização (consent já dado)
+  cadastrarBiometriaEdit(id, target, true);
 }
 
 async function removerBiometriaEdit(id, target){
   var f = S.funcionarios.find(function(x){return x.id===id;});
   if(!f || !f.rekognitionFaceId){toast('Funcionário não tem biometria');return;}
-  if(!confirm('Remover permanentemente a biometria facial de '+f.nome+'?\n\nA biometria será apagada do AWS (LGPD art. 18 — direito ao esquecimento).\n\nO funcionário continuará entrando com CPF + senha.'))return;
+  if(!confirm('Ao remover, a biometria de '+f.nome+' será apagada do AWS.\n\nVocê poderá cadastrar novamente quando quiser.\n\nConfirma?'))return;
   toast('🗑 Apagando biometria do AWS...');
   var r = await rekDeleteFace(f.rekognitionFaceId);
   if(!r.ok){
@@ -3584,18 +3922,412 @@ function renderFechamentos(){
   el.innerHTML=lista.map(f=>{
     const dt=new Date(f.criadoEm);
     const dataHora=dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    return `<div class="fechamento-item"><div><div style="font-weight:600;font-size:14px">🔒 ${f.mesLabel}</div><div style="font-size:11px;color:var(--gray);margin-top:1px">Gerado em ${dataHora} · ${f.totalFunc} funcionários</div></div><div style="display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="verFechamento('${f.id}')">Ver</button><button class="btn btn-teal btn-sm" onclick="reenviar('${f.id}')">📧</button><button class="btn btn-saida btn-sm" onclick="apagarFechamento('${f.id}','${f.mesLabel}')">🗑</button></div></div>`;
+    // v122: destaque visual pra fechamentos com pendências
+    const qtd = f.quantidadePendentes || 0;
+    const temPend = f.temPendencias === true || (f.funcionariosPendentes && f.funcionariosPendentes.length > 0);
+    let styleExtra='', warnBadge='', warnLine='', titulo='🔒 '+f.mesLabel, gerouExtra='';
+    if(temPend){
+      const critico = qtd >= 5;
+      const bgColor = critico ? 'var(--red-light)' : '#fffbeb';
+      const bdColor = critico ? 'var(--red)' : '#d97706';
+      styleExtra = 'background:'+bgColor+';border-left:4px solid '+bdColor+';padding-left:10px';
+      warnBadge = ' <span style="background:'+(critico?'var(--red)':'#d97706')+';color:#fff;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-left:6px">'+(critico?'CRÍTICO':'PENDÊNCIAS')+'</span>';
+      warnLine  = '<div style="font-size:11px;color:#92400e;margin-top:4px;font-weight:600">⚠️ '+qtd+' funcionário'+(qtd===1?'':'s')+' com dados incompletos</div>';
+      titulo    = '🔒 '+f.mesLabel+' <span style="color:#d97706">⚠️</span>'+warnBadge;
+      gerouExtra = ' <span style="color:#d97706">⚠️</span>';
+    } else {
+      // v123: relatório OK → badge verde discreto
+      titulo = '🔒 '+f.mesLabel+' <span style="color:var(--green);font-size:13px">✅</span>';
+    }
+    return '<div class="fechamento-item" style="'+styleExtra+'"><div>' +
+      '<div style="font-weight:600;font-size:14px">'+titulo+'</div>' +
+      warnLine +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">Gerado em '+dataHora+' · '+f.totalFunc+' funcionários'+gerouExtra+'</div>' +
+      '</div><div style="display:flex;gap:6px">' +
+        '<button class="btn btn-primary btn-sm" onclick="verFechamento(\''+f.id+'\')">Ver</button>' +
+        '<button class="btn btn-teal btn-sm" onclick="reenviar(\''+f.id+'\')">📧</button>' +
+        '<button class="btn btn-saida btn-sm" onclick="apagarFechamento(\''+f.id+'\',\''+f.mesLabel+'\')">🗑</button>' +
+      '</div></div>';
   }).join('');
 }
-async function fecharMes(){
-  // Usa mês selecionado ou mês atual como fallback
+// v116: validação de integridade do mês antes do fechamento.
+async function validarIntegridadeMes(mes, empresaFiltro){
+  // mes = 'YYYY-MM' · empresaFiltro = '1' | '2' | undefined (default = S.empFech)
+  const [ano, mesN] = mes.split('-').map(Number);
+  const diasNoMes = new Date(ano, mesN, 0).getDate();
+  const hojeStr = dataLocalISO();
+  const emp = String(empresaFiltro != null ? empresaFiltro : (S.empFech || '1'));
+
+  let regs = [];
+  try{
+    const snap = await db.collection('registros').where('mes', '==', mes).get();
+    regs = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  }catch(e){ console.error('[validar] fetch erro:', e); return []; }
+
+  const problemas = [];
+  const funcList = S.funcionarios.filter(f =>
+    !f.inativo &&
+    (!f.isAdmin || f.aparecerNaLista) &&
+    f.cpf !== '495.256.629-34' &&
+    // v121: filtra por empresa (inclui 'ambas')
+    (String(f.empresa) === emp || String(f.empresa) === 'ambas')
+  );
+
+  for(const f of funcList){
+    const inicioSist = f.inicioSistema || f.admissao || '';
+    const esc = S.escalas.find(e => e.id === f.escalaId);
+    const regsFunc = regs.filter(r => r.funcionarioId === f.id);
+
+    for(let d = 1; d <= diasNoMes; d++){
+      const isoD = ano + '-' + String(mesN).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const brD  = String(d).padStart(2,'0') + '/' + String(mesN).padStart(2,'0') + '/' + ano;
+
+      if(isoD > hojeStr) continue;       // dia futuro
+      if(isoD === hojeStr) continue;     // dia atual em andamento
+      if(inicioSist && isoD < inicioSist) continue;
+      if(isFolga(f.id, isoD)) continue;  // folga/férias/atestado já tratados por isFolga
+
+      const dt = new Date(ano, mesN-1, d);
+      const diaSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dt.getDay()];
+      const diaPrevisto = !!(esc && esc.tipo !== 'especial' && esc.dias && esc.dias[diaSem] && esc.dias[diaSem].ativo);
+
+      const regsDia = regsFunc.filter(r => r.data === brD);
+
+      if(diaPrevisto && regsDia.length === 0){
+        problemas.push({
+          funcId:f.id, funcNome:f.nome, data:brD, isoDate:isoD,
+          tipo:'dia_sem_registro',
+          descricao:'Dia previsto na escala sem nenhum registro',
+          registros:[]
+        });
+        continue;
+      }
+      if(regsDia.length === 0) continue;
+
+      const e    = regsDia.find(_isTipoEntrada);
+      const s    = regsDia.find(_isTipoSaida);
+      const inis = regsDia.filter(_isTipoInicioInt);
+      const fims = regsDia.filter(_isTipoRetornoInt);
+
+      if(e && !s){
+        problemas.push({funcId:f.id, funcNome:f.nome, data:brD, isoDate:isoD,
+          tipo:'entrada_sem_saida',
+          descricao:'Entrou às '+e.hora+' mas não registrou saída',
+          registros:regsDia});
+      }
+      if(!e && s){
+        problemas.push({funcId:f.id, funcNome:f.nome, data:brD, isoDate:isoD,
+          tipo:'saida_sem_entrada',
+          descricao:'Saiu às '+s.hora+' mas não há entrada registrada',
+          registros:regsDia});
+      }
+      if(e && s && hp2m(s.hora) < hp2m(e.hora) && !regsDia.some(r=>r.viradaTurno)){
+        problemas.push({funcId:f.id, funcNome:f.nome, data:brD, isoDate:isoD,
+          tipo:'saida_antes_entrada',
+          descricao:'Saída ('+s.hora+') anterior à entrada ('+e.hora+') — erro de horário',
+          registros:regsDia});
+      }
+      if(inis.length > fims.length){
+        problemas.push({funcId:f.id, funcNome:f.nome, data:brD, isoDate:isoD,
+          tipo:'intervalo_sem_retorno',
+          descricao:'Saiu para intervalo às '+inis[inis.length-1].hora+' mas não voltou',
+          registros:regsDia});
+      }
+      if(fims.length > inis.length){
+        problemas.push({funcId:f.id, funcNome:f.nome, data:brD, isoDate:isoD,
+          tipo:'retorno_sem_inicio',
+          descricao:'Retornou do intervalo às '+fims[0].hora+' mas não há início registrado',
+          registros:regsDia});
+      }
+    }
+  }
+
+  return problemas;
+}
+
+// Guarda problemas + contexto (mês, callback) pra botão "gerar mesmo assim"
+var _validacaoCtx = null;
+
+function _diaSemanaCurto(brDate){
+  const [dd, mm, yyyy] = brDate.split('/').map(Number);
+  return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][new Date(yyyy, mm-1, dd).getDay()];
+}
+
+function mostrarValidacao(problemas, mesAtual, callbackProsseguir){
+  _validacaoCtx = {
+    originalProblemas: problemas.slice(),
+    problemas: problemas.slice(),
+    mesAtual: mesAtual,
+    callbackProsseguir: callbackProsseguir,
+    actions: (_validacaoCtx && _validacaoCtx.actions) ? _validacaoCtx.actions : {}
+  };
+  const overlay = document.getElementById('modalValidacao');
+  _atualizarTituloValidacao();
+  // v121: sub-título com empresa sendo validada
+  const subEl = document.getElementById('validacaoSubtitulo');
+  if(subEl){
+    const empNome = S.empFech==1 ? 'Villa Canziani Donato' : 'Villa Bistro Patacho';
+    subEl.textContent = 'Validando: ' + empNome + ' · ' + mesAtual;
+  }
+  _renderListaValidacao();
+  overlay.classList.add('open');
+}
+
+function _chaveCombo(funcId, data){ return funcId + '|' + data; }
+
+function _atualizarTituloValidacao(){
+  if(!_validacaoCtx) return;
+  const total = _validacaoCtx.problemas.length;
+  document.getElementById('validacaoTitulo').textContent =
+    '⚠️ ' + total + ' problema' + (total===1?'':'s') + ' restante' + (total===1?'':'s');
+}
+
+function fecharModalValidacao(){
+  document.getElementById('modalValidacao').classList.remove('open');
+  _validacaoCtx = null;
+}
+
+function _renderListaValidacao(){
+  if(!_validacaoCtx) return;
+  const ctx = _validacaoCtx;
+  const el = document.getElementById('validacaoLista');
+
+  // Agrupa por funcId|data — gera lista UNIFICADA incluindo combos marcados como CORRIGIDO
+  // (que já não estão em ctx.problemas mas estavam no snapshot original).
+  const byCombo = {};
+  // Primeiro: combos ainda com problemas
+  for(const p of ctx.problemas){
+    const key = _chaveCombo(p.funcId, p.data);
+    if(!byCombo[key]){
+      byCombo[key] = {funcId:p.funcId, funcNome:p.funcNome, data:p.data, problemas:[]};
+    }
+    byCombo[key].problemas.push(p);
+  }
+  // Depois: combos do snapshot original que NÃO estão mais em problemas = corrigidos
+  for(const op of ctx.originalProblemas){
+    const key = _chaveCombo(op.funcId, op.data);
+    if(byCombo[key]) continue;  // ainda tem problema
+    byCombo[key] = {funcId:op.funcId, funcNome:op.funcNome, data:op.data, problemas:[], jaCorrigido:true};
+  }
+
+  const keys = Object.keys(byCombo);
+  if(!keys.length){
+    el.innerHTML = '<div class="empty">✅ Nenhum problema restante</div>';
+    return;
+  }
+
+  // Ordena: não-corrigidos primeiro, depois corrigidos/ignorados
+  keys.sort(function(a,b){
+    const sa = ctx.actions[a]||'';
+    const sb = ctx.actions[b]||'';
+    const oa = byCombo[a].jaCorrigido ? 2 : (sa==='ignorado'?1:0);
+    const ob = byCombo[b].jaCorrigido ? 2 : (sb==='ignorado'?1:0);
+    return oa - ob;
+  });
+
+  el.innerHTML = keys.map(function(key){
+    const g = byCombo[key];
+    const ds = _diaSemanaCurto(g.data);
+    const status = g.jaCorrigido ? 'corrigido' : (ctx.actions[key] || (g.problemas.length < (ctx.originalProblemas.filter(x=>_chaveCombo(x.funcId,x.data)===key).length) ? 'parcial' : ''));
+
+    let badge = '';
+    let borderColor = 'var(--red)';
+    let bgColor = '#fef2f2';
+    if(status === 'corrigido'){
+      badge = '<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-left:6px">✅ CORRIGIDO</span>';
+      borderColor = 'var(--green)'; bgColor = '#f0fdf4';
+    } else if(status === 'parcial'){
+      badge = '<span style="background:#fef3c7;color:#78350f;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-left:6px">🟡 PARCIAL</span>';
+      borderColor = 'var(--amber)'; bgColor = '#fffbeb';
+    } else if(status === 'ignorado'){
+      badge = '<span style="background:var(--gray-light);color:var(--gray);padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-left:6px">⏭ IGNORADO</span>';
+      borderColor = 'var(--gray)'; bgColor = '#f9fafb';
+    }
+
+    // Lista de problemas (ou mensagem se corrigido)
+    let descHtml = '';
+    if(g.jaCorrigido){
+      descHtml = '<div style="font-size:12px;color:#065f46;margin-top:4px">Tudo ajustado nesta sessão</div>';
+    } else {
+      descHtml = '<div style="font-size:12px;color:#333;margin-top:2px">' + g.data + ' · ' + ds + ' — ' + g.problemas.length + ' problema' + (g.problemas.length===1?'':'s') + '</div>';
+      descHtml += '<ul style="margin:6px 0 0 20px;font-size:11px;color:#555;line-height:1.4">' +
+        g.problemas.map(function(p){return '<li>'+p.descricao+'</li>';}).join('') +
+      '</ul>';
+    }
+
+    // Ações por status
+    let actionsHtml = '';
+    if(status === 'corrigido'){
+      actionsHtml = '<div style="font-size:11px;color:var(--green);margin-top:6px;font-style:italic">Pronto pro fechamento</div>';
+    } else if(status === 'ignorado'){
+      actionsHtml =
+        '<button class="btn btn-sm" onclick="desfazerIgnorar(\''+key+'\')" style="width:auto;margin-top:8px;padding:5px 10px;font-size:11px;background:#fff;border:1px solid var(--gray);color:var(--gray)">↩ Desfazer ignorar</button>';
+    } else {
+      actionsHtml =
+        '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-orange btn-sm" onclick="corrigirComboValidacao(\''+key+'\')" style="width:auto;padding:6px 12px;font-size:12px">✏️ ' + (status==='parcial'?'Corrigir restante':'Corrigir') + '</button>' +
+          '<button class="btn btn-sm" onclick="pularComboValidacao(\''+key+'\')" style="width:auto;padding:6px 12px;font-size:12px;background:var(--gray-light);color:var(--gray);border:1px solid var(--border)">⏭ Pular</button>' +
+        '</div>';
+    }
+
+    return '<div style="background:'+bgColor+';border-left:3px solid '+borderColor+';border-radius:8px;padding:10px 12px;margin-bottom:8px">' +
+      '<div style="font-weight:600;color:#333;font-size:13px">' + g.funcNome + badge + '</div>' +
+      descHtml +
+      actionsHtml +
+    '</div>';
+  }).join('');
+}
+
+function corrigirComboValidacao(comboKey){
+  if(!_validacaoCtx) return;
+  const [funcId, data] = comboKey.split('|');
+  const problemasCombo = _validacaoCtx.problemas.filter(function(p){ return p.funcId===funcId && p.data===data; });
+  if(!problemasCombo.length) return;
+  const mes = _validacaoCtx.mesAtual;
+  const funcNome = problemasCombo[0].funcNome;
+  fecharModalValidacao();
+  irParaAjusteDeValidacao(funcId, data, mes, funcNome, problemasCombo);
+}
+
+// Alias pra compat
+function corrigirProblemaValidacao(idx){
+  if(!_validacaoCtx) return;
+  const p = _validacaoCtx.problemas[idx];
+  if(p) corrigirComboValidacao(_chaveCombo(p.funcId, p.data));
+}
+
+function pularComboValidacao(comboKey){
+  if(!_validacaoCtx) return;
+  _validacaoCtx.actions[comboKey] = 'ignorado';
+  _renderListaValidacao();
+  _atualizarTituloValidacao();
+}
+
+function desfazerIgnorar(comboKey){
+  if(!_validacaoCtx) return;
+  delete _validacaoCtx.actions[comboKey];
+  _renderListaValidacao();
+}
+
+// v127: snapshot pra passar info de pendências do botão "Gerar mesmo assim" pro _fecharMesAposValidar
+var _pendentesParaFechamento = null;
+
+// Constrói metadados de pendências a partir de uma lista de problemas (agrupa por funcionário).
+// Retorna { temPendencias, quantidadePendentes, totalProblemas, funcionariosPendentes[] }
+function _construirPendentesMeta(problemas){
+  if(!problemas || !problemas.length) return null;
+  const byFunc = {};
+  for(const p of problemas){
+    if(!byFunc[p.funcId]){
+      byFunc[p.funcId] = { id:p.funcId, nome:p.funcNome || '—', dias:[], descricoes:[] };
+    }
+    const dia = p.data || p.dataBR || '';
+    if(dia && byFunc[p.funcId].dias.indexOf(dia) < 0) byFunc[p.funcId].dias.push(dia);
+    byFunc[p.funcId].descricoes.push({ data:dia, descricao:p.descricao, tipo:p.tipo });
+  }
+  const funcionariosPendentes = Object.values(byFunc);
+  return {
+    temPendencias: true,
+    quantidadePendentes: funcionariosPendentes.length,
+    totalProblemas: problemas.length,
+    funcionariosPendentes: funcionariosPendentes
+  };
+}
+
+async function gerarRelatorioMesmoAssim(){
+  console.log('[gerar-mesmo] 🎬 iniciando');
+  try{
+    if(!_validacaoCtx){
+      console.error('[gerar-mesmo] _validacaoCtx é null — modal abriu sem setar contexto?');
+      alert('Erro interno: contexto de validação perdido. Feche o modal e tente novamente.');
+      return;
+    }
+    const {mesAtual, callbackProsseguir, problemas} = _validacaoCtx;
+    console.log('[gerar-mesmo] ctx:', {mesAtual, temCallback: !!callbackProsseguir, problemasCount: (problemas||[]).length});
+
+    const qtdProblemas = (problemas||[]).length;
+    const msgConfirm = qtdProblemas > 0
+      ? '⚠️ ATENÇÃO\n\n'+qtdProblemas+' problema(s) não corrigido(s).\n\nO relatório será gerado mesmo assim, mas os funcionários afetados aparecerão DESTACADOS com ⚠️.\n\nConfirma?'
+      : 'Gerar relatório agora?';
+    const confirmou = confirm(msgConfirm);
+    console.log('[gerar-mesmo] confirm resposta:', confirmou);
+    if(!confirmou){
+      console.log('[gerar-mesmo] usuário cancelou');
+      return;
+    }
+
+    try{
+      await registrarLog('relatorio_gerado_com_inconsistencias',
+        'Relatório '+mesAtual+' gerado com '+qtdProblemas+' problema(s)',
+        {mes:mesAtual, problemasCount:qtdProblemas, tipos:(problemas||[]).map(function(p){return p.tipo;})});
+      console.log('[gerar-mesmo] log registrado');
+    }catch(e){ console.warn('[gerar-mesmo] log falhou:', e); }
+
+    _pendentesParaFechamento = _construirPendentesMeta(problemas);
+    console.log('[gerar-mesmo] _pendentesParaFechamento:', _pendentesParaFechamento);
+
+    fecharModalValidacao();
+    console.log('[gerar-mesmo] modal validação fechado');
+
+    if(typeof callbackProsseguir === 'function'){
+      console.log('[gerar-mesmo] chamando callbackProsseguir');
+      await callbackProsseguir();
+      console.log('[gerar-mesmo] callback concluído');
+    } else {
+      console.log('[gerar-mesmo] sem callback — gerando direto via _fecharMesAposValidar');
+      const [ano, mes] = mesAtual.split('-').map(Number);
+      let mesLabel = new Date(ano, mes-1, 1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+      mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+      const empNome = S.empFech == 2 ? 'Villa Bistro Patacho' : 'Villa Canziani Donato';
+      await _fecharMesAposValidar(mesAtual, mesLabel, empNome);
+      console.log('[gerar-mesmo] _fecharMesAposValidar concluído');
+    }
+    console.log('[gerar-mesmo] ✅ concluído com sucesso');
+  }catch(err){
+    console.error('[gerar-mesmo] ❌ erro não tratado:', err);
+    alert('Erro ao gerar relatório: ' + (err && err.message ? err.message : err) + '\n\nVeja o console (F12) para detalhes.');
+  }
+}
+
+// v126: garante que a função está no escopo global (button onclick precisa)
+if(typeof window !== 'undefined'){ window.gerarRelatorioMesmoAssim = gerarRelatorioMesmoAssim; }
+
+// Botão "Validar Registros do Mês" — uso standalone (sem gerar relatório)
+async function abrirValidadorMes(){
   const inputMes=document.getElementById('fechMesRef');
-  const mesAtual=inputMes&&inputMes.value?inputMes.value:new Date().toISOString().slice(0,7);
+  const mesAtual=inputMes&&inputMes.value?inputMes.value:mesLocalISO();
+  toast('🔍 Validando '+mesAtual+'...');
+  const problemas = await validarIntegridadeMes(mesAtual);
+  if(problemas.length === 0){
+    alert('✅ Nenhum problema encontrado em '+mesAtual+'.\n\nTodos os registros estão consistentes.');
+    return;
+  }
+  mostrarValidacao(problemas, mesAtual, null);
+}
+
+async function fecharMes(){
+  const inputMes=document.getElementById('fechMesRef');
+  const mesAtual=inputMes&&inputMes.value?inputMes.value:mesLocalISO();
   const [ano,mes]=mesAtual.split('-').map(Number);
   const dtRef=new Date(ano,mes-1,1);
   const mesLabel=dtRef.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   const empNome=S.empFech==1?'Villa Canziani Donato':'Villa Bistro Patacho';
   if(!confirm('Fechar '+mesLabel+' — '+empNome+'?'))return;
+
+  // v116: validação de integridade antes de gerar
+  toast('🔍 Validando consistência do mês...');
+  const _problemas = await validarIntegridadeMes(mesAtual);
+  if(_problemas.length > 0){
+    mostrarValidacao(_problemas, mesAtual, function(){ _fecharMesAposValidar(mesAtual, mesLabel, empNome); });
+    return;
+  }
+
+  await _fecharMesAposValidar(mesAtual, mesLabel, empNome);
+}
+
+async function _fecharMesAposValidar(mesAtual, mesLabel, empNome){
+  console.log('[fechar-mes] iniciando para', mesAtual, mesLabel, empNome);
+  const [ano,mes]=mesAtual.split('-').map(Number);
   toast('Gerando...');
   const funcList=S.funcionarios.filter(f=>(!f.isAdmin||f.aparecerNaLista)&&!f.inativo&&f.cpf!=='495.256.629-34'&&(f.empresa==S.empFech||f.empresa==='ambas'));
   let regsDoMes=[];
@@ -3662,15 +4394,26 @@ async function fecharMes(){
     grupos.push(resumos.slice(i, i + MAX_RESUMOS_POR_DOC));
   }
   
+  // v127: consome snapshot de pendentes (setado por gerarRelatorioMesmoAssim quando aplicável)
+  const _meta = _pendentesParaFechamento || { temPendencias:false, quantidadePendentes:0, totalProblemas:0, funcionariosPendentes:[] };
+  _pendentesParaFechamento = null;  // consome — pra próxima chamada não vazar
+  console.log('[fechar-mes] meta pendencias:', _meta);
+
   const fechPrincipal = {
     empresa: String(S.empFech),
     mes: mesAtual,
     mesLabel,
     totalFunc: funcList.length,
     totalGrupos: grupos.length,
-    resumos: grupos[0] || [], // Primeiro grupo no documento principal
+    resumos: grupos[0] || [],
     criadoEm: new Date().toISOString(),
-    emailContadora: S.config.emailContadora || ''
+    criadoPor: (S.user && S.user.nome) || 'Admin',
+    emailContadora: S.config.emailContadora || '',
+    // v127: campos pra UI destacar relatórios gerados com pendências
+    temPendencias: _meta.temPendencias,
+    quantidadePendentes: _meta.quantidadePendentes || 0,
+    totalProblemas: _meta.totalProblemas || 0,
+    funcionariosPendentes: _meta.funcionariosPendentes || []
   };
   try{
     // Salva documento principal
@@ -3715,6 +4458,208 @@ function agruparDias(regs){
   });
   return map;
 }
+// v129: determina status de um dia para espelho mensal completo
+// Retorna {key, icone, label, bgColor} — key é uma classe/status pra estilizar
+function _determinarStatusDia(funcId, escalaId, dataISO, regs, mesRef){
+  regs = regs || [];
+  // Férias
+  if(typeof S_ferias !== 'undefined' && Array.isArray(S_ferias)){
+    const emFerias = S_ferias.some(function(f){
+      return f.funcionarioId === funcId && dataISO >= f.inicio && dataISO <= f.fim;
+    });
+    if(emFerias && regs.length === 0) return {key:'ferias', icone:'🏖️', label:'Férias', bgColor:'#cffafe'};
+  }
+  // Folga / não_descontado / atestado (se existir como tipo)
+  const folgaKey = funcId + '_' + dataISO;
+  const folga = S.folgas && S.folgas[folgaKey];
+  if(folga){
+    if(folga.tipo === 'nao_descontado') return {key:'nao_desc', icone:'✅', label:'N/Desc', bgColor:'#dcfce7'};
+    if(folga.tipo === 'folga_dom')      return {key:'folga_dom', icone:'🌴', label:'DSR', bgColor:'#fdf2f8'};
+    if(folga.tipo === 'ferias')         return {key:'ferias', icone:'🏖️', label:'Férias', bgColor:'#cffafe'};
+    if(folga.tipo === 'atestado')       return {key:'atestado', icone:'🏥', label:'Atestado', bgColor:'#e0f2fe'};
+    return {key:'folga', icone:'🌴', label:'Folga', bgColor:'#fdf2f8'};
+  }
+  // Feriado
+  const ehFer = (typeof ehFeriado === 'function') ? ehFeriado(dataISO) : false;
+  if(ehFer && regs.length > 0)  return {key:'feriado_trab', icone:'🎉', label:'Feriado', bgColor:'#fff7ed'};
+  if(ehFer && regs.length === 0) return {key:'feriado', icone:'📅', label:'Feriado', bgColor:'#ffedd5'};
+  // Atraso / trabalhou
+  if(regs.length > 0){
+    const temAtraso = regs.some(function(r){return r.atraso;});
+    if(temAtraso) return {key:'atraso', icone:'⚠️', label:'Atraso', bgColor:'#fffbeb'};
+    return {key:'trabalhou', icone:'✅', label:'Trabalhou', bgColor:'#ffffff'};
+  }
+  // Sem registros — falta ou dia não previsto?
+  const dt = new Date(dataISO + 'T12:00');
+  const diaSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dt.getDay()];
+  const esc = S.escalas && S.escalas.find(function(e){return e.id === escalaId;});
+  const trabalhaNesteDia = !!(esc && esc.tipo !== 'especial' && esc.dias && esc.dias[diaSem] && esc.dias[diaSem].ativo);
+  // Antes de inicioSistema
+  const func = S.funcionarios && S.funcionarios.find(function(x){return x.id === funcId;});
+  const inicioSist = func ? (func.inicioSistema || func.admissao || '') : '';
+  if(inicioSist && dataISO < inicioSist) return {key:'antes_inicio', icone:'—', label:'Anterior', bgColor:'#f9fafb'};
+  if(trabalhaNesteDia) return {key:'falta', icone:'❌', label:'FALTA', bgColor:'#fef2f2'};
+  return {key:'nao_previsto', icone:'—', label:'Folga esc.', bgColor:'#f9fafb'};
+}
+
+// v124: calcula feriados trabalhados por funcionário no mês do fechamento
+function _feriadosTrabalhadosFunc(r, mesRef){
+  const [anoF, mesF] = (mesRef||'').split('-').map(Number);
+  if(!anoF || !mesF) return {dias:0, mins:0, detalhes:[]};
+  const feriadosMes = Object.values(S_feriados||{}).filter(function(fr){
+    const d = fr.data || fr.id;
+    if(!d || d.length < 10) return false;
+    const [y,m] = d.split('-').map(Number);
+    return y === anoF && m === mesF;
+  });
+  let dias = 0, mins = 0;
+  const detalhes = [];
+  for(const fer of feriadosMes){
+    const isoD = fer.data || fer.id;
+    const [y,m,d] = isoD.split('-').map(Number);
+    const brD = String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+    const regs = (r.diasMap||{})[brD];
+    if(!regs || !regs.length) continue;
+    const ent = regs.find(function(x){return x.tipo==='Entrada';});
+    const sai = regs.find(function(x){return x.tipo==='Saída';});
+    if(!ent || !sai) continue;
+    const minDia = calcDia(regs);
+    if(minDia > 0){
+      dias++;
+      mins += minDia;
+      detalhes.push({data:brD, nome:fer.nome||'Feriado', ent:ent.hora, sai:sai.hora, mins:minDia});
+    }
+  }
+  return {dias, mins, detalhes};
+}
+
+function _feriadosTrabalhadosHtml(r, mesRef){
+  const ft = _feriadosTrabalhadosFunc(r, mesRef);
+  if(ft.dias === 0) return '';  // omite a linha se não trabalhou em nenhum feriado
+  return '<div class="feriados-func" style="background:#fff7ed;padding:7px 10px;border-left:3px solid #ea580c;margin:8px 0 0;border-radius:0 6px 6px 0">' +
+    '<div style="font-size:12px;color:#9a3412;font-weight:600">🎉 Feriados trabalhados: <b>'+ft.dias+' dia'+(ft.dias===1?'':'s')+'</b> ('+m2h(ft.mins)+') ' +
+      '<span style="color:#c2410c;font-size:11px;font-weight:700">[100% extra — CLT art. 67]</span>' +
+    '</div>' +
+    '<ul style="margin:4px 0 0 22px;font-size:11px;color:#7c2d12;line-height:1.5">' +
+      ft.detalhes.map(function(d){
+        return '<li>'+d.data.slice(0,5)+' · '+d.nome+' — '+d.ent+' → '+d.sai+' ('+m2h(d.mins)+')</li>';
+      }).join('') +
+    '</ul>' +
+  '</div>';
+}
+
+function _gerarSecaoFeriadosRelatorio(f){
+  // Para cada feriado do mês do fechamento, lista funcs que trabalharam nele
+  const [anoF, mesF] = (f.mes || '').split('-').map(Number);
+  if(!anoF || !mesF) return '';
+  const feriadosMes = Object.values(S_feriados || {}).filter(function(fr){
+    const d = fr.data || fr.id;
+    if(!d || d.length < 10) return false;
+    const [y,m] = d.split('-').map(Number);
+    return y === anoF && m === mesF;
+  });
+  if(!feriadosMes.length){
+    return '<div style="margin-top:18px;padding:14px;background:#f9fafb;border-left:3px solid var(--gray);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--gray)">📅 Trabalho em feriados</div><div style="font-size:12px;color:var(--gray);margin-top:4px">Nenhum feriado configurado neste mês.</div></div>';
+  }
+
+  let linhasHtml = '';
+  let totalMinFer = 0;
+  for(const fer of feriadosMes.sort(function(a,b){return (a.data||a.id).localeCompare(b.data||b.id);})){
+    const isoD = fer.data || fer.id;
+    const [y,m,d] = isoD.split('-').map(Number);
+    const brD = String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+    let trabalharam = [];
+    for(const r of (f.resumos || [])){
+      const diasMap = r.diasMap || {};
+      const regs = diasMap[brD];
+      if(!regs || !regs.length) continue;
+      const ent = regs.find(function(x){return x.tipo==='Entrada';});
+      const sai = regs.find(function(x){return x.tipo==='Saída';});
+      if(!ent || !sai) continue;
+      const mins = calcDia(regs);
+      if(mins > 0){
+        trabalharam.push({nome:r.nome, ent:ent.hora, sai:sai.hora, mins});
+        totalMinFer += mins;
+      }
+    }
+    linhasHtml += '<div style="padding:10px 12px;margin-bottom:6px;background:#fff;border-left:3px solid #d97706;border-radius:6px">' +
+      '<div style="font-weight:700;font-size:12px;color:#78350f">📅 ' + brD + ' — ' + (fer.nome || 'Feriado') + (fer.tipo ? ' (' + fer.tipo + ')' : '') + '</div>';
+    if(trabalharam.length){
+      linhasHtml += '<ul style="margin:6px 0 0 20px;font-size:11px;color:#555;line-height:1.55">';
+      for(const w of trabalharam){
+        linhasHtml += '<li><b>' + w.nome + '</b> — ' + w.ent + ' → ' + w.sai + ' (' + m2h(w.mins) + ')</li>';
+      }
+      linhasHtml += '</ul>';
+    } else {
+      linhasHtml += '<div style="font-size:11px;color:var(--gray);margin-top:4px">Nenhum funcionário trabalhou neste feriado.</div>';
+    }
+    linhasHtml += '</div>';
+  }
+
+  const totalStr = totalMinFer > 0 ? m2h(totalMinFer) : '—';
+  return '<div style="margin-top:18px;padding:14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px">' +
+    '<div style="font-weight:700;font-size:14px;color:#78350f;margin-bottom:4px">⚠️ Trabalho em feriados (100% extra — CLT art. 67)</div>' +
+    '<div style="font-size:11px;color:#92400e;margin-bottom:10px">Total trabalhado em feriados no mês: <b>' + totalStr + '</b></div>' +
+    linhasHtml +
+  '</div>';
+}
+
+function _gerarResumoGeralRelatorio(f){
+  const resumos = f.resumos || [];
+  let totDias = 0, totFaltas = 0, totFolgas = 0, totAtrasos = 0, totBanco = 0, totExtras = 0;
+  for(const r of resumos){
+    totDias += (r.presencas || 0);
+    totFaltas += (r.faltas || 0);
+    totFolgas += (r.folgas || 0);
+    totAtrasos += (r.atrasos || 0);
+    totBanco += (r.banco || 0);
+    totExtras += (r.extras || r.horasExtras || 0);
+  }
+
+  // Feriados totais (recalcula independente)
+  const [anoF, mesF] = (f.mes || '').split('-').map(Number);
+  let totFerMin = 0;
+  if(anoF && mesF){
+    const feriadosMes = Object.values(S_feriados || {}).filter(function(fr){
+      const d = fr.data || fr.id;
+      if(!d || d.length < 10) return false;
+      const [y,m] = d.split('-').map(Number);
+      return y === anoF && m === mesF;
+    });
+    for(const fer of feriadosMes){
+      const isoD = fer.data || fer.id;
+      const [y,m,d] = isoD.split('-').map(Number);
+      const brD = String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+      for(const r of resumos){
+        const regs = (r.diasMap||{})[brD];
+        if(regs && regs.length) totFerMin += calcDia(regs);
+      }
+    }
+  }
+
+  const pendenciasHtml = f.temPendencias ?
+    '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #fca5a5"><div style="font-weight:700;font-size:12px;color:#b91c1c;margin-bottom:4px">⚠️ ATENÇÃO — ' + (f.quantidadePendentes||0) + ' funcionário(s) com dados incompletos</div><div style="font-size:11px;color:#7f1d1d">Revisar antes de processar folha de pagamento.</div></div>' : '';
+
+  const geradoPor = f.criadoPor || '—';
+  const dtG = f.criadoEm ? new Date(f.criadoEm) : new Date();
+  const dtGStr = dtG.toLocaleDateString('pt-BR') + ' ' + dtG.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  return '<div style="margin-top:18px;padding:14px;background:#f0f9ff;border:1.5px solid #93c5fd;border-radius:10px">' +
+    '<div style="font-weight:700;font-size:14px;color:var(--blue-dark);margin-bottom:8px">📊 Resumo geral do mês</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:12px;color:#333">' +
+      '<div><b>Funcionários ativos:</b> ' + resumos.length + '</div>' +
+      '<div><b>Dias trabalhados:</b> ' + totDias + '</div>' +
+      '<div><b>Faltas:</b> ' + totFaltas + '</div>' +
+      '<div><b>Folgas:</b> ' + totFolgas + '</div>' +
+      '<div><b>Atrasos:</b> ' + totAtrasos + '</div>' +
+      '<div><b>Banco horas:</b> ' + (totBanco>=0?'+':'') + m2h(totBanco) + '</div>' +
+      '<div style="grid-column:1/-1"><b>Trabalho em feriados:</b> ' + (totFerMin>0?m2h(totFerMin)+' ❗ (100% extra por CLT)':'—') + '</div>' +
+    '</div>' +
+    pendenciasHtml +
+    '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #bae6fd;font-size:10px;color:var(--gray)">Gerado por <b>' + geradoPor + '</b> em ' + dtGStr + ' · Sistema PontoFácil ' + APP_VERSION + '</div>' +
+  '</div>';
+}
+
 function verFechamento(id){
   console.log('🔍 verFechamento chamado com ID:', id);
   console.log('📋 S.fechamentos:', S.fechamentos);
@@ -3731,6 +4676,29 @@ function verFechamento(id){
   
   console.log('✅ Fechamento encontrado:', f.mesLabel);
   document.getElementById('modalFechTit').textContent='Fechamento — '+f.mesLabel;
+  // v120: aviso de pendências injetado após o conteúdo ser renderizado
+  const _injetarAvisoPendencias_v120 = function(){
+    const cont = document.getElementById('modalFechConteudo');
+    if(!cont || !f.temPendencias) return;
+    const qtd = f.quantidadePendentes || 0;
+    const totProb = f.totalProblemas || 0;
+    const bgColor = qtd >= 5 ? 'var(--red-light)' : '#fffbeb';
+    const borderColor = qtd >= 5 ? 'var(--red)' : '#d97706';
+    const titleColor = qtd >= 5 ? '#991b1b' : '#78350f';
+    let listHtml = '';
+    const fps = f.funcionariosPendentes || [];
+    for(const p of fps){
+      listHtml += '<li><b>'+p.nome+'</b> — ' + (p.dias || []).join(', ') + '</li>';
+    }
+    const aviso = '<div style="background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:10px;padding:12px 14px;margin-bottom:12px">' +
+      '<div style="font-weight:700;font-size:14px;color:'+titleColor+';margin-bottom:4px">⚠️ Este relatório contém ' + qtd + ' funcionário' + (qtd===1?'':'s') + ' com pendência' + (qtd===1?'':'s') + '</div>' +
+      '<div style="font-size:12px;color:'+titleColor+';margin-bottom:6px">Total de ' + totProb + ' problema' + (totProb===1?'':'s') + ' não corrigido' + (totProb===1?'':'s') + ' no mês.</div>' +
+      (listHtml ? '<ul style="margin:6px 0 0 20px;font-size:12px;color:#555;line-height:1.5">'+listHtml+'</ul>' : '') +
+      '<div style="font-size:11px;color:'+titleColor+';margin-top:8px;font-style:italic">Revise os registros antes de usar para folha de pagamento.</div>' +
+    '</div>';
+    cont.innerHTML = aviso + cont.innerHTML;
+  };
+  setTimeout(_injetarAvisoPendencias_v120, 0);
 
   let html=`<div style="text-align:center;margin-bottom:14px;padding:12px;background:var(--blue);border-radius:8px;border:1px solid var(--blue)">
     <div style="font-weight:800;font-size:16px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)">Villa Canziani Donato</div>
@@ -3757,49 +4725,51 @@ function verFechamento(id){
     let totalMinTrabalhado=0;
     let totalMinPrevisto=0;
 
-    if(r.diasMap&&Object.keys(r.diasMap).length>0){
-      Object.entries(r.diasMap).sort(([a],[b])=>a.localeCompare(b,'pt-BR')).forEach(([data,regs])=>{
-        const [dd,mm,yyyy]=data.split('/').map(Number);
-      const dt=new Date(yyyy,mm-1,dd);
-        const diaSem=DIAS[dt.getDay()];
-        const mins=calcDia(regs);
-        totalMinTrabalhado+=mins;
+    // v129: espelho mensal COMPLETO — itera todos os dias do mês, não só dias com registros
+    const [_anoM, _mesNM] = (fech.mes || '').split('-').map(Number);
+    const _diasDoMes = (_anoM && _mesNM) ? new Date(_anoM, _mesNM, 0).getDate() : 0;
+    if(_diasDoMes > 0 && func){
+      for(let _d = 1; _d <= _diasDoMes; _d++){
+        const dt = new Date(_anoM, _mesNM-1, _d);
+        const diaSem = DIAS[dt.getDay()];
+        const data = String(_d).padStart(2,'0')+'/'+String(_mesNM).padStart(2,'0')+'/'+_anoM;
+        const dataISO = _anoM+'-'+String(_mesNM).padStart(2,'0')+'-'+String(_d).padStart(2,'0');
+        const regs = (r.diasMap && r.diasMap[data]) || [];
+        const mins = calcDia(regs);
+        totalMinTrabalhado += mins;
 
-        // Horas previstas neste dia
-        let minPrev=0;
-        if(esc&&esc.tipo!=='especial'&&esc.dias&&esc.dias[diaSem]&&esc.dias[diaSem].ativo){
-          const cfg=esc.dias[diaSem];
-          minPrev=hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
-          totalMinPrevisto+=minPrev;
+        let minPrev = 0;
+        if(esc && esc.tipo !== 'especial' && esc.dias && esc.dias[diaSem] && esc.dias[diaSem].ativo){
+          const cfg = esc.dias[diaSem];
+          minPrev = hp2m(cfg.saida)-hp2m(cfg.entrada)-(hp2m(cfg.retorno)-hp2m(cfg.almoco));
+          totalMinPrevisto += minPrev;
         }
 
-        const saldo=mins-minPrev;
-        const entrada=regs.find(r=>r.tipo==='Entrada');
-        const saida=regs.find(r=>r.tipo==='Saída');
-        const iniInt=regs.find(r=>r.tipo==='Início intervalo');
-        const retInt=regs.find(r=>r.tipo==='Retorno intervalo');
-        const temAtraso=regs.some(r=>r.atraso);
-        const temAjuste=regs.some(r=>r.ajuste);
+        const saldo = mins - minPrev;
+        const entrada = regs.find(x=>x.tipo==='Entrada');
+        const saida   = regs.find(x=>x.tipo==='Saída');
+        const iniInt  = regs.find(x=>x.tipo==='Início intervalo');
+        const retInt  = regs.find(x=>x.tipo==='Retorno intervalo');
+        const status  = _determinarStatusDia(func.id, func.escalaId, dataISO, regs, fech.mes);
+        const rowBg   = status.bgColor ? ('background:'+status.bgColor+';') : '';
+        const fadeTxt = (status.key === 'nao_previsto' || status.key === 'antes_inicio') ? 'color:#999;' : '';
+        const mostraSaldo = regs.length > 0 && status.key !== 'feriado_trab';
+        const saldoHtml = status.key === 'feriado_trab' ? '🟠 H.Ex' : (mostraSaldo ? ((saldo>=0?'+':'')+m2h(saldo)) : (mins>0?m2h(mins):'—'));
+        const saldoCor = status.key === 'feriado_trab' ? '#ea580c' : (!mostraSaldo ? 'var(--gray)' : (saldo>=0?'var(--green)':'var(--red)'));
 
-        const dataISO=data.split('/').reverse().join('-').replace(/(\d{2})\/(\d{2})\/(\d{2})$/,'20$3-$2-$1');
-        const isFerF=ehFeriado(dataISO);
-        const nomeFerF=isFerF?nomeFeriado(dataISO):'';
-        const bgFer=isFerF?'background:#fff7ed;':'';
-        const ferLabel=isFerF?'🟠 H.Extra':''
-        diasHtml+=`<tr style="border-bottom:1px solid var(--border);${bgFer}">
-          <td style="padding:6px 4px;font-size:11px;font-weight:600;white-space:nowrap;color:${isFerF?'#ea580c':'inherit'}">${data.slice(0,5)} <span style="color:var(--gray);font-weight:400">${diaSem}</span>${isFerF?'<span style="font-size:9px;color:#ea580c;font-weight:600"> 📅'+nomeFerF+'</span>':''}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--green)">${entrada?entrada.hora:'—'}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--amber)">${iniInt?iniInt.hora:'—'}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--amber)">${retInt?retInt.hora:'—'}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--red)">${saida?saida.hora:'—'}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">${m2h(mins)}</td>
-          <td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:${isFerF?'#ea580c':saldo>=0?'var(--green)':'var(--red)'}">${isFerF?ferLabel:(saldo>=0?'+':'')+m2h(saldo)}</td>
-          <td style="padding:3px 2px;text-align:center;width:34px">
-            ${temAtraso?'<span style="font-size:9px">⚠️</span>':''}
-            <button onclick="editarDiaFechamento('${func?func.id:'__nome__'+encodeURIComponent(r.nome)}','${data}')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 4px;font-size:10px;cursor:pointer" title="Editar dia">✏️</button>
-          </td>
-        </tr>`;
-      });
+        diasHtml += '<tr style="border-bottom:1px solid var(--border);'+rowBg+fadeTxt+'">' +
+          '<td style="padding:6px 4px;font-size:11px;font-weight:600;white-space:nowrap">'+data.slice(0,5)+' <span style="color:var(--gray);font-weight:400">'+diaSem+'</span></td>' +
+          '<td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--green)">'+(entrada?entrada.hora:'—')+'</td>' +
+          '<td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--amber)">'+(iniInt?iniInt.hora:'—')+'</td>' +
+          '<td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--amber)">'+(retInt?retInt.hora:'—')+'</td>' +
+          '<td style="padding:6px 4px;font-size:11px;text-align:center;color:var(--red)">'+(saida?saida.hora:'—')+'</td>' +
+          '<td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:var(--blue)">'+(mins>0?m2h(mins):'—')+'</td>' +
+          '<td style="padding:6px 4px;font-size:11px;text-align:center;font-weight:600;color:'+saldoCor+'">'+saldoHtml+' <span style="font-size:10px">'+status.icone+'</span> <span style="font-size:9px;color:#555">'+status.label+'</span></td>' +
+          '<td style="padding:3px 2px;text-align:center;width:34px">' +
+            '<button onclick="editarDiaFechamento(\''+func.id+'\',\''+data+'\')" style="background:var(--blue-light);color:var(--blue);border:1px solid #93c5fd;border-radius:5px;padding:2px 4px;font-size:10px;cursor:pointer" title="Editar dia">✏️</button>' +
+          '</td>' +
+        '</tr>';
+      }
     }
 
     // Dias de folga
@@ -3826,7 +4796,7 @@ function verFechamento(id){
         <!-- Empresa e período -->
         <div style="text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:6px">
           <div style="font-weight:800;font-size:13px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)">${S.empresas.find(e=>e.id===f.empresa)?.nome||'Empresa não encontrada'}</div>
-          <div style="font-size:11px;color:#fff;opacity:0.95;font-weight:600">CNPJ: ${S.empresas.find(e=>e.id===f.empresa)?.cnpj||'N/A'} • ${f.mesLabel}</div>
+          <div style="font-size:11px;color:#fff;opacity:0.95;font-weight:600">CNPJ: ${formatarCNPJ(S.empresas.find(e=>e.id===f.empresa)?.cnpj)} • ${f.mesLabel}</div>
         </div>
         <!-- Funcionário -->
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -3857,8 +4827,12 @@ function verFechamento(id){
           <tbody>${diasHtml||'<tr><td colspan="8" style="padding:12px;text-align:center;color:var(--gray);font-size:12px">Sem registros neste mês</td></tr>'}</tbody>
         </table>
       </div>
+      ${_feriadosTrabalhadosHtml(r, fech.mes)}
     </div>`;
   }).join('');
+
+  // v121: seção Feriados trabalhados + Resumo Geral
+  html += _gerarSecaoFeriadosRelatorio(f) + _gerarResumoGeralRelatorio(f);
 
   document.getElementById('modalFechConteudo').innerHTML=html||'<div class="empty">Sem dados</div>';
   
@@ -3871,7 +4845,377 @@ function verFechamento(id){
     console.error('❌ Modal não encontrado!');
   }
 }
-function enviarEmail(f){if(!f.emailContadora)return;let c='Fechamento de Ponto — '+f.mesLabel+'\nVilla Canziani Donato\n\n';f.resumos.forEach(r=>{c+=r.nome+' ('+r.cargo+')\nPresenças: '+r.presencas+' | Faltas: '+r.faltas+' | Folgas: '+r.folgas+' ('+r.folgasDom+' dom.) | Banco: '+(r.banco>=0?'+':'')+m2h(r.banco||0)+'\n\n';});window.open('mailto:'+f.emailContadora+'?subject='+encodeURIComponent('Ponto '+f.mesLabel)+' — Villa Canziani Donato'+'&body='+encodeURIComponent(c));}
+// v130: chamado pelo botão Email dentro do modalFechDetalhe
+function enviarEmailDoModal(){
+  const id = document._fechAtualId;
+  if(!id){ toast('Relatório não identificado'); return; }
+  const f = S.fechamentos.find(x => x.id === id);
+  if(!f){ toast('Relatório não encontrado'); return; }
+  enviarEmail(f);
+}
+
+function enviarEmail(f){
+  if(!f.emailContadora){ toast('Configure o email da contadora em Configurações'); return; }
+  _abrirJanelaRelatorioHTML(f);
+}
+
+function _abrirJanelaRelatorioHTML(f){
+  // v130: lê empresa correta de S.config.empresaA/B (bug CNPJ)
+  const empSel = f.empresa === '2' ? (S.config && S.config.empresaB) : (S.config && S.config.empresaA);
+  const empNome = (empSel && empSel.nome) || (f.empresa==='2'?'Villa Bistro Patacho':'Villa Canziani Donato');
+  // v131: formata CNPJ (XX.XXX.XXX/XXXX-XX); se não há cnpj, mostra placeholder
+  const cnpj = (empSel && empSel.cnpj) ? formatarCNPJ(empSel.cnpj) : '— (cadastrar em Configurações)';
+  const endereco = (empSel && empSel.end) || '';
+
+  const [anoF, mesF] = (f.mes||'').split('-').map(Number);
+  const diasNoMes = (anoF && mesF) ? new Date(anoF, mesF, 0).getDate() : 0;
+  const feriadosMes = {};
+  Object.values(S_feriados||{}).forEach(function(fr){
+    const d = fr.data || fr.id;
+    if(!d || d.length < 10) return;
+    const [y,m,dd] = d.split('-').map(Number);
+    if(y === anoF && m === mesF){
+      const brD = String(dd).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+      feriadosMes[brD] = fr.nome || 'Feriado';
+    }
+  });
+  const diasSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  let funcsHtml = '';
+  let totDias=0, totFaltas=0, totFolgas=0, totAtrasos=0, totBanco=0, totFerMin=0;
+
+  f.resumos.forEach(function(r){
+    const marker = (f.funcionariosPendentes||[]).some(function(p){return p.id===r.id;}) ? ' ⚠️' : '';
+    let linhas = '';
+    for(let d=1; d<=diasNoMes; d++){
+      const dt = new Date(anoF, mesF-1, d);
+      const brD = String(d).padStart(2,'0')+'/'+String(mesF).padStart(2,'0')+'/'+anoF;
+      const isoD = anoF+'-'+String(mesF).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const ds = diasSem[dt.getDay()];
+      const regs = (r.diasMap||{})[brD] || [];
+      const ent = regs.find(function(x){return x.tipo==='Entrada';});
+      const sai = regs.find(function(x){return x.tipo==='Saída';});
+      const ini = regs.find(function(x){return x.tipo==='Início intervalo';});
+      const ret = regs.find(function(x){return x.tipo==='Retorno intervalo';});
+      const mins = calcDia(regs);
+      const status = _determinarStatusDia(r.funcId || r.id, r.escalaId, isoD, regs, f.mes);
+      linhas +=
+        '<tr style="background:'+(status.bgColor||'#fff')+'">' +
+          '<td>'+brD.slice(0,5)+' <span style="color:#999;font-size:10px">'+ds+'</span></td>' +
+          '<td>'+(ent?ent.hora:'—')+'</td>' +
+          '<td>'+(ini?ini.hora:'—')+'</td>' +
+          '<td>'+(ret?ret.hora:'—')+'</td>' +
+          '<td>'+(sai?sai.hora:'—')+'</td>' +
+          '<td><b>'+(mins>0?m2h(mins):'—')+'</b></td>' +
+          '<td class="obs">'+status.icone+' '+status.label+'</td>' +
+        '</tr>';
+    }
+    const ft = _feriadosTrabalhadosFunc(r, f.mes);
+    let ftHtml = '';
+    if(ft.dias > 0){
+      ftHtml = '<div style="color:#ea580c;margin-top:4px"><b>🎉 Feriados trabalhados:</b> '+ft.dias+' dia'+(ft.dias===1?'':'s')+' ('+m2h(ft.mins)+') <span style="font-size:10px">[100% extra]</span></div>';
+      totFerMin += ft.mins;
+    }
+    funcsHtml +=
+      '<div class="func-card">' +
+        '<div class="func-header">' +
+          '<h2>'+r.nome+marker+'</h2>' +
+          '<div class="cargo">'+(r.cargo||'—')+' · Escala: '+(r.escala||'—')+'</div>' +
+        '</div>' +
+        '<table class="ponto-table">' +
+          '<thead><tr><th>Data</th><th>Entrada</th><th>Int.Ini</th><th>Int.Ret</th><th>Saída</th><th>Total</th><th>Status</th></tr></thead>' +
+          '<tbody>'+linhas+'</tbody>' +
+        '</table>' +
+        '<div class="resumo-func">' +
+          '<div><b>Dias trab:</b> '+r.presencas+'</div>' +
+          '<div><b>Faltas:</b> '+r.faltas+'</div>' +
+          '<div><b>Folgas:</b> '+r.folgas+(r.folgasDom?' ('+r.folgasDom+' dom)':'')+'</div>' +
+          '<div><b>Atrasos:</b> '+(r.atrasos||0)+'</div>' +
+          '<div><b>Banco:</b> '+(r.banco>=0?'+':'')+m2h(r.banco||0)+'</div>' +
+          ftHtml +
+        '</div>' +
+      '</div>';
+    totDias+=r.presencas||0; totFaltas+=r.faltas||0; totFolgas+=r.folgas||0;
+    totAtrasos+=r.atrasos||0; totBanco+=r.banco||0;
+  });
+
+  let feriadosHtml = '';
+  if(Object.keys(feriadosMes).length > 0){
+    feriadosHtml += '<div class="feriados-section"><h3>⚠️ TRABALHO EM FERIADOS (100% extra — CLT art. 67)</h3>';
+    feriadosHtml += '<p><b>Total:</b> '+(totFerMin>0?m2h(totFerMin):'—')+'</p>';
+    Object.keys(feriadosMes).sort().forEach(function(brD){
+      const workers = [];
+      f.resumos.forEach(function(r){
+        const regs = (r.diasMap||{})[brD];
+        if(regs && regs.length){
+          const ent = regs.find(function(x){return x.tipo==='Entrada';});
+          const sai = regs.find(function(x){return x.tipo==='Saída';});
+          if(ent && sai) workers.push({nome:r.nome, ent:ent.hora, sai:sai.hora, mins:calcDia(regs)});
+        }
+      });
+      feriadosHtml += '<div class="feriado-item"><b>📅 '+brD+' — '+feriadosMes[brD]+'</b>';
+      if(workers.length){
+        feriadosHtml += '<ul>' + workers.map(function(w){return '<li>'+w.nome+' — '+w.ent+' → '+w.sai+' ('+m2h(w.mins)+')</li>';}).join('') + '</ul>';
+      } else {
+        feriadosHtml += '<div style="color:#999;font-size:11px;margin-top:4px">Nenhum funcionário trabalhou.</div>';
+      }
+      feriadosHtml += '</div>';
+    });
+    feriadosHtml += '</div>';
+  }
+
+  let pendHtml = '';
+  if(f.temPendencias && (f.funcionariosPendentes||[]).length){
+    pendHtml = '<div class="pendencias"><h3>⚠️ ATENÇÃO - Funcionários com dados incompletos</h3><ul>';
+    (f.funcionariosPendentes||[]).forEach(function(p){
+      pendHtml += '<li><b>'+p.nome+'</b> — '+(p.dias||[]).join(', ')+'</li>';
+    });
+    pendHtml += '</ul><p style="font-style:italic;color:#92400e">Revisar antes de processar folha de pagamento.</p></div>';
+  }
+
+  const geradoPor = f.criadoPor || '—';
+  const dt = f.criadoEm ? new Date(f.criadoEm) : new Date();
+  const dtStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const enderecoHtml = endereco ? '<p style="margin:4px 0;font-size:12px;opacity:0.9">'+endereco+'</p>' : '';
+
+  const emailContadora = S.config.emailContadora || '';
+  const subjectPrefix = f.temPendencias ? '[REVISAR] Relatório Mensal de Ponto — ' : 'Relatório Mensal de Ponto — ';
+  const subject = subjectPrefix + empNome + ' — ' + f.mesLabel;
+  // nome de arquivo amigável pra PDF: ponto_villa-canziani_04-2026
+  const slugEmp = empNome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const pdfTitle = 'ponto_' + slugEmp + '_' + (f.mes || 'mes');
+
+  const corpoEmail = (S.user && S.user.nome ? 'Prezada contadora,\n\n' : '') +
+    'Segue em anexo o relatório mensal de ponto.\n\n' +
+    'Empresa: ' + empNome + '\n' +
+    'CNPJ: ' + cnpj + '\n' +
+    'Período: ' + f.mesLabel + '\n\n' +
+    '⚠️ IMPORTANTE: Anexe o arquivo PDF que você acabou de salvar.\n\n' +
+    (f.temPendencias ? '⚠️ Este relatório contém ' + (f.quantidadePendentes||0) + ' funcionário(s) com dados incompletos — revise antes de processar a folha.\n\n' : '') +
+    'Atenciosamente,\n' +
+    ((S.user && S.user.nome) || 'Administrador');
+  const mailtoUrl = emailContadora ? ('mailto:'+emailContadora+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(corpoEmail)) : '';
+
+  const fullHtml =
+    '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<title>'+pdfTitle+'</title>' +
+    '<style>' +
+      'body{font-family:Arial,sans-serif;font-size:12px;color:#333;margin:0;padding:0;background:#f5f5f5}' +
+      '.topbar{position:sticky;top:0;background:#1a56a0;padding:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,0.15)}' +
+      '.topbar button{padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px}' +
+      '.btn-pdf{background:#fff;color:#1a56a0}' +
+      '.btn-mail{background:#16a34a;color:#fff}' +
+      '.btn-cancel{background:#dc2626;color:#fff}' +
+      '.instrucoes{background:#fef3c7;border:1.5px solid #fcd34d;border-radius:8px;padding:10px 14px;margin:16px 20px 0;font-size:12px;color:#78350f}' +
+      '.content{max-width:900px;margin:20px auto;padding:20px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.08)}' +
+      '.header{background:#1a56a0;color:#fff;padding:20px;text-align:center;border-radius:8px;margin-bottom:16px}' +
+      '.header h1{margin:0;font-size:20px}' +
+      '.header p{margin:4px 0;font-size:13px;opacity:0.95}' +
+      '.func-card{margin-bottom:24px;border:1px solid #ddd;border-radius:8px;overflow:hidden}' +
+      // v131: conteúdo flui natural do cabeçalho pro primeiro funcionário; quebra só ENTRE funcionários
+      '.func-card+.func-card{page-break-before:always;break-before:page}' +
+      '.func-header{background:#1a56a0;color:#fff;padding:10px 14px}' +
+      '.func-header h2{margin:0;font-size:14px;font-weight:700}' +
+      '.func-header .cargo{font-size:11px;opacity:0.9}' +
+      '.ponto-table{width:100%;border-collapse:collapse;font-size:11px}' +
+      '.ponto-table th{background:#f5f5f5;padding:6px 4px;text-align:center;border-bottom:2px solid #ddd;font-size:10px;font-weight:700}' +
+      '.ponto-table td{padding:5px 4px;text-align:center;border-bottom:1px solid #eee}' +
+      '.ponto-table .obs{font-size:10px;color:#666;text-align:left;padding-left:8px}' +
+      '.resumo-func{background:#f9fafb;padding:10px 14px;border-top:1px solid #ddd;display:flex;gap:12px;flex-wrap:wrap;font-size:11px}' +
+      '.resumo-func b{color:#1a56a0}' +
+      '.feriados-section{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px;margin:16px 0}' +
+      '.feriados-section h3{color:#c2410c;margin-top:0;font-size:14px}' +
+      '.feriado-item{background:#fff;border-left:3px solid #ea580c;padding:8px 12px;margin:8px 0;border-radius:4px}' +
+      '.feriado-item ul{margin:4px 0 0 20px;font-size:11px}' +
+      '.pendencias{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px;margin:16px 0}' +
+      '.pendencias h3{color:#92400e;margin-top:0;font-size:14px}' +
+      '.footer{text-align:center;font-size:10px;color:#999;margin-top:20px;padding-top:10px;border-top:1px solid #ddd}' +
+      '@media print{.topbar,.instrucoes{display:none!important}body{background:#fff}.content{max-width:100%;box-shadow:none;margin:0;padding:0}}' +
+    '</style>' +
+    '</head><body>' +
+    '<div class="topbar">' +
+      '<button class="btn-pdf" onclick="window.print()">🖨 Salvar como PDF</button>' +
+      (emailContadora
+        ? '<button class="btn-mail" onclick="prosseguirEmail()">📧 Já salvei, abrir email</button>'
+        : '<button class="btn-mail" onclick="alert(\'Configure o email da contadora em Configurações antes.\')" title="Email não configurado">📧 Email (configurar)</button>') +
+      '<button class="btn-cancel" onclick="window.close()">✕ Cancelar</button>' +
+    '</div>' +
+    '<div class="instrucoes">' +
+      '<b>Como enviar:</b> 1) Clique em <b>Salvar como PDF</b> (escolha "Salvar como PDF" no diálogo). ' +
+      '2) Clique em <b>Já salvei, abrir email</b> — seu cliente de email abrirá com destinatário e assunto preenchidos. ' +
+      '3) Anexe o PDF que você salvou e envie.' +
+    '</div>' +
+    '<div class="content" id="_relContent">' +
+      '<div class="header">' +
+        '<h1>RELATÓRIO MENSAL DE PONTO</h1>' +
+        '<p>'+empNome+'</p>' +
+        '<p>CNPJ: '+cnpj+'</p>' +
+        enderecoHtml +
+        '<p><b>Período: '+f.mesLabel+'</b></p>' +
+      '</div>' +
+      pendHtml +
+      funcsHtml +
+      feriadosHtml +
+      '<div class="footer">Gerado por '+geradoPor+' em '+dtStr+' · Sistema PontoFácil '+APP_VERSION+'</div>' +
+    '</div>' +
+    '<script>' +
+      'function prosseguirEmail(){' +
+        'var mailto = ' + JSON.stringify(mailtoUrl) + ';' +
+        'if(!mailto){ alert("Configure o email da contadora em Configurações do sistema."); return; }' +
+        'window.location.href = mailto;' +
+      '}' +
+    '<\/script>' +
+    '</body></html>';
+
+  const w = window.open('', '_blank', 'width=980,height=720');
+  if(!w){ toast('Permita pop-ups pra abrir o relatório'); return; }
+  w.document.open();
+  w.document.write(fullHtml);
+  w.document.close();
+  // set title explicitly (algumas versões de Chrome ignoram o <title> no write)
+  try{ w.document.title = pdfTitle; }catch(e){}
+}
+
+function _gerarTextoEmailCompleto(f){
+  const empNome = f.empresa == '2' ? 'Villa Bistro Patacho' : 'Villa Canziani Donato';
+  let c = 'Fechamento de Ponto — '+f.mesLabel+'\n'+empNome+'\n\n';
+  if(f.temPendencias && f.quantidadePendentes > 0){
+    c += '⚠️ ATENÇÃO: '+f.quantidadePendentes+' funcionário'+(f.quantidadePendentes===1?'':'s')+' com dados incompletos.\n';
+    c += 'Revise antes de processar a folha.\n\nPendentes:\n';
+    (f.funcionariosPendentes||[]).forEach(function(p){
+      c += '• '+p.nome+' ('+(p.dias||[]).join(', ')+')\n';
+    });
+    c += '\n==========================================\n\n';
+  }
+  const [anoF, mesF] = (f.mes||'').split('-').map(Number);
+  const diasNoMes = (anoF && mesF) ? new Date(anoF, mesF, 0).getDate() : 0;
+  const feriadosMes = {};
+  Object.values(S_feriados||{}).forEach(function(fr){
+    const d = fr.data || fr.id;
+    if(!d || d.length < 10) return;
+    const [y,m,dd] = d.split('-').map(Number);
+    if(y === anoF && m === mesF){
+      const brD = String(dd).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+      feriadosMes[brD] = fr.nome || 'Feriado';
+    }
+  });
+  let totDias=0, totFaltas=0, totFolgas=0, totAtrasos=0, totBanco=0, totFerMin=0;
+  const diasSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const pad = function(s,n){ s = String(s||'--'); return s + ' '.repeat(Math.max(0, n - s.length)); };
+  f.resumos.forEach(function(r){
+    const marker = (f.funcionariosPendentes||[]).some(function(p){return p.id===r.id;}) ? ' ⚠️' : '';
+    c += '══════════════════════════════════════════\n';
+    c += 'FUNCIONÁRIO: '+r.nome+marker+'\n';
+    c += 'Cargo: '+(r.cargo||'—')+'  ·  Escala: '+(r.escala||'—')+'\n';
+    c += '──────────────────────────────────────────\n';
+    c += 'Data      Ent    IntI   IntR   Saída   Total   Obs\n';
+    for(let d = 1; d <= diasNoMes; d++){
+      const dt = new Date(anoF, mesF-1, d);
+      const brD = String(d).padStart(2,'0')+'/'+String(mesF).padStart(2,'0')+'/'+anoF;
+      const ds = diasSem[dt.getDay()];
+      const regs = (r.diasMap||{})[brD] || [];
+      const ent = regs.find(function(x){return x.tipo==='Entrada';});
+      const sai = regs.find(function(x){return x.tipo==='Saída';});
+      const ini = regs.find(function(x){return x.tipo==='Início intervalo';});
+      const ret = regs.find(function(x){return x.tipo==='Retorno intervalo';});
+      const mins = calcDia(regs);
+      const temAtraso = regs.some(function(x){return x.atraso;});
+      const temAjuste = regs.some(function(x){return x.ajuste;});
+      const isoD = anoF+'-'+String(mesF).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const folgaEntry = Object.values(S.folgas||{}).find(function(fg){
+        return fg.funcId === r.funcId && fg.data === isoD;
+      });
+      let obs = '';
+      if(folgaEntry){
+        if(folgaEntry.tipo === 'folga_dom') obs = '🌴 DSR';
+        else if(folgaEntry.tipo === 'nao_descontado') obs = '✅ N/Desc';
+        else if(folgaEntry.tipo === 'ferias') obs = '🏖️ Férias';
+        else if(folgaEntry.tipo === 'atestado') obs = '🏥 Atestado';
+        else obs = '🌴 Folga';
+      } else if(feriadosMes[brD] && regs.length > 0){
+        obs = '🎉 Feriado';
+      } else if(temAtraso){
+        obs = '⚠️ Atraso';
+      } else if(temAjuste){
+        obs = '✏️ Ajuste';
+      }
+      c += pad(brD.slice(0,5)+' '+ds, 10);
+      c += pad(ent?ent.hora:'--', 7);
+      c += pad(ini?ini.hora:'--', 7);
+      c += pad(ret?ret.hora:'--', 7);
+      c += pad(sai?sai.hora:'--', 8);
+      c += pad(mins>0?m2h(mins):'0h 00',8);
+      c += obs + '\n';
+    }
+    c += '──────────────────────────────────────────\n';
+    c += 'RESUMO '+r.nome.split(' ')[0]+':\n';
+    c += '  Dias trabalhados: '+r.presencas+'\n';
+    c += '  Faltas: '+r.faltas+'\n';
+    c += '  Folgas: '+r.folgas+(r.folgasDom?' ('+r.folgasDom+' dom)':'')+'\n';
+    c += '  Atrasos: '+(r.atrasos||0)+'\n';
+    c += '  Banco do mês: '+(r.banco>=0?'+':'')+m2h(r.banco||0)+'\n';
+    const ft = _feriadosTrabalhadosFunc(r, f.mes);
+    if(ft.dias > 0){
+      c += '  🎉 Feriados trabalhados: '+ft.dias+' dia'+(ft.dias===1?'':'s')+' ('+m2h(ft.mins)+') [100% extra]\n';
+      totFerMin += ft.mins;
+    }
+    c += '\n';
+    totDias+=r.presencas||0; totFaltas+=r.faltas||0; totFolgas+=r.folgas||0;
+    totAtrasos+=r.atrasos||0; totBanco+=r.banco||0;
+  });
+  c += '==========================================\n';
+  c += '📊 RESUMO GERAL DO MÊS\n';
+  c += '==========================================\n';
+  c += 'Funcionários ativos: '+f.resumos.length+'\n';
+  c += 'Dias trabalhados (total): '+totDias+'\n';
+  c += 'Faltas (total): '+totFaltas+'\n';
+  c += 'Folgas (total): '+totFolgas+'\n';
+  c += 'Atrasos (total): '+totAtrasos+'\n';
+  c += 'Banco de horas (total): '+(totBanco>=0?'+':'')+m2h(totBanco)+'\n';
+  if(totFerMin > 0) c += 'Trabalho em feriados (total): '+m2h(totFerMin)+' ❗ (100% extra — CLT art. 67)\n';
+  c += '\nGerado por: '+(f.criadoPor||'—')+'\n';
+  c += 'Sistema PontoFácil '+APP_VERSION+'\n';
+  return c;
+}
+
+function _abrirModalCopiarEmail(f, subject, textoCompleto){
+  const existing = document.getElementById('modalCopiarEmail');
+  if(existing) existing.remove();
+  const m = document.createElement('div');
+  m.id = 'modalCopiarEmail';
+  m.className = 'modal-bg open';
+  m.style.zIndex = '3500';
+  const gmailUrl = 'https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(f.emailContadora)+'&su='+encodeURIComponent(subject);
+  const outlookUrl = 'https://outlook.live.com/owa/?path=/mail/action/compose&to='+encodeURIComponent(f.emailContadora)+'&subject='+encodeURIComponent(subject);
+  const mailtoUrl = 'mailto:'+f.emailContadora+'?subject='+encodeURIComponent(subject);
+  m.innerHTML =
+    '<div class="modal" style="max-width:720px">' +
+      '<h2 style="color:var(--blue-dark);font-size:16px">📧 Relatório pronto pra enviar</h2>' +
+      '<div style="font-size:12px;color:#333;margin:8px 0">O relatório é muito detalhado pra caber num mailto. Copie e cole no seu cliente de email.</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-bottom:6px"><b>Para:</b> '+f.emailContadora+'  ·  <b>Assunto:</b> '+subject+'</div>' +
+      '<textarea id="_emailTextarea" readonly style="width:100%;height:280px;font-family:monospace;font-size:11px;padding:10px;border:1.5px solid var(--border);border-radius:8px;resize:vertical">'+textoCompleto.replace(/</g,'&lt;')+'</textarea>' +
+      '<div id="_emailCopyStatus" style="font-size:12px;color:var(--green);margin-top:6px;min-height:18px"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' +
+        '<button class="btn btn-solid btn-sm" style="flex:1;min-width:140px" onclick="_copiarEmailTexto()">📋 Copiar tudo</button>' +
+        '<button class="btn btn-primary btn-sm" style="flex:1;min-width:140px" onclick="window.open(\''+gmailUrl+'\',\'_blank\')">📮 Abrir Gmail</button>' +
+        '<button class="btn btn-primary btn-sm" style="flex:1;min-width:140px" onclick="window.open(\''+outlookUrl+'\',\'_blank\')">📨 Abrir Outlook</button>' +
+        '<button class="btn btn-primary btn-sm" style="flex:1;min-width:140px" onclick="window.open(\''+mailtoUrl+'\')">✉️ Abrir Mail</button>' +
+      '</div>' +
+      '<div class="modal-actions" style="margin-top:12px">' +
+        '<button class="btn btn-saida btn-sm" style="flex:1" onclick="document.getElementById(\'modalCopiarEmail\').remove()">Fechar</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+}
+
+function _copiarEmailTexto(){
+  const ta = document.getElementById('_emailTextarea');
+  if(!ta) return;
+  ta.select();
+  function ok(){ const s=document.getElementById('_emailCopyStatus'); if(s){s.textContent='✅ Copiado — cole no seu email (Cmd+V)';setTimeout(function(){if(s)s.textContent='';},3000);} }
+  try{ navigator.clipboard.writeText(ta.value).then(ok, function(){document.execCommand('copy');ok();}); }
+  catch(e){ document.execCommand('copy'); ok(); }
+}
 function reenviar(id){const f=S.fechamentos.find(x=>x.id===id);if(f)enviarEmail(f);}
 function imprimirFechamento(){
   const conteudo=document.getElementById('modalFechConteudo').innerHTML;
@@ -3883,7 +5227,9 @@ function imprimirFechamento(){
     table{width:100%;border-collapse:collapse;margin-bottom:8px}
     th{padding:5px 4px;font-size:10px;font-weight:700;border-bottom:2px solid #ccc;text-align:left;background:#f5f5f5}
     td{padding:5px 4px;font-size:11px;border-bottom:1px solid #eee}
-    .bloco{margin-bottom:20px;border:1px solid #ccc;border-radius:6px;overflow:hidden;page-break-inside:avoid}
+    .bloco{margin-bottom:20px;border:1px solid #ccc;border-radius:6px;overflow:hidden}
+    /* v131: cabeçalho/resumo flui junto do primeiro bloco; quebra só entre blocos consecutivos */
+    .bloco+.bloco{page-break-before:always;break-before:page}
     .header-func{background:#1a6fb5;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
     .header-func .nome{font-weight:700;font-size:13px}
     .header-func .cargo{font-size:10px;opacity:.8}
@@ -3894,19 +5240,11 @@ function imprimirFechamento(){
     .resumo-topo{text-align:center;margin-bottom:16px;padding:10px;background:#f0f7ff;border-radius:6px;border:1px solid #bfdbfe}
     .resumo-topo .rt{font-weight:700;font-size:14px;color:#1e3a5f}
     .resumo-topo .rs{font-size:12px;color:#1a6fb5}
-    @media print{body{margin:8px}.bloco{page-break-inside:avoid}}
+    @media print{body{margin:8px}.bloco+.bloco{page-break-before:always;break-before:page}}
   </style></head><body>`);
   win.document.write(`<h2>${titulo}</h2>`);
-  // Reescreve o conteúdo em formato limpo para impressão
-  const parser=new DOMParser();
-  const doc2=parser.parseFromString(conteudo,'text/html');
-  // Pega os blocos de cada funcionário
-  const blocos=doc2.querySelectorAll('[style*="margin-bottom:16px"]');
-  if(blocos.length>0){
-    blocos.forEach(b=>win.document.write(b.outerHTML));
-  } else {
-    win.document.write(conteudo);
-  }
+  // v123: imprime TODO o conteúdo (funcs + feriados + resumo + rodapé), não só blocos
+  win.document.write(conteudo);
   win.document.write('</body></html>');
   win.document.close();
   win.focus();
@@ -3924,7 +5262,7 @@ async function apagarFechamento(id,label){
 async function renderBH(){
   const mesEl=document.getElementById('bhMes');
   const empEl=document.getElementById('bhEmp');
-  const mes=mesEl&&mesEl.value?mesEl.value:new Date().toISOString().slice(0,7);
+  const mes=mesEl&&mesEl.value?mesEl.value:mesLocalISO();
   const empFiltro=empEl?empEl.value:'todas';
   if(mesEl&&!mesEl.value) mesEl.value=mes;
   const el=document.getElementById('listaBH');
@@ -3976,7 +5314,7 @@ async function carregarDetalhe(){
 
   for(let d=1;d<=diasNoMes;d++){
     const dt=new Date(ano,mesN-1,d);
-    const iso=dt.toISOString().slice(0,10);
+    const iso=dataLocalISO(dt);
     const dataBR=String(d).padStart(2,'0')+'/'+String(mesN).padStart(2,'0')+'/'+ano;
     const dataBRShort=String(d).padStart(2,'0')+'/'+String(mesN).padStart(2,'0')+'/'+String(ano).slice(2);
     const diaSem=DIAS[dt.getDay()];
@@ -4118,7 +5456,7 @@ function renderFeriados(){
   if(!el)return;
   const lista=Object.values(S_feriados).sort((a,b)=>a.data.localeCompare(b.data));
   if(!lista.length){el.innerHTML='<div class="empty">Nenhum feriado cadastrado</div>';return;}
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=dataLocalISO();
   el.innerHTML=lista.map(f=>{
     const passado=f.data<hoje;
     const fmtBR=f.data.split('-').reverse().join('/');
@@ -4399,7 +5737,7 @@ function renderEmpresas(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
         <div style="flex:1">
           <div style="font-weight:600;font-size:14px;color:var(--blue-dark)">${emp.nome}</div>
-          <div style="font-size:12px;color:var(--gray);margin-top:2px">CNPJ: ${emp.cnpj||'Não informado'}</div>
+          <div style="font-size:12px;color:var(--gray);margin-top:2px">CNPJ: ${emp.cnpj?formatarCNPJ(emp.cnpj):'Não informado'}</div>
           ${emp.endereco?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📍 ${emp.endereco}</div>`:''}
           ${emp.latitude&&emp.longitude?`<div style="font-size:11px;color:var(--blue);margin-top:1px">🌍 ${emp.latitude.toFixed(4)}, ${emp.longitude.toFixed(4)} (${emp.raio||150}m)</div>`:''}
           ${emp.telefone?`<div style="font-size:11px;color:var(--gray);margin-top:1px">📞 ${emp.telefone}</div>`:''}
@@ -4660,7 +5998,7 @@ function renderFerias(){
   const lista=S_ferias.filter(f=>!filtro||f.funcionarioId===filtro);
   if(!lista.length){el.innerHTML='<div class="empty">Nenhuma férias registrada</div>';return;}
   el.innerHTML=lista.map(f=>{
-    const hoje=new Date().toISOString().slice(0,10);
+    const hoje=dataLocalISO();
     const ativa=f.inicio<=hoje&&f.fim>=hoje;
     const futura=f.inicio>hoje;
     const badge=ativa?'<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600">Em curso</span>':
@@ -4723,11 +6061,22 @@ async function carregarFotoMaster(){
       previewEl.innerHTML = '👤';
     }
     if(biometriaAtiva && faceId){
-      const d = data.biometriaCadastradaEm ? new Date(data.biometriaCadastradaEm).toLocaleDateString('pt-BR') : '—';
-      statusEl.textContent = '✅ Biometria ativa · cadastrada em '+d;
+      const cadData = data.biometriaCadastradaEm;
+      const cadFmt  = cadData ? new Date(cadData).toLocaleDateString('pt-BR') : '—';
+      const cons = data.biometriaConsentimento || {};
+      const consData = cons.aceitoEm ? new Date(cons.aceitoEm).toLocaleString('pt-BR') : '—';
+      const consVersao = cons.versaoTexto || '—';
+      statusEl.innerHTML =
+        '<div style="font-size:12px;color:var(--green);line-height:1.5">' +
+          '✅ <b>Biometria ativa</b><br>' +
+          '<span style="opacity:.85">Ativa desde:</span> ' + cadFmt + '<br>' +
+          '<span style="opacity:.85">Termo aceito em:</span> ' + consData + '<br>' +
+          '<span style="opacity:.85">Versão do termo:</span> ' + consVersao + ' · ' +
+          '<a href="#" onclick="verTermoLGPD();return false" style="color:var(--green);text-decoration:underline">📄 Ver termo completo</a>' +
+        '</div>';
       actionsEl.innerHTML =
         '<button type="button" class="btn btn-solid btn-sm" onclick="cadastrarBiometriaMaster()" style="background:var(--green);border-color:var(--green);width:auto">📷 Atualizar</button>' +
-        '<button type="button" class="btn btn-saida btn-sm" onclick="removerBiometriaMaster()" style="width:auto">🗑 Remover</button>';
+        '<button type="button" class="btn btn-saida btn-sm" onclick="removerBiometriaMaster()" style="width:auto">🗑 Revogar e apagar</button>';
     } else {
       statusEl.textContent = '⚠️ Sem biometria — login facial indisponível';
       actionsEl.innerHTML = '<button type="button" class="btn btn-solid btn-sm" onclick="cadastrarBiometriaMaster()" style="background:var(--green);border-color:var(--green);width:auto">📷 Cadastrar biometria facial</button>';
@@ -4741,9 +6090,11 @@ async function carregarFotoMaster(){
 }
 
 function cadastrarBiometriaMaster(){
+  // Se já tem biometria ativa, é atualização — pula LGPD (consent já dado)
+  const jaTem = !!(S.user && S.user.biometriaAtiva && S.user.rekognitionFaceId);
   abrirCadastroBiometria('admin', 'Administrador Master (Ivan)', function(ok){
     if(ok) carregarFotoMaster();
-  });
+  }, jaTem);
 }
 
 async function removerBiometriaMaster(){
@@ -5112,7 +6463,7 @@ function getDataTrabalho(timestamp) {
   
   return {
     dataBR: String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear(),
-    mes: dt.toISOString().slice(0,7),
+    mes: mesLocalISO(dt),
     original: timestamp ? new Date(timestamp) : new Date()
   };
 }
@@ -5217,11 +6568,35 @@ function abrirConsentimentoLGPD(callback, mode){
   document.getElementById('consentimentoLGPDOverlay').classList.add('open');
 }
 
+function verTermoLGPD(){
+  abrirConsentimentoLGPD(function(){}, 'view');
+  // Em modo 'view', só o botão "Fechar" fecha o modal (callback ignorado)
+}
+
 function _setConsentMode(mode){
   const titleEl = document.getElementById('consentTitle');
   const bodyEl  = document.getElementById('consentBody');
   const labelEl = document.getElementById('consentChkLabel');
-  if(!titleEl || !bodyEl || !labelEl) return;  // backward compat se algo faltar
+  const chkEl   = document.getElementById('consentChk');
+  const actionsEl = document.querySelector('#consentimentoLGPDOverlay .modal-actions');
+  if(!titleEl || !bodyEl || !labelEl) return;
+  // Reset: modo normal (2 botões, checkbox visível)
+  const chkWrap = chkEl ? chkEl.closest('label') : null;
+  if(chkWrap) chkWrap.style.display = '';
+  if(actionsEl){
+    actionsEl.innerHTML =
+      '<button class="btn btn-saida btn-sm" style="flex:1" onclick="recusarConsentimentoLGPD()">✕ Cancelar</button>' +
+      '<button class="btn btn-solid btn-sm" style="flex:1" onclick="aceitarConsentimentoLGPD()">✓ Continuar</button>';
+  }
+  if(mode === 'view'){
+    // Modo leitura: esconde checkbox, botão único "Fechar"
+    if(chkWrap) chkWrap.style.display = 'none';
+    if(actionsEl){
+      actionsEl.innerHTML = '<button class="btn btn-solid btn-sm" style="flex:1" onclick="recusarConsentimentoLGPD()">Fechar</button>';
+    }
+    // usa o texto enroll (o que foi aceito originalmente)
+    mode = 'enroll';
+  }
   if(mode === 'login'){
     titleEl.textContent = 'Uso de reconhecimento facial — consentimento';
     bodyEl.innerHTML =
@@ -5280,11 +6655,16 @@ let _enrollFuncId = null;
 let _enrollFuncNome = null;
 let _enrollOnSuccess = null;
 
-async function abrirCadastroBiometria(funcionarioId, funcionarioNome, onSuccess){
-  console.log('[enroll] abrirCadastroBiometria →', {funcionarioId, funcionarioNome, temCallback:!!onSuccess});
+async function abrirCadastroBiometria(funcionarioId, funcionarioNome, onSuccess, skipConsent){
+  console.log('[enroll] abrirCadastroBiometria →', {funcionarioId, funcionarioNome, temCallback:!!onSuccess, skipConsent:!!skipConsent});
   _enrollFuncId = funcionarioId;
   _enrollFuncNome = funcionarioNome;
   _enrollOnSuccess = onSuccess || null;
+  // v115: pulamos o modal LGPD quando é atualização (consent já dado no cadastro inicial)
+  if(skipConsent){
+    await iniciarEnrollCamera();
+    return;
+  }
   abrirConsentimentoLGPD(async function(aceito){
     console.log('[enroll] consent callback — aceito:', aceito);
     if(!aceito){
@@ -5294,7 +6674,7 @@ async function abrirCadastroBiometria(funcionarioId, funcionarioNome, onSuccess)
     }
     await registrarConsentimento(funcionarioId);
     await iniciarEnrollCamera();
-  });
+  }, 'enroll');
 }
 async function iniciarEnrollCamera(){
   document.getElementById('enrollNome').textContent = _enrollFuncNome || '—';
