@@ -173,6 +173,13 @@ img[src*="base64"][style*="border-radius:50%"]:hover {
 .dash-stat-v{font-size:20px;font-weight:700}
 .dash-stat-l{font-size:9px;opacity:.8;margin-top:1px}
 .func-dash-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:7px;overflow:hidden}
+.func-dash-card.em-ferias{background:#cffafe;border:1px solid #67e8f9}
+.func-dash-card.em-ferias .func-dash-header:hover{background:#a5f3fc}
+.ferias-info{color:#0e7490;font-weight:700;text-align:center;padding:14px 10px;font-size:13px;line-height:1.5}
+.ferias-info small{display:block;font-weight:500;font-size:11px;color:#155e75;margin-top:2px}
+#dashFeriasBanner{background:#cffafe;border:1px solid #67e8f9;border-left:4px solid #06b6d4;border-radius:8px;padding:10px 14px;margin-bottom:8px}
+#dashFeriasBanner .ferias-banner-title{font-weight:700;color:#0e7490;font-size:13px;margin-bottom:4px}
+#dashFeriasBanner .ferias-banner-list{font-size:12px;color:#155e75;line-height:1.5}
 .func-dash-header{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;transition:.15s}
 .func-dash-header:hover{background:var(--gray-light)}
 .func-dash-status{margin-left:auto;display:flex;align-items:center;gap:5px;flex-shrink:0}
@@ -504,6 +511,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div id="dashFiltroLabel" style="font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.06em">Funcionários — ordem alfabética</div>
         <button class="btn btn-primary btn-sm" onclick="carregarDashboard()" title="Mostrar todos">↺</button>
       </div>
+      <div id="dashFeriasBanner" style="display:none"></div>
       <div id="dashLista"><div class="empty">Carregando...</div></div>
       <!-- REVISÃO FACIAL - só admin -->
       <div id="dashRevisaoCard" class="card admin-nav" style="display:none;border:1.5px solid #fed7aa;background:#fff7ed">
@@ -1212,7 +1220,7 @@ var FIREBASE_CONFIG = {
 var db = null;
 try { firebase.initializeApp(FIREBASE_CONFIG); db = firebase.firestore(); } catch(e) { console.error('Firebase init error:',e); }
 
-var APP_VERSION = 'v1.0.131 · 23/04/2026'; // ← ATUALIZAR A CADA CORREÇÃO
+var APP_VERSION = 'v1.0.133 · 04/05/2026'; // ← ATUALIZAR A CADA CORREÇÃO
 
 // Restaurar sessão ao recarregar página
 window.addEventListener('DOMContentLoaded', async function(){
@@ -1762,6 +1770,42 @@ function isFolga(funcId,dataISO){const f=S.folgas[folgaKey(funcId,dataISO)];retu
 function isFolgaDom(funcId,dataISO){const f=S.folgas[folgaKey(funcId,dataISO)];return f&&f.tipo==='folga_dom';}
 function isNaoDescontado(funcId,dataISO){const f=S.folgas[folgaKey(funcId,dataISO)];return f&&f.tipo==='nao_descontado';}
 
+// v132: helpers de férias para o Dashboard
+function estaEmFeriasHoje(funcId){
+  if(typeof S_ferias==='undefined'||!Array.isArray(S_ferias))return null;
+  var hoje=dataLocalISO();
+  return S_ferias.find(function(f){
+    return f.funcionarioId===funcId && hoje>=f.inicio && hoje<=f.fim;
+  })||null;
+}
+function diasRestantesFerias(fim){
+  var h=new Date();h.setHours(0,0,0,0);
+  var df=new Date(fim+'T12:00');
+  var diff=df-h;
+  return Math.ceil(diff/(1000*60*60*24));
+}
+function rotuloDiasRestantesFerias(fim){
+  var n=diasRestantesFerias(fim);
+  if(n<=0) return 'Último dia de férias';
+  if(n===1) return 'Falta 1 dia';
+  return 'Faltam '+n+' dias';
+}
+function getFuncionariosEmFeriasHoje(){
+  if(typeof S_ferias==='undefined'||!Array.isArray(S_ferias))return [];
+  var hoje=dataLocalISO();
+  var lista=[];
+  S_ferias.forEach(function(f){
+    if(hoje>=f.inicio&&hoje<=f.fim){
+      var func=S.funcionarios.find(function(x){return x.id===f.funcionarioId;});
+      if(func&&!func.inativo){
+        lista.push({id:func.id,nome:func.nome,inicio:f.inicio,fim:f.fim});
+      }
+    }
+  });
+  lista.sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR');});
+  return lista;
+}
+
 async function toggleNaoDescontado(funcId,dataISO){
   const key=folgaKey(funcId,dataISO);
   const jaND=isNaoDescontado(funcId,dataISO);
@@ -2159,10 +2203,13 @@ async function _registrarPonto(tipo,fotoB64,statusFacial,faceOk,confianca){
   var agora=new Date(),empId=S.user.empresa==='2'?'2':'1';
   var empNome=empId==='2'?S.config.empresaB.nome:S.config.empresaA.nome;
   var esc=S.escalas.find(function(e){return e.id===S.user.escalaId;});
-  var atraso=false,minAtraso=0;
+  var atraso=false,minAtraso=0,horaExtra=false,minExtra=0;
   if(tipo==='Entrada'&&esc&&esc.tipo!=='especial'){
     var dia=DIAS[agora.getDay()],cfg=esc.dias&&esc.dias[dia];
     if(cfg&&cfg.ativo){var tol=parseInt(esc.tolerancia)||10,hr=agora.getHours()*60+agora.getMinutes(),he=hp2m(cfg.entrada);if(hr>he+tol){atraso=true;minAtraso=hr-he;}}
+  } else if(tipo==='Saída'&&esc&&esc.tipo!=='especial'){
+    var diaS=DIAS[agora.getDay()],cfgS=esc.dias&&esc.dias[diaS];
+    if(cfgS&&cfgS.ativo){var tolS=parseInt(esc.tolerancia)||10,hrS=agora.getHours()*60+agora.getMinutes(),hsS=hp2m(cfgS.saida);if(hrS>hsS+tolS){horaExtra=true;minExtra=hrS-hsS;}}
   }
   // Calcula data de trabalho considerando virada de turno
   var dataTrabalho = getDataTrabalho(agora.getTime());
@@ -2172,7 +2219,7 @@ async function _registrarPonto(tipo,fotoB64,statusFacial,faceOk,confianca){
   var reg={funcionarioId:S.user.id,funcionarioNome:S.user.nome,tipo,empresa:empId,empresaNome:empNome,
     data:dataTrabalho.dataBR,hora:horaReal,
     timestamp:agora.getTime(),lat:S.lat,lng:S.lng,mes:dataTrabalho.mes,
-    escalaId:S.user.escalaId||'',escalaNome:esc?esc.nome:'',atraso,minAtraso,ajuste:false,
+    escalaId:S.user.escalaId||'',escalaNome:esc?esc.nome:'',atraso,minAtraso,horaExtra,minExtra,ajuste:false,
     fotoB64:fotoB64||'',statusFacial:statusFacial||'',faceOk:!!faceOk,confianca:confianca||null,
     viradaTurno:virada};
   // Verifica se já bateu este tipo hoje
@@ -2185,10 +2232,10 @@ async function _registrarPonto(tipo,fotoB64,statusFacial,faceOk,confianca){
   try{
     var ref=await db.collection('registros').add(reg);
     reg.id=ref.id; S.registros.unshift(reg);
-    registrarLog('ponto_registrado',tipo+' registrado às '+reg.hora,{funcId:S.user.id,funcNome:S.user.nome,detalhes:tipo+' · '+reg.data+' '+reg.hora+(reg.atraso?' ⚠️ +'+reg.minAtraso+'min atraso':'')});
+    registrarLog('ponto_registrado',tipo+' registrado às '+reg.hora,{funcId:S.user.id,funcNome:S.user.nome,detalhes:tipo+' · '+reg.data+' '+reg.hora+(reg.atraso?' ⚠️ +'+reg.minAtraso+'min atraso':'')+(reg.horaExtra?' ⏰ +'+reg.minExtra+'min extra':'')});
     renderRegistrosHoje(); calcTotal();
     var faceMsg=statusFacial==='confirmado'?' · 🤖 '+confianca+'%':statusFacial==='revisao_manual'?' · ⚠️ Revisão':'';
-    toast('✅ '+tipo+' às '+reg.hora+(atraso?' ⚠️ +'+minAtraso+'min':'')+faceMsg);
+    toast('✅ '+tipo+' às '+reg.hora+(atraso?' ⚠️ +'+minAtraso+'min':'')+(horaExtra?' ⏰ +'+minExtra+'min':'')+faceMsg);
   }catch(e){toast('Erro ao salvar ponto');}
 }
 
@@ -2235,7 +2282,7 @@ function renderRegistrosHoje(){
   const regs=S.registros.filter(r=>r.data===hoje&&r.funcionarioId===S.user.id);
   const el=document.getElementById('registrosHoje');
   if(!regs.length){el.innerHTML='<div class="empty">Nenhum registro hoje</div>';return;}
-  el.innerHTML=regs.map(r=>`<div class="reg-item"><div><div class="reg-type">${r.tipo}${r.atraso?` <span style="color:var(--amber);font-size:10px">⚠️ +${r.minAtraso}min</span>`:''}${r.ajuste?` <span class="ajuste-badge">✏️</span>`:''}</div><div class="reg-meta">${r.ajuste?'Ajuste: '+r.motivoLabel:r.empresaNome+' · GPS ✓'}</div></div><div><div class="reg-time">${r.hora}</div></div></div>`).join('');
+  el.innerHTML=regs.map(r=>`<div class="reg-item"><div><div class="reg-type">${r.tipo}${r.atraso?` <span style="color:var(--amber);font-size:10px">⚠️ +${r.minAtraso}min</span>`:''}${r.horaExtra?` <span style="color:var(--blue);font-size:10px">⏰ +${r.minExtra}min</span>`:''}${r.ajuste?` <span class="ajuste-badge">✏️</span>`:''}</div><div class="reg-meta">${r.ajuste?'Ajuste: '+r.motivoLabel:r.empresaNome+' · GPS ✓'}</div></div><div><div class="reg-time">${r.hora}</div></div></div>`).join('');
 }
 function calcTotal(){
   const dataTrabalhoAtual=getDataTrabalho();
@@ -2408,8 +2455,45 @@ async function carregarDashboard(){
   if(masterEntry&&masterEntry.aparecerNaLista) funcOrdenados.unshift(masterEntry);
   let presentes=0,fimJornada=0,faltas=0,folgas=0,atrasos=0;
   const el=document.getElementById('dashLista');
+  // v132: banner de funcionários em férias hoje
+  const banner=document.getElementById('dashFeriasBanner');
+  if(banner){
+    const emFerias=getFuncionariosEmFeriasHoje();
+    if(emFerias.length){
+      const linhas=emFerias.map(function(x){
+        const fimBR=x.fim.split('-').reverse().join('/');
+        return '• '+x.nome+' (até '+fimBR+')';
+      }).join('<br>');
+      banner.innerHTML='<div class="ferias-banner-title">🏖️ '+emFerias.length+' '+(emFerias.length===1?'funcionário em férias hoje':'funcionários em férias hoje')+'</div><div class="ferias-banner-list">'+linhas+'</div>';
+      banner.style.display='block';
+    } else {
+      banner.style.display='none';
+      banner.innerHTML='';
+    }
+  }
   if(!funcOrdenados.length){el.innerHTML='<div class="empty">Nenhum funcionário cadastrado</div>';return;}
   el.innerHTML=funcOrdenados.map(f=>{
+    // v132: funcionário em férias — card especial, não conta como falta
+    const ferias=estaEmFeriasHoje(f.id);
+    if(ferias){
+      const ini2=f.nome.split(' ').slice(0,2).map(p=>p[0]).join('').toUpperCase();
+      const fimBR=ferias.fim.split('-').reverse().join('/');
+      const cardId2='dc_'+f.id;
+      return `<div class="func-dash-card em-ferias" data-filtro="ferias" data-empresa="${f.empresa||'1'}">
+        <div class="func-dash-header" onclick="toggleDashCard('${cardId2}')">
+          <div class="avatar" style="background:#a5f3fc;color:#0e7490">${ini2}</div>
+          <div><div class="func-name">${f.nome}</div><div class="func-info">${f.cargo||'—'}</div></div>
+          <div class="func-dash-status">
+            <span class="badge" style="font-size:9px;background:#cffafe;color:#0e7490;border:1px solid #67e8f9">🏖️ Férias</span>
+            <span style="font-size:10px;color:#0e7490;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">até ${fimBR}</span>
+            <span style="font-size:10px;color:var(--gray)">▾</span>
+          </div>
+        </div>
+        <div class="func-dash-body" id="${cardId2}">
+          <div class="ferias-info">🏖️ EM FÉRIAS<small>Até ${fimBR}</small><small>${rotuloDiasRestantesFerias(ferias.fim)}</small></div>
+        </div>
+      </div>`;
+    }
     const ehFolga=isFolga(f.id,hojeISO);
     const ehFolgaDom=isFolgaDom(f.id,hojeISO);
     const regsF=regsHoje.filter(r=>r.funcionarioId===f.id);
@@ -3141,7 +3225,7 @@ async function carregarHistorico(){
       </div>
       ${regsD.map(r=>`<div class="reg-item" style="padding:7px 12px;align-items:center">
         <div style="flex:1">
-          <div class="reg-type">${r.tipo}${r.atraso?` <span style="color:var(--amber);font-size:10px">⚠️ +${r.minAtraso}min</span>`:''}${r.ajuste?` <span class="ajuste-badge">✏️ ${r.motivoLabel||''}</span>`:''}</div>
+          <div class="reg-type">${r.tipo}${r.atraso?` <span style="color:var(--amber);font-size:10px">⚠️ +${r.minAtraso}min</span>`:''}${r.horaExtra?` <span style="color:var(--blue);font-size:10px">⏰ +${r.minExtra}min</span>`:''}${r.ajuste?` <span class="ajuste-badge">✏️ ${r.motivoLabel||''}</span>`:''}</div>
           <div class="reg-meta">${r.ajuste?'Ajuste por '+r.ajustadoPor:(r.empresaNome||'GPS ✓')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
@@ -3438,9 +3522,9 @@ async function salvarAjuste(){
   const diParts=di.split('-');const dataBR=diParts[2]+'/'+diParts[1]+'/'+diParts[0];
   const [hh,mm]=hora.split(':').map(Number);const bd=new Date(di);bd.setHours(hh,mm,0,0);
   const func=S.funcionarios.find(f=>f.id===fid);const empId=func?.empresa==='2'?'2':'1';
-  // Calcular atraso se for Entrada
+  // Calcular atraso se for Entrada / hora extra se for Saída
   const tipoAj=document.getElementById('ajTipo').value;
-  let atrasoAj=false,minAtrasoAj=0;
+  let atrasoAj=false,minAtrasoAj=0,horaExtraAj=false,minExtraAj=0;
   if(tipoAj==='Entrada'){
     const esc=S.escalas.find(e=>e.id===func?.escalaId);
     if(esc&&esc.tipo!=='especial'&&esc.dias){
@@ -3453,6 +3537,18 @@ async function salvarAjuste(){
         if(hrMin>heMin+tol){atrasoAj=true;minAtrasoAj=hrMin-heMin;}
       }
     }
+  } else if(tipoAj==='Saída'){
+    const esc=S.escalas.find(e=>e.id===func?.escalaId);
+    if(esc&&esc.tipo!=='especial'&&esc.dias){
+      const diaSem=DIAS[bd.getDay()];
+      const cfg=esc.dias[diaSem];
+      if(cfg&&cfg.ativo){
+        const tol=parseInt(esc.tolerancia)||10;
+        const hrMin=hh*60+mm;
+        const hsMin=hp2m(cfg.saida);
+        if(hrMin>hsMin+tol){horaExtraAj=true;minExtraAj=hrMin-hsMin;}
+      }
+    }
   }
   // Verifica duplicado
   const dupAj=await verificarDuplicado(fid,dataBR,tipoAj,null);
@@ -3460,14 +3556,14 @@ async function salvarAjuste(){
     const horaExist=dupAj.data().hora;
     if(!confirm('⚠️ Já existe um registro de "'+tipoAj+'" às '+horaExist+' neste dia.\n\nDeseja substituir pelo novo horário ('+hora+')?'))return;
     // Atualiza o existente em vez de criar novo
-    await db.collection('registros').doc(dupAj.id).update({hora,timestamp:bd.getTime(),ajuste:true,motivo,motivoLabel,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj});
+    await db.collection('registros').doc(dupAj.id).update({hora,timestamp:bd.getTime(),ajuste:true,motivo,motivoLabel,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj,horaExtra:horaExtraAj,minExtra:minExtraAj});
     registrarLog('ajuste_ponto','Ajuste substituído: '+tipoAj+' às '+hora,{funcId:fid,funcNome:func?.nome||'',detalhes:'Anterior: '+horaExist+' → Novo: '+hora});
     toast('✅ Horário atualizado: '+tipoAj+' às '+hora);
     carregarPontosAjuste();carregarDashboard();
     if(_ajusteValidacaoCtx){ await _aposSalvarValidacao(); return; }
     return;
   }
-  const reg={funcionarioId:fid,funcionarioNome:func?.nome||'',tipo:tipoAj,empresa:empId,empresaNome:empId==='2'?S.config.empresaB.nome:S.config.empresaA.nome,data:dataBR,hora,timestamp:bd.getTime(),mes:di.slice(0,7),ajuste:true,motivo,motivoLabel,obs:document.getElementById('ajObs').value,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj};
+  const reg={funcionarioId:fid,funcionarioNome:func?.nome||'',tipo:tipoAj,empresa:empId,empresaNome:empId==='2'?S.config.empresaB.nome:S.config.empresaA.nome,data:dataBR,hora,timestamp:bd.getTime(),mes:di.slice(0,7),ajuste:true,motivo,motivoLabel,obs:document.getElementById('ajObs').value,ajustadoPor:S.user.nome,ajustadoEm:new Date().toISOString(),atraso:atrasoAj,minAtraso:minAtrasoAj,horaExtra:horaExtraAj,minExtra:minExtraAj};
   try{await db.collection('registros').add(reg);registrarLog('ajuste_ponto','Ajuste de ponto: '+reg.tipo+' às '+reg.hora,{funcId:fid,funcNome:reg.funcionarioNome,detalhes:reg.motivoLabel+' · '+reg.data+' '+reg.hora});toast('✅ Ajuste salvo com identificação');carregarPontosAjuste();carregarDashboard();if(_ajusteValidacaoCtx){await _aposSalvarValidacao();}}catch(e){toast('Erro ao salvar');}
 }
 
